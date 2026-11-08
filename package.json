@@ -1,0 +1,25 @@
+{
+  "name": "g7-riesgo-ansiedad",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JhuniorCq/g7-riesgo-ansiedad.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/JhuniorCq/g7-riesgo-ansiedad/issues"
+  },
+  "homepage": "https://github.com/JhuniorCq/g7-riesgo-ansiedad#readme",
+  "private": true,
+  "workspaces": [
+    "services/*"
+  ]
+}

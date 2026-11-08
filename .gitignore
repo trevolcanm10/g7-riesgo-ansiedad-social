@@ -1,0 +1,7 @@
+node_modules/
+.env
+dist/
+!.env.example
+
+# Config local de Flutter DevTools (no versionar)
+frontend/devtools_options.yaml

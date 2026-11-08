@@ -1,0 +1,145 @@
+openapi: 3.0.3
+info:
+  title: Prediction ML Service API
+  version: 1.0.0
+  description: API del microservicio de prediccion de riesgo de ansiedad.
+servers:
+  - url: https://g7-riesgo-ansiedad-prediction.onrender.com
+    description: Servicio de prediccion desplegado en Render
+tags:
+  - name: Prediction
+    description: Prediccion de riesgo de ansiedad
+  - name: Health
+    description: Estado del servicio y disponibilidad de modelos
+paths:
+  /predict:
+    post:
+      tags: [Prediction]
+      summary: Predecir el riesgo de ansiedad
+      description: Devuelve una estimacion basada en los indicadores recibidos; no es un diagnostico clinico.
+      operationId: predictRisk
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PredictionRequest'
+            example:
+              phq9_score: 8
+              gad7_score: 6
+              sleep_hours: 7.5
+              exercise_freq: 3
+              social_activity: 6
+              online_stress: 6
+              gpa: 3.5
+              family_support: 7
+              screen_time: 5
+              academic_stress: 7
+              diet_quality: 7
+              self_efficacy: 6
+              peer_relationship: 6
+              financial_stress: 5
+              sleep_quality: 7
+      responses:
+        '200':
+          description: Prediccion generada correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PredictionResponse'
+        '400':
+          description: JSON invalido o indicadores ausentes o fuera de rango
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '503':
+          description: Los modelos de prediccion no estan disponibles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+        '500':
+          description: No se pudo realizar la prediccion
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceError'
+  /health:
+    get:
+      tags: [Health]
+      summary: Consultar el estado del servicio
+      operationId: getPredictionHealth
+      responses:
+        '200':
+          description: Servicio listo con los cinco modelos cargados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+              example: { service: prediction-ml, status: OK, models_loaded: 5 }
+        '503':
+          description: Servicio no listo o modelos no disponibles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+              example: { service: prediction-ml, status: UNAVAILABLE, models_loaded: 0 }
+components:
+  schemas:
+    PredictionRequest:
+      type: object
+      additionalProperties: false
+      required: [phq9_score, gad7_score, sleep_hours, exercise_freq, social_activity, online_stress, gpa, family_support, screen_time, academic_stress, diet_quality, self_efficacy, peer_relationship, financial_stress, sleep_quality]
+      properties:
+        phq9_score: { type: number, minimum: 0, maximum: 27 }
+        gad7_score: { type: number, minimum: 0, maximum: 21 }
+        sleep_hours: { type: number, minimum: 3, maximum: 10 }
+        exercise_freq: { type: number, minimum: 0, maximum: 7 }
+        social_activity: { type: number, minimum: 0, maximum: 10 }
+        online_stress: { type: number, minimum: 1, maximum: 10 }
+        gpa: { type: number, minimum: 0, maximum: 5 }
+        family_support: { type: number, minimum: 1, maximum: 10 }
+        screen_time: { type: number, minimum: 1, maximum: 12 }
+        academic_stress: { type: number, minimum: 1, maximum: 10 }
+        diet_quality: { type: number, minimum: 1, maximum: 10 }
+        self_efficacy: { type: number, minimum: 1, maximum: 10 }
+        peer_relationship: { type: number, minimum: 1, maximum: 10 }
+        financial_stress: { type: number, minimum: 1, maximum: 10 }
+        sleep_quality: { type: number, minimum: 0, maximum: 10 }
+    PredictionResponse:
+      type: object
+      required: [nivel_riesgo, probabilidad_ansiedad, explicacion, reporte_ia]
+      properties:
+        nivel_riesgo: { type: string, enum: [BAJO, MEDIO, ALTO] }
+        probabilidad_ansiedad: { type: number, minimum: 0, maximum: 1 }
+        explicacion: { type: string }
+        reporte_ia:
+          $ref: '#/components/schemas/AIReport'
+    AIReport:
+      type: object
+      additionalProperties: false
+      required: [resumen, fortalezas, factores_preocupantes, recomendaciones, plan_7_dias, temas_videos, temas_lectura, prioridad_intervencion, mensaje_motivacional]
+      properties:
+        resumen: { type: string }
+        fortalezas: { type: array, maxItems: 5, items: { type: string } }
+        factores_preocupantes: { type: array, maxItems: 5, items: { type: string } }
+        recomendaciones: { type: array, maxItems: 5, items: { type: string } }
+        plan_7_dias: { type: array, maxItems: 7, items: { type: string } }
+        temas_videos: { type: array, maxItems: 3, items: { type: string } }
+        temas_lectura: { type: array, maxItems: 3, items: { type: string } }
+        prioridad_intervencion: { type: string }
+        mensaje_motivacional: { type: string }
+    ServiceError:
+      type: object
+      required: [error, mensaje]
+      properties:
+        error: { type: string }
+        mensaje: { type: string }
+    HealthStatus:
+      type: object
+      required: [service, status, models_loaded]
+      properties:
+        service: { type: string, enum: [prediction-ml] }
+        status: { type: string, enum: [OK, UNAVAILABLE] }
+        models_loaded: { type: integer, minimum: 0, maximum: 5 }
