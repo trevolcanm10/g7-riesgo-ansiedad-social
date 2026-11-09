@@ -1,0 +1,359 @@
+openapi: 3.0.3
+info:
+  title: Orientación Confidencial Service API
+  version: 1.0.0
+  description: API del microservicio de orientación confidencial (Móvil M2 - UNAYOE FISI UNMSM).
+servers:
+  - url: http://localhost:5000
+    description: Servidor de desarrollo local
+  - url: http://localhost:5002
+    description: Contenedor Docker de producción
+tags:
+  - name: Solicitudes
+    description: Gestión y atención de solicitudes de orientación confidencial
+  - name: Métricas
+    description: Métricas analíticas por tema de orientación
+paths:
+  /api/v1/orientacion/solicitudes:
+    post:
+      tags:
+        - Solicitudes
+      summary: Crear una solicitud de orientación confidencial
+      description: Recibe el mensaje del estudiante, ejecuta inferencia local ML (tema y prioridad) y detección heurística de urgencia, y persiste la solicitud.
+      operationId: crearSolicitudOrientacion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SolicitudCreateRequest"
+            example:
+              estudiante_id: "20200001"
+              mensaje: "Tengo mucha ansiedad por mis exámenes finales y necesito apoyo"
+              comparte_evaluacion_riesgo: true
+              evaluacion_riesgo_id: 12
+      responses:
+        "201":
+          description: Solicitud creada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolicitudOrientacionCreatedResponse"
+        "400":
+          description: Errores de validación en los datos enviados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerError"
+    get:
+      tags:
+        - Solicitudes
+      summary: Listar solicitudes de orientación
+      description: Lista las solicitudes ordenadas por prioridad efectiva (alta, media, baja) y fecha de creación descendente. Permite filtrar por estado, prioridad y estudiante_id.
+      operationId: listarSolicitudesOrientacion
+      parameters:
+        - name: estado
+          in: query
+          required: false
+          description: Filtrar por estado de la solicitud
+          schema:
+            type: string
+            enum:
+              - pendiente
+              - atendida
+        - name: prioridad
+          in: query
+          required: false
+          description: Filtrar por prioridad efectiva (confirmada o sugerida)
+          schema:
+            type: string
+            enum:
+              - alta
+              - media
+              - baja
+        - name: estudiante_id
+          in: query
+          required: false
+          description: Filtrar por código o identificador del estudiante
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Lista de solicitudes de orientación
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SolicitudOrientacion"
+  /api/v1/orientacion/solicitudes/{id}:
+    get:
+      tags:
+        - Solicitudes
+      summary: Obtener el detalle de una solicitud de orientación
+      operationId: obtenerSolicitudOrientacion
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID entero de la solicitud
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Detalle de la solicitud encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolicitudOrientacion"
+        "404":
+          description: Solicitud no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+  /api/v1/orientacion/solicitudes/{id}/atender:
+    patch:
+      tags:
+        - Solicitudes
+      summary: Atender una solicitud de orientación
+      description: Registra la respuesta escrita del orientador, confirma o corrige el tema y la prioridad sugeridos por IA, y cambia el estado a atendida.
+      operationId: atenderSolicitudOrientacion
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID entero de la solicitud a atender
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SolicitudAtenderRequest"
+            example:
+              respuesta_escrita: "Te hemos programado una sesión prioritaria con psicología."
+              atendido_por: "Lic. María"
+              tema_confirmado: "ansiedad_estres"
+              prioridad_confirmada: "alta"
+      responses:
+        "200":
+          description: Solicitud atendida y actualizada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolicitudOrientacion"
+        "400":
+          description: Errores de validación en los datos enviados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        "404":
+          description: Solicitud no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerError"
+  /api/v1/orientacion/solicitudes/metricas/conteo-temas:
+    get:
+      tags:
+        - Métricas
+      summary: Obtener conteo de solicitudes agrupadas por tema
+      description: Agrupa y cuenta las solicitudes priorizando el tema confirmado sobre el tema sugerido (COALESCE).
+      operationId: obtenerMetricasConteoTemas
+      responses:
+        "200":
+          description: Conteo de solicitudes por tema
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MetricaTema"
+components:
+  schemas:
+    SolicitudCreateRequest:
+      type: object
+      required:
+        - estudiante_id
+        - mensaje
+      properties:
+        estudiante_id:
+          type: string
+          minLength: 1
+          description: Código o identificador del estudiante
+        mensaje:
+          type: string
+          minLength: 1
+          description: Mensaje confidencial redactado por el estudiante
+        comparte_evaluacion_riesgo:
+          type: boolean
+          default: false
+          description: Indica si el estudiante autoriza compartir su última evaluación de riesgo
+        evaluacion_riesgo_id:
+          type: integer
+          nullable: true
+          description: ID de la evaluación de riesgo asociada (opcional)
+    SolicitudAtenderRequest:
+      type: object
+      required:
+        - respuesta_escrita
+        - atendido_por
+      properties:
+        respuesta_escrita:
+          type: string
+          minLength: 1
+          description: Respuesta u orientación redactada por el especialista
+        atendido_por:
+          type: string
+          minLength: 1
+          description: Nombre o identificador del orientador/psicólogo
+        tema_confirmado:
+          type: string
+          nullable: true
+          description: Tema confirmado o corregido por el orientador
+        prioridad_confirmada:
+          type: string
+          nullable: true
+          enum:
+            - alta
+            - media
+            - baja
+          description: Prioridad confirmada o corregida por el orientador
+    AlertaUrgencia:
+      type: object
+      required:
+        - coincidencias
+        - lineas_ayuda
+      properties:
+        coincidencias:
+          type: array
+          items:
+            type: string
+          description: Frases críticas detectadas en el mensaje
+        lineas_ayuda:
+          type: array
+          items:
+            type: string
+          description: Líneas de emergencia y ayuda inmediata
+    SolicitudOrientacion:
+      type: object
+      required:
+        - id
+        - estudiante_id
+        - mensaje
+        - comparte_evaluacion_riesgo
+        - urgencia_detectada
+        - estado
+        - fecha_creacion
+      properties:
+        id:
+          type: integer
+        estudiante_id:
+          type: string
+        mensaje:
+          type: string
+        comparte_evaluacion_riesgo:
+          type: boolean
+        evaluacion_riesgo_id:
+          type: integer
+          nullable: true
+        tema_sugerido:
+          type: string
+          nullable: true
+        prioridad_sugerida:
+          type: string
+          nullable: true
+        urgencia_detectada:
+          type: boolean
+        estado:
+          type: string
+          enum:
+            - pendiente
+            - atendida
+        tema_confirmado:
+          type: string
+          nullable: true
+        prioridad_confirmada:
+          type: string
+          nullable: true
+        respuesta_escrita:
+          type: string
+          nullable: true
+        atendido_por:
+          type: string
+          nullable: true
+        fecha_creacion:
+          type: string
+          format: date-time
+        fecha_atencion:
+          type: string
+          format: date-time
+          nullable: true
+    SolicitudOrientacionCreatedResponse:
+      allOf:
+        - $ref: "#/components/schemas/SolicitudOrientacion"
+        - type: object
+          properties:
+            alertas_urgencia:
+              $ref: "#/components/schemas/AlertaUrgencia"
+    MetricaTema:
+      type: object
+      required:
+        - tema
+        - cantidad
+      properties:
+        tema:
+          type: string
+          example: ansiedad_estres
+        cantidad:
+          type: integer
+          example: 14
+    ValidationError:
+      type: object
+      required:
+        - error
+        - detalles
+      properties:
+        error:
+          type: string
+          example: Errores de validación
+        detalles:
+          type: array
+          items:
+            type: object
+    NotFoundError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          example: Solicitud no encontrada
+    ServerError:
+      type: object
+      required:
+        - error
+        - detalle
+      properties:
+        error:
+          type: string
+          example: Error interno del servidor
+        detalle:
+          type: string

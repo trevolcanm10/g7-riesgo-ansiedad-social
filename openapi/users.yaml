@@ -1,0 +1,488 @@
+openapi: 3.0.3
+info:
+  title: Users Service API
+  version: 1.0.0
+  description: API del microservicio de usuarios.
+servers:
+  - url: https://g7-riesgo-ansiedad-users.onrender.com
+    description: Servicio de usuarios desplegado en Render
+tags:
+  - name: Users
+    description: Operaciones de usuarios
+  - name: Health
+    description: Estado del servicio y su base de datos
+paths:
+  /users:
+    post:
+      tags:
+        - Users
+      summary: Crear un usuario
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+            example:
+              names: Ana
+              surnames: Perez
+              code: EST-12345
+              email: ana.perez@example.com
+              password: "UnaClaveSegura123!"
+              school: Ingeniería
+              cycle: 5
+      responses:
+        "201":
+          description: Usuario creado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Los datos enviados no son válidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        "409":
+          description: El email o el código de estudiante ya está registrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+              example:
+                message: El email ya está registrado
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+    get:
+      tags:
+        - Users
+      summary: Listar todos los usuarios
+      operationId: getUsers
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Lista de usuarios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+        "401":
+          description: Falta un token válido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+  /users/login:
+    post:
+      tags:
+        - Users
+      summary: Iniciar sesión
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginUserRequest"
+            example:
+              email: ana.perez@example.com
+              password: "UnaClaveSegura123!"
+      responses:
+        "200":
+          description: Inicio de sesión exitoso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginUserResponse"
+        "400":
+          description: Los datos enviados no son válidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        "401":
+          description: El correo o la contraseña no son válidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: Obtener el usuario autenticado
+      operationId: getCurrentUser
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Usuario autenticado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Falta un token válido o el usuario no está autenticado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+        "404":
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+  /users/{id}:
+    get:
+      tags:
+        - Users
+      summary: Obtener un usuario por su ID
+      operationId: getUserById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID entero positivo del usuario
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Usuario encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: El ID debe ser un entero positivo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        "401":
+          description: Falta un token válido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+        "404":
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+    patch:
+      tags:
+        - Users
+      summary: Actualizar parcialmente un usuario
+      operationId: updateUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID entero positivo del usuario
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+            example:
+              names: Jhon
+      responses:
+        "200":
+          description: Usuario actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: ID o datos enviados no válidos, o no se envió ningún campo modificable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        "401":
+          description: Falta un token válido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+        "403":
+          description: El rol no tiene permiso para actualizar usuarios
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+        "404":
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+        "409":
+          description: El código de estudiante ya está registrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Consultar el estado del servicio
+      operationId: getHealth
+      responses:
+        "200":
+          description: El servicio y la base de datos están disponibles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+              example:
+                service: users
+                status: OK
+                database: OK
+        "503":
+          description: La base de datos no está disponible
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+              example:
+                service: users
+                status: ERROR
+                database: UNAVAILABLE
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    CreateUserRequest:
+      type: object
+      required:
+        - names
+        - surnames
+        - code
+        - email
+        - password
+        - school
+        - cycle
+      properties:
+        names:
+          type: string
+          minLength: 1
+          description: Nombres del usuario
+        surnames:
+          type: string
+          minLength: 1
+          description: Apellidos del usuario
+        code:
+          type: string
+          minLength: 1
+          description: Código de estudiante único
+        email:
+          type: string
+          format: email
+          description: Correo electrónico único
+        password:
+          type: string
+          minLength: 1
+          format: password
+          writeOnly: true
+          description: Contraseña del usuario. No se devuelve en la respuesta.
+        school:
+          type: string
+          minLength: 1
+          description: Escuela del usuario
+        cycle:
+          type: integer
+          minimum: 1
+          maximum: 12
+          description: Ciclo académico del usuario
+    LoginUserRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: Correo electrónico registrado
+        password:
+          type: string
+          minLength: 1
+          format: password
+          writeOnly: true
+          description: Contraseña del usuario
+    UpdateUserRequest:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      description: Solo se aceptan campos modificables; ID, correo, contraseña, rol y fecha de creación no se pueden cambiar.
+      properties:
+        names:
+          type: string
+          minLength: 1
+          description: Nombres del usuario
+        surnames:
+          type: string
+          minLength: 1
+          description: Apellidos del usuario
+        code:
+          type: string
+          minLength: 1
+          description: Código de estudiante único
+        school:
+          type: string
+          minLength: 1
+          description: Escuela del usuario
+        cycle:
+          type: integer
+          minimum: 1
+          maximum: 12
+          description: Ciclo académico del usuario
+    LoginUserResponse:
+      type: object
+      required:
+        - message
+        - user
+        - accessToken
+      properties:
+        message:
+          type: string
+          example: Inicio de sesión exitoso
+        user:
+          $ref: "#/components/schemas/User"
+        accessToken:
+          type: string
+          description: Token JWT para autenticar solicitudes protegidas
+    User:
+      type: object
+      required:
+        - id
+        - names
+        - surnames
+        - code
+        - email
+        - school
+        - cycle
+        - createdAt
+      properties:
+        id:
+          type: integer
+          format: int64
+        names:
+          type: string
+        surnames:
+          type: string
+        code:
+          type: string
+        email:
+          type: string
+          format: email
+        school:
+          type: string
+        cycle:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+    MessageError:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+    ValidationError:
+      type: object
+      required:
+        - message
+        - errors
+      properties:
+        message:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            required:
+              - field
+              - message
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+    HealthStatus:
+      type: object
+      required:
+        - service
+        - status
+        - database
+      properties:
+        service:
+          type: string
+          enum:
+            - users
+        status:
+          type: string
+          enum:
+            - OK
+            - ERROR
+        database:
+          type: string
+          enum:
+            - OK
+            - UNAVAILABLE

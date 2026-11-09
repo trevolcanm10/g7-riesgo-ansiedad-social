@@ -1,0 +1,210 @@
+{
+  "universidad": "Universidad Nacional Mayor de San Marcos",
+  "siglas": "UNMSM",
+  "areas_academicas": [
+    {
+      "area": "Área A: Ciencias de la Salud",
+      "facultades": [
+        {
+          "nombre": "Facultad de Medicina (San Fernando)",
+          "escuelas": [
+            "Medicina Humana",
+            "Obstetricia",
+            "Enfermería",
+            "Tecnología Médica",
+            "Nutrición"
+          ]
+        },
+        {
+          "nombre": "Facultad de Farmacia y Bioquímica",
+          "escuelas": [
+            "Farmacia y Bioquímica",
+            "Ciencia de los Alimentos",
+            "Toxicología"
+          ]
+        },
+        {
+          "nombre": "Facultad de Odontología",
+          "escuelas": [
+            "Odontología"
+          ]
+        },
+        {
+          "nombre": "Facultad de Medicina Veterinaria",
+          "escuelas": [
+            "Medicina Veterinaria"
+          ]
+        },
+        {
+          "nombre": "Facultad de Psicología",
+          "escuelas": [
+            "Psicología",
+            "Psicología Organizacional y de la Gestión Humana"
+          ]
+        }
+      ]
+    },
+    {
+      "area": "Área B: Ciencias Básicas",
+      "facultades": [
+        {
+          "nombre": "Facultad de Ciencias Biológicas",
+          "escuelas": [
+            "Ciencias Biológicas",
+            "Genética y Biotecnología",
+            "Microbiología y Parasitología"
+          ]
+        },
+        {
+          "nombre": "Facultad de Ciencias Físicas",
+          "escuelas": [
+            "Física",
+            "Ciencias de los Materiales y Nanotecnología",
+            "Geofísica"
+          ]
+        },
+        {
+          "nombre": "Facultad de Ciencias Matemáticas",
+          "escuelas": [
+            "Matemática",
+            "Estadística",
+            "Investigación Operativa",
+            "Computación Científica"
+          ]
+        }
+      ]
+    },
+    {
+      "area": "Área C: Ingenierías",
+      "facultades": [
+        {
+          "nombre": "Facultad de Ingeniería Geológica, Minera, Metalúrgica y Geográfica",
+          "escuelas": [
+            "Ingeniería Geológica",
+            "Ingeniería Geográfica",
+            "Ingeniería de Minas",
+            "Ingeniería Metalúrgica",
+            "Ingeniería Civil",
+            "Arquitectura y Urbanismo"
+          ]
+        },
+        {
+          "nombre": "Facultad de Ingeniería Industrial",
+          "escuelas": [
+            "Ingeniería Industrial",
+            "Ingeniería Textil y Confecciones",
+            "Ingeniería de Seguridad y Salud en el Trabajo",
+            "Ingeniería Logística y Cadena de Suministro Digital",
+            "Ingeniería de Transportes y Sistemas Ferroviarios"
+          ]
+        },
+        {
+          "nombre": "Facultad de Ingeniería de Sistemas e Informática",
+          "escuelas": [
+            "Ingeniería de Sistemas",
+            "Ingeniería de Software",
+            "Ciencia de la Computación",
+            "Ingeniería de Inteligencia Artificial"
+          ]
+        },
+        {
+          "nombre": "Facultad de Química e Ingeniería Química",
+          "escuelas": [
+            "Química",
+            "Ingeniería Química",
+            "Ingeniería Agroindustrial",
+            "Ingeniería de Alimentos"
+          ]
+        },
+        {
+          "nombre": "Facultad de Ingeniería Electrónica y Eléctrica",
+          "escuelas": [
+            "Ingeniería Electrónica",
+            "Ingeniería Eléctrica",
+            "Ingeniería de Telecomunicaciones",
+            "Ingeniería Biomédica"
+          ]
+        },
+        {
+          "nombre": "Facultad de Ciencias Físicas (Mecánica de Fluidos)",
+          "escuelas": [
+            "Ingeniería Mecánica de Fluidos"
+          ]
+        }
+      ]
+    },
+    {
+      "area": "Área D: Ciencias Económicas y de la Gestión",
+      "facultades": [
+        {
+          "nombre": "Facultad de Ciencias Administrativas",
+          "escuelas": [
+            "Administración",
+            "Administración de Negocios Internacionales",
+            "Administración de Turismo",
+            "Administración de la Gastronomía",
+            "Administración Marítima y Portuaria",
+            "Marketing"
+          ]
+        },
+        {
+          "nombre": "Facultad de Ciencias Contables",
+          "escuelas": [
+            "Contabilidad",
+            "Auditoría Empresarial y del Sector Público",
+            "Gestión Tributaria"
+          ]
+        },
+        {
+          "nombre": "Facultad de Ciencias Económicas",
+          "escuelas": [
+            "Economía"
+          ]
+        }
+      ]
+    },
+    {
+      "area": "Área E: Humanidades y Ciencias Jurídicas y Sociales",
+      "facultades": [
+        {
+          "nombre": "Facultad de Derecho y Ciencia Política",
+          "escuelas": [
+            "Derecho",
+            "Ciencia Política"
+          ]
+        },
+        {
+          "nombre": "Facultad de Letras y Ciencias Humanas",
+          "escuelas": [
+            "Literatura",
+            "Filosofía",
+            "Lingüística",
+            "Comunicación Social",
+            "Arte",
+            "Bibliotecología y Ciencias de la Información",
+            "Danza",
+            "Lenguas, Traducción e Interpretación"
+          ]
+        },
+        {
+          "nombre": "Facultad de Educación",
+          "escuelas": [
+            "Educación",
+            "Educación Física"
+          ]
+        },
+        {
+          "nombre": "Facultad de Ciencias Sociales",
+          "escuelas": [
+            "Historia",
+            "Sociología",
+            "Antropología",
+            "Arqueología",
+            "Trabajo Social",
+            "Geografía"
+          ]
+        }
+      ]
+    }
+  ]
+}

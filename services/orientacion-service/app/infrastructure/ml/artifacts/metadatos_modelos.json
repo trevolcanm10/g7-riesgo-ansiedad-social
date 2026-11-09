@@ -1,0 +1,20 @@
+{
+  "tecnica": "TF-IDF + Regresion Logistica",
+  "random_state": 42,
+  "test_size": 0.2,
+  "clases_tema": [
+    "academico",
+    "ansiedad_estres",
+    "economico",
+    "familiar",
+    "personal"
+  ],
+  "clases_prioridad": [
+    "alta",
+    "baja",
+    "media"
+  ],
+  "prioridad_preferente": "alta",
+  "cantidad_mensajes": 250,
+  "advertencia": "Prototipo experimental; requiere revisión de etiquetas y validación institucional."
+}

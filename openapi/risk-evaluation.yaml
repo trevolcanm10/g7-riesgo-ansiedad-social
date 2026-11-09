@@ -1,0 +1,379 @@
+openapi: 3.0.3
+info:
+  title: Risk Evaluation Service API
+  version: 1.0.0
+  description: API del microservicio de evaluación de riesgo de ansiedad.
+servers:
+  - url: https://g7-riesgo-ansiedad-risk-evaluations.onrender.com
+    description: Servicio de evaluación de riesgo desplegado en Azure
+tags:
+  - name: Risk Evaluations
+    description: Evaluación del riesgo de ansiedad
+  - name: Health
+    description: Estado del servicio y su base de datos
+paths:
+  /risk-evaluations:
+    post:
+      tags:
+        - Risk Evaluations
+      summary: Crear una evaluación de riesgo
+      description: Calcula y guarda una evaluación asociada al usuario autenticado.
+      operationId: createRiskEvaluation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRiskEvaluationRequest"
+            example:
+              phq9Score: 8
+              gad7Score: 7
+              sleepHours: 7
+              exerciseFreq: 3
+              socialActivity: 5
+              onlineStress: 4
+              gpa: 3.8
+              familySupport: 7
+              screenTime: 6
+              academicStress: 5
+              dietQuality: 7
+              selfEfficacy: 6
+              peerRelationship: 7
+              financialStress: 3
+              sleepQuality: 6
+      responses:
+        "201":
+          description: Evaluación creada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskEvaluation"
+        "400":
+          description: Los datos enviados no son válidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        "401":
+          description: Falta un token válido o el usuario no está autenticado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+        "500":
+          description: Error interno o no se encontró una recomendación para el nivel de riesgo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+  /risk-evaluations/me/history:
+    get:
+      tags:
+        - Risk Evaluations
+      summary: Consultar el historial propio de evaluaciones
+      description: Devuelve las evaluaciones del usuario autenticado, de la más reciente a la más antigua.
+      operationId: getMyRiskEvaluationHistory
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Historial consultado; puede ser una lista vacía
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RiskEvaluation"
+        "401":
+          description: Falta un token válido o el usuario no está autenticado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+        "500":
+          description: Error interno al consultar el historial
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Consultar el estado del servicio
+      operationId: getHealth
+      responses:
+        "200":
+          description: El servicio y la base de datos están disponibles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+              example:
+                service: riskEvaluation
+                status: OK
+                database: OK
+        "503":
+          description: La base de datos no está disponible
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+              example:
+                service: riskEvaluation
+                status: ERROR
+                database: UNAVAILABLE
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    CreateRiskEvaluationRequest:
+      type: object
+      required:
+        - phq9Score
+        - gad7Score
+        - sleepHours
+        - exerciseFreq
+        - socialActivity
+        - onlineStress
+        - gpa
+        - familySupport
+        - screenTime
+        - academicStress
+        - dietQuality
+        - selfEfficacy
+        - peerRelationship
+        - financialStress
+        - sleepQuality
+      properties:
+        phq9Score:
+          type: integer
+          minimum: 0
+          maximum: 27
+          description: Puntaje PHQ-9
+        gad7Score:
+          type: integer
+          minimum: 0
+          maximum: 21
+          description: Puntaje GAD-7
+        sleepHours:
+          type: integer
+          minimum: 3
+          maximum: 10
+          description: Horas de sueño
+        exerciseFreq:
+          type: integer
+          minimum: 0
+          maximum: 7
+          description: Frecuencia de ejercicio
+        socialActivity:
+          type: integer
+          minimum: 0
+          maximum: 10
+          description: Nivel de actividad social
+        onlineStress:
+          type: integer
+          minimum: 1
+          maximum: 10
+          description: Nivel de estrés asociado a actividades en línea
+        gpa:
+          type: number
+          minimum: 0
+          maximum: 5
+          description: Promedio académico
+        familySupport:
+          type: integer
+          minimum: 1
+          maximum: 10
+          description: Nivel de apoyo familiar
+        screenTime:
+          type: integer
+          minimum: 1
+          maximum: 12
+          description: Horas de tiempo de pantalla
+        academicStress:
+          type: integer
+          minimum: 1
+          maximum: 10
+          description: Nivel de estrés académico
+        dietQuality:
+          type: integer
+          minimum: 1
+          maximum: 10
+          description: Calidad de la alimentación
+        selfEfficacy:
+          type: integer
+          minimum: 1
+          maximum: 10
+          description: Nivel de autoeficacia
+        peerRelationship:
+          type: integer
+          minimum: 1
+          maximum: 10
+          description: Calidad de las relaciones con pares
+        financialStress:
+          type: integer
+          minimum: 1
+          maximum: 10
+          description: Nivel de estrés financiero
+        sleepQuality:
+          type: integer
+          minimum: 0
+          maximum: 10
+          description: Calidad del sueño
+    RiskEvaluation:
+      type: object
+      required:
+        - id
+        - userId
+        - anxietyProbability
+        - riskLevel
+        - explanation
+        - recommendations
+        - aiReport
+        - createdAt
+      properties:
+        id:
+          type: integer
+          format: int64
+        userId:
+          type: integer
+          format: int64
+          description: ID del usuario autenticado que realizó la evaluación
+        anxietyProbability:
+          type: number
+          description: Probabilidad estimada de ansiedad devuelta por el servicio de predicción
+        riskLevel:
+          $ref: "#/components/schemas/RiskLevel"
+        explanation:
+          type: string
+        recommendations:
+          type: array
+          items:
+            $ref: "#/components/schemas/RiskRecommendation"
+        aiReport:
+          $ref: "#/components/schemas/AIReport"
+        createdAt:
+          type: string
+          format: date-time
+    RiskLevel:
+      type: string
+      enum:
+        - BAJO
+        - MEDIO
+        - ALTO
+    RiskRecommendation:
+      type: object
+      required:
+        - id
+        - category
+        - title
+        - description
+      properties:
+        id:
+          type: integer
+          format: int64
+        category:
+          $ref: "#/components/schemas/RiskLevel"
+        title:
+          type: string
+        description:
+          type: string
+    AIReport:
+      type: object
+      required:
+        - summary
+        - strengths
+        - concerningFactors
+        - recommendations
+        - sevenDayPlan
+        - videoTopics
+        - readingTopics
+        - priorityIntervention
+        - motivationalMessage
+      properties:
+        summary:
+          type: string
+        strengths:
+          type: array
+          items:
+            type: string
+        concerningFactors:
+          type: array
+          items:
+            type: string
+        recommendations:
+          type: array
+          items:
+            type: string
+        sevenDayPlan:
+          type: array
+          items:
+            type: string
+        videoTopics:
+          type: array
+          items:
+            type: string
+        readingTopics:
+          type: array
+          items:
+            type: string
+        priorityIntervention:
+          type: string
+        motivationalMessage:
+          type: string
+        error:
+          type: string
+    MessageError:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+    ValidationError:
+      type: object
+      required:
+        - message
+        - errors
+      properties:
+        message:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            required:
+              - field
+              - message
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+    HealthStatus:
+      type: object
+      required:
+        - service
+        - status
+        - database
+      properties:
+        service:
+          type: string
+          enum:
+            - riskEvaluation
+        status:
+          type: string
+          enum:
+            - OK
+            - ERROR
+        database:
+          type: string
+          enum:
+            - OK
+            - UNAVAILABLE
