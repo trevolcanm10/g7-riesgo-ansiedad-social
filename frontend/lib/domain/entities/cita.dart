@@ -32,6 +32,8 @@ class Cita {
   final String prioridad;
   final String? motivo;
   final int reprogramaciones;
+  final int? estudianteId;
+  final int? personalId;
 
   const Cita({
     required this.id,
@@ -42,6 +44,8 @@ class Cita {
     required this.prioridad,
     this.motivo,
     this.reprogramaciones = 0,
+    this.estudianteId,
+    this.personalId,
   });
 
   bool get activa => estado == solicitada || estado == confirmada;
@@ -50,4 +54,20 @@ class Cita {
   bool puedeModificar(DateTime ahora) =>
       activa &&
       inicio.difference(ahora) >= const Duration(hours: horasMinimasParaCambiar);
+}
+
+/// Estimacion orientativa de inasistencia. Solo sirve para decidir un
+/// recordatorio: nunca para negar ni retrasar una cita.
+class RiesgoInasistencia {
+  final double probabilidad;
+  final List<String> factores;
+  final String modelo;
+  final String? nota;
+
+  const RiesgoInasistencia({
+    required this.probabilidad,
+    required this.factores,
+    required this.modelo,
+    this.nota,
+  });
 }

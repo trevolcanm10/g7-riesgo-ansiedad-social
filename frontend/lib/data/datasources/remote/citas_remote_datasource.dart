@@ -62,6 +62,51 @@ class CitasRemoteDataSource {
     return CitaModel.citaFromJson(json);
   });
 
+  Future<List<Cita>> agenda({String? estado}) => _ejecutar(() async {
+    final url = estado == null
+        ? AppConstants.citas
+        : '${AppConstants.citas}?status=${Uri.encodeQueryComponent(estado)}';
+    final data = await _api.getList(url);
+    return data
+        .map((e) => CitaModel.citaFromJson(e as Map<String, dynamic>))
+        .toList();
+  });
+
+  Future<List<Horario>> publicarHorarios(
+    List<DateTime> inicios, {
+    int? personalId,
+  }) => _ejecutar(() async {
+    final body = <String, dynamic>{
+      'startAts': inicios.map((d) => d.toUtc().toIso8601String()).toList(),
+    };
+    if (personalId != null) body['staffUserId'] = personalId;
+    final json = await _api.post(
+      AppConstants.citasSlots,
+      body: body,
+      expectedStatus: 201,
+    );
+    // ApiService envuelve las listas como {'data': [...]}.
+    final lista = json['data'];
+    if (lista is! List) throw const FormatException('Respuesta inesperada');
+    return lista
+        .map((e) => CitaModel.horarioFromJson(e as Map<String, dynamic>))
+        .toList();
+  });
+
+  Future<Cita> cambiarEstado(int citaId, String estado) => _ejecutar(() async {
+    final json = await _api.patch(
+      AppConstants.citaEstado(citaId),
+      body: {'status': estado},
+    );
+    return CitaModel.citaFromJson(json);
+  });
+
+  Future<RiesgoInasistencia> riesgoInasistencia(int citaId) =>
+      _ejecutar(() async {
+        final json = await _api.get(AppConstants.citaRiesgo(citaId));
+        return CitaModel.riesgoFromJson(json);
+      });
+
   Future<T> _ejecutar<T>(Future<T> Function() accion) async {
     try {
       return await accion();

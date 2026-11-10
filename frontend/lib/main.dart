@@ -41,11 +41,12 @@ import 'presentation/viewmodels/medico_viewmodel.dart';
 import 'presentation/viewmodels/theme_viewmodel.dart';
 import 'presentation/viewmodels/escuela_viewmodel.dart';
 import 'presentation/viewmodels/citas_viewmodel.dart';
+import 'presentation/viewmodels/agenda_unayoe_viewmodel.dart';
+import 'presentation/pages/citas/publicar_horarios_screen.dart';
 import 'presentation/pages/citas/agendar_cita_screen.dart';
 import 'presentation/pages/citas/mis_citas_screen.dart';
 import 'presentation/pages/onboarding/onboarding_screen.dart';
 import 'presentation/pages/auth/login_screen.dart';
-import 'presentation/pages/home/home_screen.dart';
 import 'presentation/pages/admin/admin_home_screen.dart';
 import 'presentation/pages/medico/medico_home_screen.dart';
 import 'presentation/pages/evaluacion/evaluacion_screen.dart';
@@ -130,10 +131,12 @@ class _AnsiedadAppState extends State<AnsiedadApp> {
       RestaurarSesionUseCase(authRepository),
     );
     final citasVM = CitasViewModel(citasRepository);
+    final agendaVM = AgendaUnayoeViewModel(citasRepository);
     authVM.onSessionReset = () {
       evaluationVM.limpiarSesion();
       medicoVM.limpiarSesion();
       citasVM.limpiarSesion();
+      agendaVM.limpiarSesion();
     };
     apiService.onUnauthorized = authVM.invalidarSesion;
     _providers = [
@@ -143,6 +146,7 @@ class _AnsiedadAppState extends State<AnsiedadApp> {
       ChangeNotifierProvider(create: (_) => evaluationVM, lazy: false),
       ChangeNotifierProvider(create: (_) => medicoVM, lazy: false),
       ChangeNotifierProvider(create: (_) => citasVM),
+      ChangeNotifierProvider(create: (_) => agendaVM),
       ChangeNotifierProvider(
         create: (_) => EscuelaViewModel(obtenerEscuelasUseCase),
       ),
@@ -197,7 +201,9 @@ class _AnsiedadAppState extends State<AnsiedadApp> {
             '/session': (_) => const SessionGate(),
             '/onboarding': (context) => const OnboardingScreen(),
             '/login': (context) => const LoginScreen(),
-            '/home': (context) => const SessionProtected(child: HomeScreen()),
+            '/home': (context) => const SessionProtected(child: HomePorRol()),
+            '/publicar-horarios': (context) =>
+                const SessionProtected(child: PublicarHorariosScreen()),
             '/admin-home': (context) =>
                 const SessionProtected(child: AdminHomeScreen()),
             '/medico-home': (context) =>

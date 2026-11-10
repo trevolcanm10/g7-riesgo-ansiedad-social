@@ -17,4 +17,19 @@ abstract class CitasRepository {
   Future<Cita> cancelar(int citaId);
 
   Future<Cita> reprogramar(int citaId, int slotId);
+
+  // --- Personal UNAYOE / administrador ---
+
+  /// Agenda del personal (el administrador ve todas). [estado] filtra.
+  Future<List<Cita>> agenda({String? estado});
+
+  /// Publica horarios de 30 min. [personalId] es obligatorio solo para admin.
+  Future<List<Horario>> publicarHorarios(
+    List<DateTime> inicios, {
+    int? personalId,
+  });
+
+  Future<Cita> cambiarEstado(int citaId, String estado);
+
+  Future<RiesgoInasistencia> riesgoInasistencia(int citaId);
 }

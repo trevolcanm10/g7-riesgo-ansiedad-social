@@ -26,4 +26,21 @@ class CitasRepositoryImpl implements CitasRepository {
   @override
   Future<Cita> reprogramar(int citaId, int slotId) =>
       _remote.reprogramar(citaId, slotId);
+
+  @override
+  Future<List<Cita>> agenda({String? estado}) => _remote.agenda(estado: estado);
+
+  @override
+  Future<List<Horario>> publicarHorarios(
+    List<DateTime> inicios, {
+    int? personalId,
+  }) => _remote.publicarHorarios(inicios, personalId: personalId);
+
+  @override
+  Future<Cita> cambiarEstado(int citaId, String estado) =>
+      _remote.cambiarEstado(citaId, estado);
+
+  @override
+  Future<RiesgoInasistencia> riesgoInasistencia(int citaId) =>
+      _remote.riesgoInasistencia(citaId);
 }
