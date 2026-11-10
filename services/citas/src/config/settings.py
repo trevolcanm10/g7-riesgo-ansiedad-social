@@ -15,7 +15,11 @@ PORT = int(os.environ.get("PORT", "3004"))
 JWT_SECRET = os.environ.get("JWT_SECRET", "")
 USE_IN_MEMORY = _bool("USE_IN_MEMORY", False)   # solo desarrollo: sin MySQL, datos se pierden
 
-DB_HOST = os.environ.get("DB_HOST", "")
+# Ruta a un artefacto de ml/artifacts (p. ej. ml/artifacts/no_show_logreg_v1.json).
+# Vacío = línea base por reglas. Si el archivo no carga, se usa la línea base.
+NO_SHOW_MODEL_PATH = os.environ.get("NO_SHOW_MODEL_PATH", "").strip()
+
+DB_HOST =os.environ.get("DB_HOST", "")
 DB_PORT = int(os.environ.get("DB_PORT", "3306"))
 DB_NAME = os.environ.get("DB_NAME", "")
 DB_USER = os.environ.get("DB_USER", "")

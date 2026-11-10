@@ -1,0 +1,6 @@
+# Solo para entrenar y evaluar el modelo de inasistencia (no se despliega).
+-r ../requirements.txt
+pandas>=2.2
+numpy>=2.0
+scikit-learn>=1.5
+pyreadr>=0.5

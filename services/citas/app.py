@@ -4,13 +4,27 @@ import logging
 from src.application.services import AppointmentService, SlotService
 from src.config import settings
 from src.infrastructure.jwt_token_service import JwtTokenService
+from src.infrastructure.logistic_no_show import LogisticNoShowPredictor
 from src.infrastructure.rule_based_no_show import RuleBasedNoShowPredictor
 from src.presentation.http import create_http_app
 
 
+def build_predictor(model_path: str = ""):
+    """Modelo entrenado si NO_SHOW_MODEL_PATH carga bien; si no, línea base por reglas."""
+    if model_path:
+        try:
+            predictor = LogisticNoShowPredictor(model_path)
+            logging.getLogger(__name__).info("Modelo de inasistencia: %s", predictor.MODEL)
+            return predictor
+        except Exception as exc:   # archivo ausente o artefacto inválido
+            logging.getLogger(__name__).warning(
+                "No se pudo cargar el modelo (%s); se usa la línea base por reglas", exc)
+    return RuleBasedNoShowPredictor()
+
+
 def create_app():
     tokens = JwtTokenService(settings.JWT_SECRET)
-    predictor = RuleBasedNoShowPredictor()
+    predictor = build_predictor(settings.NO_SHOW_MODEL_PATH)
 
     if settings.USE_IN_MEMORY:
         from src.infrastructure.in_memory import (
