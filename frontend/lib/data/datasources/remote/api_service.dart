@@ -148,6 +148,23 @@ class ApiService {
     return _procesarRespuesta(response);
   }
 
+  /// Realiza una petición PATCH
+  Future<Map<String, dynamic>> patch(
+    String url, {
+    Map<String, dynamic>? body,
+  }) async {
+    final session = (_token, _sessionVersion);
+    final response = await http
+        .patch(
+          Uri.parse(url),
+          headers: _headers(url),
+          body: body != null ? jsonEncode(body) : null,
+        )
+        .timeout(requestTimeout);
+    await _checkUnauthorized(response, session);
+    return _procesarRespuesta(response);
+  }
+
   /// Realiza una petición DELETE
   Future<Map<String, dynamic>> delete(String url) async {
     final session = (_token, _sessionVersion);

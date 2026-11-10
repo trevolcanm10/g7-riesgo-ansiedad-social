@@ -188,6 +188,33 @@ class AppConstants {
       '$_baseUrl/api/v1/evaluaciones/historial';
 
   // ==========================================
+  // ENDPOINTS DE CITAS (microservicio Citas, prefijo /c en APIM)
+  // ==========================================
+  static const String _citasPort = '3004';
+  static const String _citasBaseUrl = String.fromEnvironment('CITAS_BASE_URL');
+
+  /// Origen del microservicio Citas. Con APIM usa `<APIM>/c`; sin APIM usa
+  /// CITAS_BASE_URL o el host local de la plataforma (puerto 3004).
+  static String get citasOrigin {
+    if (gateway.enabled) return gateway.citasOrigin;
+    final configurada = _citasBaseUrl.replaceAll(RegExp(r'/+$'), '');
+    if (configurada.isNotEmpty) return configurada;
+    try {
+      if (Platform.isAndroid) return 'http://10.0.2.2:$_citasPort';
+    } catch (_) {
+      // Sin dart:io (web): se usa localhost.
+    }
+    return 'http://localhost:$_citasPort';
+  }
+
+  static String get citasSlots => '$citasOrigin/slots';
+  static String get citas => '$citasOrigin/appointments';
+  static String get citasMias => '$citasOrigin/appointments/me';
+  static String citaCancelar(int id) => '$citasOrigin/appointments/$id/cancel';
+  static String citaReprogramar(int id) =>
+      '$citasOrigin/appointments/$id/reschedule';
+
+  // ==========================================
   // ENDPOINTS DE HÁBITOS
   // ==========================================
   static String get habitos => '$_baseUrl/habitos';
