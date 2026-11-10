@@ -1,0 +1,266 @@
+openapi: 3.0.3
+info:
+  title: Citas Service API
+  version: 0.1.0
+  description: >
+    Microservicio de agendamiento de citas con UNAYOE. Valida el mismo JWT que emite Users.
+    Citas de 30 minutos fijos. Fechas en ISO 8601 con zona horaria; las respuestas van en UTC (Z).
+servers:
+  - url: https://apim-g7-riesgo-ansiedad.azure-api.net/c
+    description: Vía API Management (prefijo /c por confirmar con el equipo)
+tags:
+  - name: Slots
+  - name: Appointments
+  - name: Health
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Estado del servicio y de MySQL
+      responses:
+        "200": { description: OK }
+        "503": { description: Base de datos no disponible }
+  /slots:
+    get:
+      tags: [Slots]
+      summary: Horarios libres
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { name: staffUserId, in: query, schema: { type: integer } }
+      responses:
+        "200":
+          description: Lista de horarios LIBRES futuros (por defecto, próximos 14 días; máximo 60)
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Slot" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Slots]
+      summary: Publicar disponibilidad (PERSONAL_UNAYOE, ADMINISTRADOR)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [startAts]
+              properties:
+                startAts:
+                  type: array
+                  maxItems: 50
+                  items: { type: string, format: date-time }
+                staffUserId:
+                  type: integer
+                  description: Obligatorio solo para ADMINISTRADOR
+            example: { startAts: ["2026-11-20T10:00:00-05:00", "2026-11-20T10:30:00-05:00"] }
+      responses:
+        "201":
+          description: Horarios creados
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Slot" } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /appointments:
+    post:
+      tags: [Appointments]
+      summary: Solicitar una cita (ESTUDIANTE)
+      description: Máximo 2 citas activas por estudiante. La prioridad ALTA es informativa.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [slotId]
+              properties:
+                slotId: { type: integer }
+                priority: { type: string, enum: [NORMAL, ALTA], default: NORMAL }
+                reason: { type: string, maxLength: 200 }
+      responses:
+        "201":
+          description: Cita creada en estado SOLICITADA
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Appointment" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: Horario no encontrado }
+        "409": { $ref: "#/components/responses/Conflict" }
+    get:
+      tags: [Appointments]
+      summary: Agenda (PERSONAL_UNAYOE ve la propia; ADMINISTRADOR ve todas)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: status, in: query, schema: { $ref: "#/components/schemas/AppointmentStatus" } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+      responses:
+        "200":
+          description: Citas ordenadas por fecha
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Appointment" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /appointments/me:
+    get:
+      tags: [Appointments]
+      summary: Mis citas (ESTUDIANTE)
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Citas del estudiante autenticado
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Appointment" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /appointments/{id}/cancel:
+    patch:
+      tags: [Appointments]
+      summary: Cancelar (dueño con 12 h de anticipación, o UNAYOE/ADMIN en cualquier momento)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { reason: { type: string, maxLength: 200 } } }
+      responses:
+        "200":
+          description: Cita cancelada y horario liberado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Appointment" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: Cita no encontrada }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /appointments/{id}/reschedule:
+    patch:
+      tags: [Appointments]
+      summary: Reprogramar (ESTUDIANTE, con 12 h de anticipación)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [slotId]
+              properties: { slotId: { type: integer } }
+      responses:
+        "200":
+          description: Cita movida al nuevo horario; vuelve a SOLICITADA
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Appointment" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { description: Cita u horario no encontrado }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /appointments/{id}/status:
+    patch:
+      tags: [Appointments]
+      summary: Cambiar estado (PERSONAL_UNAYOE, ADMINISTRADOR)
+      description: >
+        Transiciones: SOLICITADA→CONFIRMADA; CONFIRMADA→ATENDIDA|NO_ASISTIO (solo cuando la cita ya ocurrió).
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties: { status: { $ref: "#/components/schemas/AppointmentStatus" } }
+      responses:
+        "200":
+          description: Estado actualizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Appointment" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: Cita no encontrada }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /appointments/{id}/no-show-risk:
+    get:
+      tags: [Appointments]
+      summary: Probabilidad orientativa de inasistencia (PERSONAL_UNAYOE, ADMINISTRADOR)
+      description: >
+        Línea base por reglas (v0). Solo sirve para decidir recordatorios; nunca para negar
+        ni retrasar una cita. No usa la prioridad ni datos clínicos.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: Estimación
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  appointmentId: { type: integer }
+                  noShowProbability: { type: number, minimum: 0, maximum: 1 }
+                  factors: { type: array, items: { type: string } }
+                  model: { type: string, example: rule-based-baseline-v0 }
+                  note: { type: string }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: Cita no encontrada }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    Id: { name: id, in: path, required: true, schema: { type: integer } }
+  responses:
+    BadRequest:
+      description: Datos inválidos
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    Unauthorized:
+      description: Token ausente, inválido o expirado
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    Forbidden:
+      description: Rol sin permiso
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    Conflict:
+      description: Regla de negocio incumplida (horario ocupado, límite de citas, anticipación, transición inválida)
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+  schemas:
+    Error:
+      type: object
+      properties: { message: { type: string } }
+    AppointmentStatus:
+      type: string
+      enum: [SOLICITADA, CONFIRMADA, ATENDIDA, NO_ASISTIO, CANCELADA]
+    Slot:
+      type: object
+      properties:
+        id: { type: integer }
+        staffUserId: { type: integer }
+        startAt: { type: string, format: date-time }
+        endAt: { type: string, format: date-time }
+        status: { type: string, enum: [LIBRE, RESERVADO, BLOQUEADO] }
+    Appointment:
+      type: object
+      properties:
+        id: { type: integer }
+        studentUserId: { type: integer }
+        staffUserId: { type: integer }
+        slotId: { type: integer }
+        startAt: { type: string, format: date-time }
+        endAt: { type: string, format: date-time }
+        status: { $ref: "#/components/schemas/AppointmentStatus" }
+        priority: { type: string, enum: [NORMAL, ALTA] }
+        reason: { type: string, nullable: true }
+        rescheduleCount: { type: integer }
+        cancelReason: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
