@@ -193,12 +193,13 @@ class AppConstants {
   static const String _citasPort = '3004';
   static const String _citasBaseUrl = String.fromEnvironment('CITAS_BASE_URL');
 
-  /// Origen del microservicio Citas. Con APIM usa `<APIM>/c`; sin APIM usa
-  /// CITAS_BASE_URL o el host local de la plataforma (puerto 3004).
+  /// Origen del microservicio Citas. CITAS_BASE_URL manda (util para probar un
+  /// Citas local aunque el resto vaya por APIM); si no, con APIM usa `<APIM>/c`;
+  /// si tampoco, el host local de la plataforma (puerto 3004).
   static String get citasOrigin {
-    if (gateway.enabled) return gateway.citasOrigin;
     final configurada = _citasBaseUrl.replaceAll(RegExp(r'/+$'), '');
     if (configurada.isNotEmpty) return configurada;
+    if (gateway.enabled) return gateway.citasOrigin;
     try {
       if (Platform.isAndroid) return 'http://10.0.2.2:$_citasPort';
     } catch (_) {
