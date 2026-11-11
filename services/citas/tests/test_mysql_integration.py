@@ -49,8 +49,12 @@ def _db():
 
 
 def _raw(cursor_class=pymysql.cursors.Cursor):
+    kwargs = dict(CFG)
+    if SSL:   # mismo criterio que Database: TLS sin verificar el certificado (TiDB Cloud lo exige)
+        kwargs.update(ssl={"fake_flag_to_enable_tls": True},
+                      ssl_verify_cert=False, ssl_verify_identity=False)
     return pymysql.connect(database=NAME, autocommit=True, charset="utf8mb4",
-                           cursorclass=cursor_class, **CFG)
+                           cursorclass=cursor_class, **kwargs)
 
 
 def _apply_schema_and_clean():
