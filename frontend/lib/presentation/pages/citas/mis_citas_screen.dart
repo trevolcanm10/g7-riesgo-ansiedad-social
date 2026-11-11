@@ -67,10 +67,8 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Mis citas')),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          await Navigator.pushNamed(context, '/agendar-cita');
-          if (mounted) context.read<CitasViewModel>().cargarMisCitas();
-        },
+        // Al volver no se recarga: el ViewModel ya aplico la cita nueva (menos peticiones).
+        onPressed: () => Navigator.pushNamed(context, '/agendar-cita'),
         icon: const Icon(Icons.add),
         label: const Text('Agendar cita'),
       ),
@@ -127,16 +125,11 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
                         puedeModificar: c.puedeModificar(ahora),
                         ocupado: vm.guardando,
                         onCancelar: () => _cancelar(c),
-                        onReprogramar: () async {
-                          await Navigator.pushNamed(
-                            context,
-                            '/agendar-cita',
-                            arguments: c,
-                          );
-                          if (mounted) {
-                            context.read<CitasViewModel>().cargarMisCitas();
-                          }
-                        },
+                        onReprogramar: () => Navigator.pushNamed(
+                          context,
+                          '/agendar-cita',
+                          arguments: c,
+                        ),
                       ),
                     if (anteriores.isNotEmpty) const _Titulo('Anteriores'),
                     for (final c in anteriores)

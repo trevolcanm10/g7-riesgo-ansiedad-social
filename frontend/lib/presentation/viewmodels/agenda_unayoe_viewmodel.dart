@@ -87,10 +87,9 @@ class AgendaUnayoeViewModel extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      await accion();
+      final cita = await accion();
       if (sesion != _sessionVersion) return false;
-      _agenda = await _repository.agenda(estado: _filtro);
-      if (sesion != _sessionVersion) return false;
+      _aplicar(cita);
       _guardando = false;
       notifyListeners();
       return true;
@@ -100,6 +99,21 @@ class AgendaUnayoeViewModel extends ChangeNotifier {
       _guardando = false;
       notifyListeners();
       return false;
+    }
+  }
+
+  /// Aplica la cita devuelta por el servidor sin pedir la agenda otra vez (una sola peticion
+  /// por accion; el APIM limita las peticiones). Si ya no cumple el filtro, sale de la lista.
+  void _aplicar(Cita cita) {
+    final resto = _agenda.where((c) => c.id != cita.id).toList();
+    final i = _agenda.indexWhere((c) => c.id == cita.id);
+    final cumpleFiltro = _filtro == null || cita.estado == _filtro;
+    if (!cumpleFiltro) {
+      _agenda = resto;
+    } else if (i == -1) {
+      _agenda = [...resto, cita];
+    } else {
+      _agenda = [..._agenda]..[i] = cita;
     }
   }
 

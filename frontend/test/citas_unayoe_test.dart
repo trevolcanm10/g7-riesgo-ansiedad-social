@@ -7,6 +7,7 @@ import 'package:ansiedad_ml_app/domain/entities/cita.dart';
 import 'package:ansiedad_ml_app/domain/repositories/citas_repository.dart';
 import 'package:ansiedad_ml_app/domain/services/horarios_service.dart';
 import 'package:ansiedad_ml_app/presentation/viewmodels/agenda_unayoe_viewmodel.dart';
+import 'package:ansiedad_ml_app/presentation/viewmodels/citas_viewmodel.dart';
 
 String _jwt(Map<String, dynamic> payload) {
   String b64(Object o) =>
@@ -28,9 +29,13 @@ class _FakeRepo implements CitasRepository {
     prioridad: 'NORMAL',
   );
 
+  /// Simula que las lecturas (recarga de listas) fallan, p. ej. por el límite de peticiones.
+  bool fallaLecturas = false;
+
   @override
   Future<List<Cita>> agenda({String? estado}) async {
     llamadas.add('agenda:$estado');
+    if (fallaLecturas) throw Exception('429');
     return citas;
   }
 
@@ -71,10 +76,20 @@ class _FakeRepo implements CitasRepository {
         modelo: 'rule-based-baseline-v0',
       );
 
+  List<Horario> horarios = [];
+
   @override
-  Future<List<Horario>> horariosLibres() async => [];
+  Future<List<Horario>> horariosLibres() async {
+    if (fallaLecturas) throw Exception('429');
+    llamadas.add('horarios');
+    return horarios;
+  }
+
   @override
-  Future<List<Cita>> misCitas() async => [];
+  Future<List<Cita>> misCitas() async {
+    if (fallaLecturas) throw Exception('429');
+    return [];
+  }
   @override
   Future<Cita> reprogramar(int citaId, int slotId) async => _c(citaId, 'X');
   @override
@@ -152,15 +167,61 @@ void main() {
     });
   });
 
+  group('CitasViewModel', () {
+    Horario h(int id) => Horario(
+      id: id,
+      staffUserId: 1,
+      inicio: DateTime.utc(2026, 11, 20, 15),
+      fin: DateTime.utc(2026, 11, 20, 15, 30),
+    );
+
+    test('solicitar aplica la cita y quita el horario sin pedir nada mas', () async {
+      final repo = _FakeRepo()..horarios = [h(1), h(2)];
+      final vm = CitasViewModel(repo);
+      await vm.cargarHorarios();
+      final ok = await vm.solicitar(slotId: 1, prioridad: 'NORMAL');
+      expect(ok, isTrue);
+      expect(vm.horarios.map((x) => x.id), [2]);
+      expect(vm.citas.single.estado, Cita.solicitada);
+      expect(repo.llamadas, ['horarios'], reason: 'solo la carga inicial, sin recarga');
+    });
+
+    test('cancelar reemplaza la cita por la que devuelve el servidor', () async {
+      final repo = _FakeRepo()..horarios = [h(1)];
+      final vm = CitasViewModel(repo);
+      await vm.solicitar(slotId: 1, prioridad: 'NORMAL');
+      expect(await vm.cancelar(1), isTrue);
+      expect(vm.citas.single.estado, Cita.cancelada);
+      expect(vm.citas, hasLength(1));
+    });
+
+    test('con las lecturas caidas (429) la escritura sigue siendo exito', () async {
+      final repo = _FakeRepo()..fallaLecturas = true;
+      final vm = CitasViewModel(repo);
+      final ok = await vm.solicitar(slotId: 1, prioridad: 'NORMAL');
+      expect(ok, isTrue);
+      expect(vm.error, isNull);
+      expect(vm.guardando, isFalse);
+    });
+  });
+
   group('AgendaUnayoeViewModel', () {
-    test('cambiar estado refresca la agenda con el filtro vigente', () async {
-      final repo = _FakeRepo();
+    test('cambiar estado actualiza la lista local sin pedir la agenda otra vez', () async {
+      final repo = _FakeRepo()..citas = [repo0()];
+      final vm = AgendaUnayoeViewModel(repo);
+      await vm.cargarAgenda();
+      expect(await vm.cambiarEstado(1, Cita.confirmada), isTrue);
+      expect(vm.agenda.single.estado, Cita.confirmada);
+      expect(repo.llamadas, ['agenda:null', 'estado:1:CONFIRMADA']);
+    });
+
+    test('si la cita deja de cumplir el filtro vigente, sale de la lista', () async {
+      final repo = _FakeRepo()..citas = [repo0()];
       final vm = AgendaUnayoeViewModel(repo);
       await vm.cargarAgenda(filtro: Cita.solicitada);
-      final ok = await vm.cambiarEstado(3, Cita.confirmada);
-      expect(ok, isTrue);
-      expect(vm.agenda.single.estado, Cita.confirmada);
-      expect(repo.llamadas.last, 'agenda:SOLICITADA');
+      expect(vm.agenda, hasLength(1));
+      await vm.cambiarEstado(1, Cita.confirmada);
+      expect(vm.agenda, isEmpty);
     });
 
     test('un error del servicio se muestra y no refresca', () async {
@@ -181,6 +242,16 @@ void main() {
       );
       expect(await vm.publicar(inicios, personalId: 9), 2);
       expect(repo.llamadas.single, 'publicar:2:9');
+    });
+
+    test('si la escritura se aplica pero la recarga falla, sigue siendo exito', () async {
+      final repo = _FakeRepo()..fallaLecturas = true;
+      final vm = AgendaUnayoeViewModel(repo);
+      final ok = await vm.cambiarEstado(3, Cita.confirmada);
+      expect(ok, isTrue);
+      expect(vm.error, isNull);
+      expect(vm.guardando, isFalse);
+      expect(repo.llamadas.first, 'estado:3:CONFIRMADA');
     });
 
     test('limpiarSesion vacia el estado', () async {

@@ -41,13 +41,33 @@ class CitasViewModel extends ChangeNotifier {
       prioridad: prioridad,
       motivo: motivo,
     ),
+    _aplicarYQuitarHorario,
   );
 
   Future<bool> cancelar(int citaId) =>
-      _guardar(() => _repository.cancelar(citaId));
+      _guardar(() => _repository.cancelar(citaId), _reemplazar);
 
-  Future<bool> reprogramar(int citaId, int slotId) =>
-      _guardar(() => _repository.reprogramar(citaId, slotId));
+  Future<bool> reprogramar(int citaId, int slotId) => _guardar(
+    () => _repository.reprogramar(citaId, slotId),
+    _aplicarYQuitarHorario,
+  );
+
+  /// Pone la cita devuelta por el servidor en la lista local (o la agrega).
+  void _reemplazar(Cita cita) {
+    final i = _citas.indexWhere((c) => c.id == cita.id);
+    _citas = [..._citas];
+    if (i == -1) {
+      _citas.add(cita);
+    } else {
+      _citas[i] = cita;
+    }
+  }
+
+  /// Ademas, el horario que la cita ocupa ya no esta libre.
+  void _aplicarYQuitarHorario(Cita cita) {
+    _reemplazar(cita);
+    _horarios = _horarios.where((h) => h.id != cita.slotId).toList();
+  }
 
   Future<void> _cargar(Future<void> Function() accion) async {
     final sesion = _sessionVersion;
@@ -65,23 +85,23 @@ class CitasViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Ejecuta una escritura y, si funciona, refresca ambas listas.
-  Future<bool> _guardar(Future<Cita> Function() accion) async {
+  /// Ejecuta una escritura y aplica la cita devuelta por el servidor a las
+  /// listas locales, sin volver a pedirlas: una sola peticion por accion (el
+  /// APIM limita las peticiones y recargar tambien podia fallar tras una
+  /// escritura ya aplicada). "Tirar para actualizar" sigue recargando todo.
+  Future<bool> _guardar(
+    Future<Cita> Function() accion,
+    void Function(Cita) aplicar,
+  ) async {
     if (_guardando) return false;
     final sesion = _sessionVersion;
     _guardando = true;
     _error = null;
     notifyListeners();
     try {
-      await accion();
+      final cita = await accion();
       if (sesion != _sessionVersion) return false;
-      final resultados = await Future.wait([
-        _repository.misCitas(),
-        _repository.horariosLibres(),
-      ]);
-      if (sesion != _sessionVersion) return false;
-      _citas = resultados[0] as List<Cita>;
-      _horarios = resultados[1] as List<Horario>;
+      aplicar(cita);
       _guardando = false;
       notifyListeners();
       return true;

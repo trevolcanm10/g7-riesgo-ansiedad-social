@@ -133,6 +133,8 @@ class CitasRemoteDataSource {
         return 'Tu sesion expiro. Vuelve a iniciar sesion.';
       case 403:
         return 'No tienes permiso para esta accion.';
+      case 429:
+        return 'Hay demasiadas solicitudes seguidas. Espera unos segundos e intentalo de nuevo.';
       default:
         if (e.statusCode >= 500) {
           return 'El servicio de citas no esta disponible. Intentalo mas tarde.';
