@@ -66,6 +66,34 @@ python -m unittest tests.test_mysql_integration
 El esquema `db/schema.sql` lo aplica la propia prueba. La conexión con TLS (`DB_SSL=true`, como en
 Azure) **no** se ha probado todavía.
 
+## Despliegue en Render
+
+Los demás servicios (Users, Evaluación, Predicción) están en Render y se exponen por el APIM; Citas va
+igual, como un servicio web más. Archivo: [`render.yaml`](render.yaml).
+
+**Con Blueprint:** Render > New > Blueprint > elegir el repositorio y la rama; si pide la ruta del
+archivo, `services/citas/render.yaml`. Render pedirá los valores secretos al crear el servicio.
+
+**A mano** (equivalente): Web Service con Root Directory `services/citas`, Build
+`pip install -r requirements.txt`, Start
+`gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 60 "app:create_app()"`, Health Check Path `/health`
+y Python 3.11 o más.
+
+Variables de entorno:
+
+| Variable | Valor |
+|---|---|
+| `JWT_SECRET` | El **mismo** que usa Users (variable del servicio Users en Render) |
+| `USE_IN_MEMORY` | `false` |
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | La base `citas_db` (crearla antes y ejecutar `db/schema.sql`) |
+| `DB_SSL` | `true` |
+| `NO_SHOW_MODEL_PATH` | Opcional: `ml/artifacts/no_show_logreg_v1.json` |
+
+Después de desplegar: `GET /health` debe responder `200` con `"database": "OK"`. Luego se agrega la ruta
+`/c` en el APIM apuntando a la URL de Render y se verifica con el contrato de
+[`openapi/citas.yaml`](../../openapi/citas.yaml). El plan gratuito de Render duerme el servicio tras un
+rato sin tráfico: la primera petición puede tardar.
+
 ## Estructura
 
 ```
