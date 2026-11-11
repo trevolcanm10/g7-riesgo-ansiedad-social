@@ -5,6 +5,8 @@ from datetime import datetime, timedelta, timezone
 import jwt
 
 from src.application.services import AppointmentService, SlotService
+from src.domain.model import AppointmentStatus
+from src.domain.ports import NoShowPredictor
 from src.infrastructure.in_memory import InMemoryAppointmentRepository, InMemorySlotRepository
 from src.infrastructure.jwt_token_service import JwtTokenService
 from src.infrastructure.rule_based_no_show import RuleBasedNoShowPredictor
@@ -59,6 +61,7 @@ class CitasApiTest(unittest.TestCase):
         r = self.c.get("/health")
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.get_json()["service"], "citas")
+        self.assertEqual(r.get_json()["noShowModel"], "rule-based-baseline-v0")
 
     def test_requires_token(self):
         self.assertEqual(self.c.get("/slots").status_code, 401)
@@ -221,6 +224,106 @@ class CitasApiTest(unittest.TestCase):
         p1 = self.c.get(f"/appointments/{normal['id']}/no-show-risk", headers=self.staff).get_json()
         p2 = self.c.get(f"/appointments/{alta['id']}/no-show-risk", headers=self.staff).get_json()
         self.assertEqual(p1["noShowProbability"], p2["noShowProbability"])
+
+    def test_no_show_risk_only_for_active_appointments(self):
+        slot = self.publish(2)[0]
+        appt = self.book(slot["id"]).get_json()
+        self.c.patch(f"/appointments/{appt['id']}/cancel", json={}, headers=self.staff)
+        r = self.c.get(f"/appointments/{appt['id']}/no-show-risk", headers=self.staff)
+        self.assertEqual(r.status_code, 409)
+
+    def _capture_service(self):
+        captured = {}
+
+        class Capture(NoShowPredictor):
+            MODEL = "capture"
+
+            def predict(self, features):
+                captured.update(features)
+                return {"probability": 0.1, "factors": [], "model": "capture"}
+
+        clock = lambda: self.now
+        return (SlotService(self.slots_repo, clock),
+                AppointmentService(self.slots_repo, self.apps_repo, Capture(), clock), captured)
+
+    def test_risk_features_use_calendar_days_in_lima(self):
+        # Agendada a las 23:00 (Lima) del 9-nov para las 09:00 del 10-nov = 1 día, no "mismo día".
+        self.now = datetime(2026, 11, 10, 4, 0, tzinfo=timezone.utc)
+        slots, appts, captured = self._capture_service()
+        slot = slots.publish(10, "PERSONAL_UNAYOE",
+                             [datetime(2026, 11, 10, 14, 0, tzinfo=timezone.utc)], None)[0]
+        appt = appts.request(1, slot.id, None, None)
+        appts.no_show_risk(appt.id, 10, "PERSONAL_UNAYOE")
+        self.assertEqual(captured["lead_days"], 1)
+        self.assertEqual(captured["hour_local"], 9)
+
+    def test_risk_history_counts_only_earlier_appointments(self):
+        slots, appts, captured = self._capture_service()
+        early = slots.publish(10, "PERSONAL_UNAYOE", [self.now + timedelta(hours=48)], None)[0]
+        first = appts.request(1, early.id, None, None)
+        self.now += timedelta(hours=60)                       # la 1.ª cita ya ocurrió
+        appts.change_status(first.id, 10, "PERSONAL_UNAYOE", "CONFIRMADA")
+        appts.change_status(first.id, 10, "PERSONAL_UNAYOE", "NO_ASISTIO")
+        late = slots.publish(10, "PERSONAL_UNAYOE", [self.now + timedelta(hours=48)], None)[0]
+        second = appts.request(1, late.id, None, None)
+        appts.no_show_risk(second.id, 10, "PERSONAL_UNAYOE")
+        self.assertEqual(captured["prior_no_shows"], 1)       # solo la anterior, no la actual
+
+    # ---------------- concurrencia (bloqueo optimista) ----------------
+    def _lose_race(self, appointment_id):
+        """La próxima lectura de la cita devuelve una copia vieja: otra operación ya la canceló."""
+        real_get = self.apps_repo.get
+        winner = real_get(appointment_id)
+        winner.status = AppointmentStatus.CANCELADA
+        self.apps_repo.update(winner)
+        stale = real_get(appointment_id)
+        stale.status = AppointmentStatus.SOLICITADA
+        self.apps_repo.get = lambda _id: stale
+        self.addCleanup(setattr, self.apps_repo, "get", real_get)
+
+    def test_reschedule_that_loses_a_race_releases_the_new_slot(self):
+        a, b = self.publish(48, 72)
+        appt = self.book(a["id"]).get_json()
+        self._lose_race(appt["id"])
+        r = self.c.patch(f"/appointments/{appt['id']}/reschedule", json={"slotId": b["id"]},
+                         headers=self.student)
+        self.assertEqual(r.status_code, 409)
+        free = [s["id"] for s in self.c.get("/slots", headers=self.student).get_json()]
+        self.assertIn(b["id"], free, "el horario nuevo no debe quedar reservado")
+
+    def test_cancel_and_status_that_lose_a_race_return_conflict(self):
+        slot = self.publish(2)[0]
+        appt = self.book(slot["id"]).get_json()
+        self._lose_race(appt["id"])
+        r = self.c.patch(f"/appointments/{appt['id']}/status", json={"status": "CONFIRMADA"},
+                         headers=self.staff)
+        self.assertEqual(r.status_code, 409)
+
+    # ---------------- validaciones de entrada ----------------
+    def test_staff_user_id_query_is_validated(self):
+        for bad in ("abc", "²", "0", "-3", "1.5"):
+            r = self.c.get(f"/slots?staffUserId={bad}", headers=self.student)
+            self.assertEqual(r.status_code, 400, bad)
+        self.assertEqual(self.c.get("/slots?staffUserId=10", headers=self.student).status_code, 200)
+
+    def test_extreme_dates_are_rejected_not_500(self):
+        r = self.c.post("/slots", json={"startAts": ["0001-01-01T00:00:00+05:00"]}, headers=self.staff)
+        self.assertEqual(r.status_code, 400)
+        r = self.c.get("/slots?from=9999-12-31T23:59:59-05:00", headers=self.student)
+        self.assertEqual(r.status_code, 400)
+
+    def test_token_without_expiry_is_rejected(self):
+        no_exp = jwt.encode({"userId": 1, "role": "ESTUDIANTE"}, SECRET, algorithm="HS256")
+        r = self.c.get("/slots", headers={"Authorization": f"Bearer {no_exp}"})
+        self.assertEqual(r.status_code, 401)
+
+    def test_publish_conflict_is_all_or_nothing(self):
+        self.publish(48)
+        dup = self.c.post("/slots", json={"startAts": [iso(self.now + timedelta(hours=47)),
+                                                       iso(self.now + timedelta(hours=48))]},
+                          headers=self.staff)
+        self.assertEqual(dup.status_code, 409)
+        self.assertEqual(len(self.c.get("/slots", headers=self.student).get_json()), 1)
 
     def test_malformed_json(self):
         r = self.c.post("/appointments", data="no es json", content_type="application/json",

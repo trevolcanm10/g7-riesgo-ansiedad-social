@@ -18,7 +18,17 @@ paths:
       tags: [Health]
       summary: Estado del servicio y de MySQL
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK. Incluye el modelo de inasistencia en uso (noShowModel).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service: { type: string, example: citas }
+                  status: { type: string, example: OK }
+                  database: { type: string, example: OK }
+                  noShowModel: { type: string, example: logreg-calibrated-v1 }
         "503": { description: Base de datos no disponible }
   /slots:
     get:
@@ -35,10 +45,12 @@ paths:
           content:
             application/json:
               schema: { type: array, items: { $ref: "#/components/schemas/Slot" } }
+        "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
     post:
       tags: [Slots]
       summary: Publicar disponibilidad (PERSONAL_UNAYOE, ADMINISTRADOR)
+      description: Todo o nada. Si algún horario ya existe (también si otra solicitud se adelantó), responde 409 y no crea ninguno.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -196,8 +208,10 @@ paths:
       tags: [Appointments]
       summary: Probabilidad orientativa de inasistencia (PERSONAL_UNAYOE, ADMINISTRADOR)
       description: >
-        Línea base por reglas (v0). Solo sirve para decidir recordatorios; nunca para negar
-        ni retrasar una cita. No usa la prioridad ni datos clínicos.
+        Línea base por reglas o modelo entrenado (ver noShowModel en /health). Solo sirve para
+        decidir recordatorios; nunca para negar ni retrasar una cita. No usa la prioridad ni
+        datos clínicos. Solo para citas activas (SOLICITADA o CONFIRMADA); el historial cuenta
+        únicamente citas anteriores del estudiante, sin la evaluada.
       security: [{ bearerAuth: [] }]
       parameters: [{ $ref: "#/components/parameters/Id" }]
       responses:
@@ -215,6 +229,7 @@ paths:
                   note: { type: string }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { description: Cita no encontrada }
+        "409": { $ref: "#/components/responses/Conflict" }
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
@@ -231,7 +246,7 @@ components:
       description: Rol sin permiso
       content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
     Conflict:
-      description: Regla de negocio incumplida (horario ocupado, límite de citas, anticipación, transición inválida)
+      description: Regla de negocio incumplida o la cita cambió mientras se modificaba (horario ocupado, límite de citas, anticipación, transición inválida, cita inactiva)
       content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
   schemas:
     Error:

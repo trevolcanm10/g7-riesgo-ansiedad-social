@@ -12,6 +12,9 @@ from src.domain.ports import AppointmentRepository, NoShowPredictor, SlotReposit
 
 Clock = Callable[[], datetime]
 
+LIMA = timezone(timedelta(hours=-5))   # America/Lima (sin horario de verano)
+_CHANGED_MEANWHILE = "La cita cambió mientras la modificabas. Actualiza e inténtalo de nuevo"
+
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
@@ -52,7 +55,8 @@ class SlotService:
                 raise ValidationError("Los horarios no deben tener segundos")
             if self._slots.exists(staff_id, start):
                 raise ConflictError(f"Ya existe un horario en {start.isoformat()}")
-        return [self._slots.add(Slot(staff_user_id=staff_id, start_at=s)) for s in unique]
+        # Todo o nada; si otra solicitud se adelantó con el mismo horario, lanza ConflictError (409).
+        return self._slots.add_many([Slot(staff_user_id=staff_id, start_at=s) for s in unique])
 
     def list_free(self, start: datetime | None, end: datetime | None,
                   staff_user_id: int | None) -> list[Slot]:
@@ -73,6 +77,11 @@ class AppointmentService:
         self._apps = appointments
         self._predictor = predictor
         self._clock = clock
+
+    @property
+    def model_name(self) -> str:
+        """Modelo de inasistencia en uso (se expone en /health para detectar degradaciones)."""
+        return getattr(self._predictor, "MODEL", "desconocido")
 
     # ---- helpers -------------------------------------------------------
     def _get_visible(self, appointment_id: int, actor_id: int, actor_role: str) -> Appointment:
@@ -141,11 +150,13 @@ class AppointmentService:
         appt = self._get_visible(appointment_id, actor_id, actor_role)
         self._check_student_can_change(appt, actor_role)
         now = self._clock()
+        seen_status, seen_slot = appt.status, appt.slot_id
         appt.status = AppointmentStatus.CANCELADA
         appt.cancelled_by = actor_id
         appt.cancel_reason = (reason or "").strip()[:MAX_REASON_LENGTH] or None
         appt.updated_at = now
-        self._apps.update(appt)
+        if not self._apps.update(appt, expect_status=seen_status, expect_slot_id=seen_slot):
+            raise ConflictError(_CHANGED_MEANWHILE)
         self._slots.release(appt.slot_id)
         self._apps.add_event(appt.id, "CANCELADA", actor_id, now)
         return appt
@@ -166,16 +177,19 @@ class AppointmentService:
             raise ValidationError("Elige un horario distinto al actual")
         if not self._slots.reserve(new_slot_id):
             raise ConflictError("El horario ya no está disponible")
-        old_slot_id = appt.slot_id
+        old_slot_id, seen_status = appt.slot_id, appt.status
         appt.slot_id, appt.staff_user_id, appt.start_at = new_slot.id, new_slot.staff_user_id, new_slot.start_at
         appt.status = AppointmentStatus.SOLICITADA
         appt.reschedule_count += 1
         appt.updated_at = now
         try:
-            self._apps.update(appt)
+            saved = self._apps.update(appt, expect_status=seen_status, expect_slot_id=old_slot_id)
         except Exception:
             self._slots.release(new_slot_id)
             raise
+        if not saved:       # otra operación (cancelar, otra reprogramación) se adelantó
+            self._slots.release(new_slot_id)
+            raise ConflictError(_CHANGED_MEANWHILE)
         self._slots.release(old_slot_id)
         self._apps.add_event(appt.id, "REPROGRAMADA", actor_id, now)
         return appt
@@ -194,9 +208,11 @@ class AppointmentService:
         now = self._clock()
         if target in (AppointmentStatus.ATENDIDA, AppointmentStatus.NO_ASISTIO) and now < appt.start_at:
             raise ConflictError("La cita todavía no ocurrió")
+        seen_status = appt.status
         appt.status = target
         appt.updated_at = now
-        self._apps.update(appt)
+        if not self._apps.update(appt, expect_status=seen_status):
+            raise ConflictError(_CHANGED_MEANWHILE)
         self._apps.add_event(appt.id, target.value, actor_id, now)
         return appt
 
@@ -204,13 +220,19 @@ class AppointmentService:
         if not _is_staff(actor_role):
             raise ForbiddenError("No tienes permisos para realizar esta operación")
         appt = self._get_visible(appointment_id, actor_id, actor_role)
+        if not appt.is_active:
+            raise ConflictError("Solo se estima la inasistencia de citas activas")
+        start_local, created_local = appt.start_at.astimezone(LIMA), appt.created_at.astimezone(LIMA)
+        # Mismas definiciones que en el entrenamiento: anticipación en DÍAS CALENDARIO (Lima) e
+        # historial = citas anteriores del estudiante, sin contar la que se evalúa.
+        prior = dict(before=appt.start_at, exclude_id=appt.id)
         features = {
-            "lead_days": max((appt.start_at - appt.created_at).total_seconds() / 86400, 0),
-            "hour_local": (appt.start_at - timedelta(hours=5)).hour,   # America/Lima (UTC-5)
+            "lead_days": max((start_local.date() - created_local.date()).days, 0),
+            "hour_local": start_local.hour,
             "prior_no_shows": self._apps.count_by_status(
-                appt.student_user_id, AppointmentStatus.NO_ASISTIO.value),
+                appt.student_user_id, AppointmentStatus.NO_ASISTIO.value, **prior),
             "prior_cancellations": self._apps.count_by_status(
-                appt.student_user_id, AppointmentStatus.CANCELADA.value),
+                appt.student_user_id, AppointmentStatus.CANCELADA.value, **prior),
             "reschedule_count": appt.reschedule_count,
         }
         result = self._predictor.predict(features)

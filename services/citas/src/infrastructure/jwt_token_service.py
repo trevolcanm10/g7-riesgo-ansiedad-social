@@ -16,7 +16,9 @@ class JwtTokenService(TokenService):
 
     def verify_access_token(self, token):
         try:
-            payload = jwt.decode(token, self._secret, algorithms=["HS256"])
+            # exp obligatorio: Users emite tokens de 1 h; uno sin caducidad no debe aceptarse.
+            payload = jwt.decode(token, self._secret, algorithms=["HS256"],
+                                 options={"require": ["exp"]})
         except jwt.PyJWTError as exc:
             raise ValueError("Token inválido o expirado") from exc
         user_id, role = payload.get("userId"), payload.get("role")

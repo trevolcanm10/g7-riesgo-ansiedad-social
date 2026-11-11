@@ -3,6 +3,7 @@ import copy
 import threading
 from datetime import datetime
 
+from src.domain.errors import ConflictError
 from src.domain.model import ACTIVE_STATUSES, Appointment, Slot, SlotStatus
 from src.domain.ports import AppointmentRepository, SlotRepository
 
@@ -19,6 +20,23 @@ class InMemorySlotRepository(SlotRepository):
             slot.id = self._seq
             self._items[slot.id] = copy.copy(slot)
             return copy.copy(slot)
+
+    def add_many(self, slots):
+        with self._lock:
+            keys = set()
+            for s in slots:
+                key = (s.staff_user_id, s.start_at)
+                if key in keys or any(i.staff_user_id == s.staff_user_id and i.start_at == s.start_at
+                                      for i in self._items.values()):
+                    raise ConflictError(f"Ya existe un horario en {s.start_at.isoformat()}")
+                keys.add(key)
+            created = []
+            for s in slots:
+                self._seq += 1
+                s.id = self._seq
+                self._items[s.id] = copy.copy(s)
+                created.append(copy.copy(s))
+            return created
 
     def get(self, slot_id):
         s = self._items.get(slot_id)
@@ -68,8 +86,17 @@ class InMemoryAppointmentRepository(AppointmentRepository):
         a = self._items.get(appointment_id)
         return copy.copy(a) if a else None
 
-    def update(self, appointment):
-        self._items[appointment.id] = copy.copy(appointment)
+    def update(self, appointment, *, expect_status=None, expect_slot_id=None):
+        with self._lock:
+            current = self._items.get(appointment.id)
+            if current is None:
+                return False
+            if expect_status is not None and current.status != expect_status:
+                return False
+            if expect_slot_id is not None and current.slot_id != expect_slot_id:
+                return False
+            self._items[appointment.id] = copy.copy(appointment)
+            return True
 
     def list_for_student(self, student_user_id):
         return sorted((copy.copy(a) for a in self._items.values()
@@ -88,9 +115,10 @@ class InMemoryAppointmentRepository(AppointmentRepository):
         return sum(1 for a in self._items.values()
                    if a.student_user_id == student_user_id and a.status in ACTIVE_STATUSES)
 
-    def count_by_status(self, student_user_id, status):
+    def count_by_status(self, student_user_id, status, *, before=None, exclude_id=None):
         return sum(1 for a in self._items.values()
-                   if a.student_user_id == student_user_id and a.status.value == status)
+                   if a.student_user_id == student_user_id and a.status.value == status
+                   and a.id != exclude_id and (before is None or a.start_at < before))
 
     def add_event(self, appointment_id, event_type, actor_user_id, created_at):
         self.events.append((appointment_id, event_type, actor_user_id, created_at))

@@ -1,4 +1,5 @@
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -62,6 +63,16 @@ class LogisticNoShowTest(unittest.TestCase):
         self.assertIsInstance(build_predictor(""), RuleBasedNoShowPredictor)
         self.assertIsInstance(build_predictor("no-existe.json"), RuleBasedNoShowPredictor)
         self.assertIsInstance(build_predictor(str(ARTIFACT)), LogisticNoShowPredictor)
+
+    def test_relative_model_path_does_not_depend_on_working_directory(self):
+        cwd = os.getcwd()
+        with tempfile.TemporaryDirectory() as elsewhere:
+            os.chdir(elsewhere)
+            try:
+                predictor = build_predictor("ml/artifacts/no_show_logreg_v1.json")
+            finally:
+                os.chdir(cwd)
+        self.assertIsInstance(predictor, LogisticNoShowPredictor)
 
 
 if __name__ == "__main__":

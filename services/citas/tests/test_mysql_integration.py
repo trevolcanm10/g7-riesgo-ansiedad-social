@@ -21,6 +21,7 @@ from pathlib import Path
 import pymysql
 
 from src.config import settings  # noqa: F401  (carga el .env)
+from src.domain.errors import ConflictError
 from src.domain.model import (
     Appointment, AppointmentStatus, Priority, Slot, SlotStatus,
 )
@@ -107,11 +108,59 @@ class MySqlRepositoryTest(unittest.TestCase):
 
     def test_unique_slot_per_staff_and_start(self):
         self.slots.add(Slot(staff_user_id=10, start_at=self.t0))
-        with self.assertRaises(pymysql.err.IntegrityError):
+        with self.assertRaises(ConflictError):          # la restricción única se traduce a 409
             self.slots.add(Slot(staff_user_id=10, start_at=self.t0))
         self.slots.add(Slot(staff_user_id=11, start_at=self.t0))   # otro personal: permitido
         self.assertTrue(self.slots.exists(10, self.t0))
         self.assertFalse(self.slots.exists(12, self.t0))
+
+    def test_add_many_is_all_or_nothing(self):
+        self.slots.add(Slot(staff_user_id=10, start_at=self.t0 + timedelta(minutes=30)))
+        batch = [Slot(staff_user_id=10, start_at=self.t0),
+                 Slot(staff_user_id=10, start_at=self.t0 + timedelta(minutes=30))]   # el 2.º choca
+        with self.assertRaises(ConflictError):
+            self.slots.add_many(batch)
+        self.assertFalse(self.slots.exists(10, self.t0), "el 1.º no debe quedar creado")
+
+    def test_concurrent_publish_gives_conflict_not_500(self):
+        outcomes, barrier = [], threading.Barrier(6)
+
+        def worker():
+            barrier.wait()
+            try:
+                self.slots.add_many([Slot(staff_user_id=10, start_at=self.t0)])
+                outcomes.append("ok")
+            except ConflictError:
+                outcomes.append("conflicto")
+
+        threads = [threading.Thread(target=worker) for _ in range(6)]
+        [t.start() for t in threads]
+        [t.join() for t in threads]
+        self.assertEqual(sorted(outcomes), ["conflicto"] * 5 + ["ok"])
+
+    def test_optimistic_update_rejects_stale_writes(self):
+        a = self._appt(student=1)
+        stale = self.apps.get(a.id)
+        winner = self.apps.get(a.id)
+        winner.status = AppointmentStatus.CANCELADA
+        self.assertTrue(self.apps.update(winner, expect_status=AppointmentStatus.SOLICITADA))
+        stale.status = AppointmentStatus.CONFIRMADA
+        self.assertFalse(self.apps.update(stale, expect_status=AppointmentStatus.SOLICITADA))
+        self.assertEqual(self.apps.get(a.id).status, AppointmentStatus.CANCELADA)
+        # también protege contra un cambio de horario concurrente
+        other = self.slots.add(Slot(staff_user_id=10, start_at=self.t0 + timedelta(hours=5)))
+        moved = self.apps.get(a.id)
+        moved.slot_id = other.id
+        self.assertFalse(self.apps.update(moved, expect_slot_id=a.slot_id + 999))
+
+    def test_count_by_status_before_and_exclude(self):
+        first = self._appt(student=1, status=AppointmentStatus.NO_ASISTIO)
+        later = self.slots.add(Slot(staff_user_id=10, start_at=self.t0 + timedelta(days=3)))
+        second = self._appt(student=1, slot=later, status=AppointmentStatus.NO_ASISTIO)
+        self.assertEqual(self.apps.count_by_status(1, "NO_ASISTIO"), 2)
+        self.assertEqual(self.apps.count_by_status(1, "NO_ASISTIO", before=second.start_at), 1)
+        self.assertEqual(self.apps.count_by_status(
+            1, "NO_ASISTIO", before=second.start_at, exclude_id=first.id), 0)
 
     def test_reserve_is_atomic_under_concurrency(self):
         slot = self.slots.add(Slot(staff_user_id=10, start_at=self.t0))

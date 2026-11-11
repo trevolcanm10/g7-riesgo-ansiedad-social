@@ -1,5 +1,6 @@
 """Composition root del microservicio Citas."""
 import logging
+from pathlib import Path
 
 from src.application.services import AppointmentService, SlotService
 from src.config import settings
@@ -12,8 +13,11 @@ from src.presentation.http import create_http_app
 def build_predictor(model_path: str = ""):
     """Modelo entrenado si NO_SHOW_MODEL_PATH carga bien; si no, línea base por reglas."""
     if model_path:
+        path = Path(model_path)
+        if not path.is_absolute():   # relativa a la carpeta del servicio, no al directorio de trabajo
+            path = Path(__file__).resolve().parent / path
         try:
-            predictor = LogisticNoShowPredictor(model_path)
+            predictor = LogisticNoShowPredictor(path)
             logging.getLogger(__name__).info("Modelo de inasistencia: %s", predictor.MODEL)
             return predictor
         except Exception as exc:   # archivo ausente o artefacto inválido

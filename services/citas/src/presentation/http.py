@@ -24,17 +24,24 @@ def parse_datetime(value, field: str) -> datetime:
         raise ValidationError(f"{field} debe ser una fecha ISO 8601")
     try:
         dt = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
-    except ValueError:
+        if dt.tzinfo is None:
+            raise ValidationError(f"{field} debe incluir zona horaria (por ejemplo -05:00 o Z)")
+        return dt.astimezone(timezone.utc)
+    except (ValueError, OverflowError):   # OverflowError: fechas en los extremos del calendario
         raise ValidationError(f"{field} no es una fecha ISO 8601 válida")
-    if dt.tzinfo is None:
-        raise ValidationError(f"{field} debe incluir zona horaria (por ejemplo -05:00 o Z)")
-    return dt.astimezone(timezone.utc)
 
 
 def parse_int(value, field: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
         raise ValidationError(f"{field} debe ser un entero positivo")
     return value
+
+
+def parse_query_int(value: str, field: str) -> int:
+    """Entero positivo recibido por query string (solo dígitos ASCII)."""
+    if not (value.isascii() and value.isdigit()):
+        raise ValidationError(f"{field} debe ser un entero positivo")
+    return parse_int(int(value), field)
 
 
 def slot_json(s: Slot) -> dict:
@@ -84,7 +91,8 @@ def create_http_app(slots: SlotService, appointments: AppointmentService,
     def health():
         ok = db_ping()
         return jsonify(service="citas", status="OK" if ok else "ERROR",
-                       database="OK" if ok else "UNAVAILABLE"), 200 if ok else 503
+                       database="OK" if ok else "UNAVAILABLE",
+                       noShowModel=appointments.model_name), 200 if ok else 503
 
     # ---------------- horarios ----------------
     @app.get("/slots")
@@ -92,8 +100,8 @@ def create_http_app(slots: SlotService, appointments: AppointmentService,
     def list_slots():
         start = parse_datetime(request.args["from"], "from") if "from" in request.args else None
         end = parse_datetime(request.args["to"], "to") if "to" in request.args else None
-        staff = parse_int(int(request.args["staffUserId"]), "staffUserId") \
-            if request.args.get("staffUserId", "").isdigit() else None
+        staff = parse_query_int(request.args["staffUserId"], "staffUserId") \
+            if "staffUserId" in request.args else None
         return jsonify([slot_json(s) for s in slots.list_free(start, end, staff)])
 
     @app.post("/slots")

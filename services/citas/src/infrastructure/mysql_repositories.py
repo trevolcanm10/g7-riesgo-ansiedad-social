@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 import pymysql
 from pymysql.cursors import DictCursor
 
+from src.domain.errors import ConflictError
 from src.domain.model import (
     ACTIVE_STATUSES, Appointment, AppointmentStatus, Priority, Slot, SlotStatus,
 )
@@ -26,6 +27,20 @@ class Database:
         try:
             with conn.cursor() as cur:
                 yield cur
+        finally:
+            conn.close()
+
+    @contextmanager
+    def transaction(self):
+        """Cursor dentro de una transacción: confirma al salir o deshace si hay error."""
+        conn = pymysql.connect(**{**self._kwargs, "autocommit": False})
+        try:
+            with conn.cursor() as cur:
+                yield cur
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
         finally:
             conn.close()
 
@@ -67,13 +82,24 @@ class MySqlSlotRepository(SlotRepository):
     def __init__(self, db: Database):
         self._db = db
 
+    _INSERT = ("INSERT INTO availability_slots (staff_user_id, start_at, status) "
+               "VALUES (%s, %s, %s)")
+
     def add(self, slot):
-        with self._db.cursor() as cur:
-            cur.execute("INSERT INTO availability_slots (staff_user_id, start_at, status) "
-                        "VALUES (%s, %s, %s)",
-                        (slot.staff_user_id, _to_db(slot.start_at), slot.status.value))
-            slot.id = cur.lastrowid
-        return slot
+        return self.add_many([slot])[0]
+
+    def add_many(self, slots):
+        # Una sola transacción: o se crean todos o ninguno. Si dos solicitudes publican el mismo
+        # horario a la vez, la restricción única de MySQL rechaza a la segunda -> 409, no 500.
+        try:
+            with self._db.transaction() as cur:
+                for slot in slots:
+                    cur.execute(self._INSERT, (slot.staff_user_id, _to_db(slot.start_at),
+                                               slot.status.value))
+                    slot.id = cur.lastrowid
+        except pymysql.err.IntegrityError as exc:
+            raise ConflictError("Alguno de los horarios ya existe") from exc
+        return slots
 
     def get(self, slot_id):
         with self._db.cursor() as cur:
@@ -133,13 +159,20 @@ class MySqlAppointmentRepository(AppointmentRepository):
             row = cur.fetchone()
         return _appt(row) if row else None
 
-    def update(self, a):
+    def update(self, a, *, expect_status=None, expect_slot_id=None):
+        sql = ("UPDATE appointments SET staff_user_id=%s, slot_id=%s, start_at=%s, status=%s, "
+               "reschedule_count=%s, cancelled_by=%s, cancel_reason=%s, updated_at=%s WHERE id=%s")
+        params = [a.staff_user_id, a.slot_id, _to_db(a.start_at), a.status.value, a.reschedule_count,
+                  a.cancelled_by, a.cancel_reason, _to_db(a.updated_at), a.id]
+        if expect_status is not None:       # bloqueo optimista
+            sql += " AND status = %s"
+            params.append(expect_status.value)
+        if expect_slot_id is not None:
+            sql += " AND slot_id = %s"
+            params.append(expect_slot_id)
         with self._db.cursor() as cur:
-            cur.execute(
-                "UPDATE appointments SET staff_user_id=%s, slot_id=%s, start_at=%s, status=%s, "
-                "reschedule_count=%s, cancelled_by=%s, cancel_reason=%s, updated_at=%s WHERE id=%s",
-                (a.staff_user_id, a.slot_id, _to_db(a.start_at), a.status.value, a.reschedule_count,
-                 a.cancelled_by, a.cancel_reason, _to_db(a.updated_at), a.id))
+            cur.execute(sql, params)
+            return cur.rowcount == 1
 
     def list_for_student(self, student_user_id):
         with self._db.cursor() as cur:
@@ -169,10 +202,17 @@ class MySqlAppointmentRepository(AppointmentRepository):
                         (student_user_id, *[s.value for s in ACTIVE_STATUSES]))
             return cur.fetchone()["n"]
 
-    def count_by_status(self, student_user_id, status):
+    def count_by_status(self, student_user_id, status, *, before=None, exclude_id=None):
+        sql = "SELECT COUNT(*) AS n FROM appointments WHERE student_user_id = %s AND status = %s"
+        params = [student_user_id, status]
+        if before is not None:
+            sql += " AND start_at < %s"
+            params.append(_to_db(before))
+        if exclude_id is not None:
+            sql += " AND id <> %s"
+            params.append(exclude_id)
         with self._db.cursor() as cur:
-            cur.execute("SELECT COUNT(*) AS n FROM appointments WHERE student_user_id = %s "
-                        "AND status = %s", (student_user_id, status))
+            cur.execute(sql, params)
             return cur.fetchone()["n"]
 
     def add_event(self, appointment_id, event_type, actor_user_id, created_at):
