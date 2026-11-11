@@ -48,6 +48,11 @@ class Cita {
     this.personalId,
   });
 
+  /// Prioridad informativa que se envía al solicitar: ALTA solo si el resultado
+  /// del test fue de riesgo alto. No cambia permisos ni orden en el servidor.
+  static String prioridadPara(String? nivelRiesgo) =>
+      nivelRiesgo?.toUpperCase() == 'ALTO' ? 'ALTA' : 'NORMAL';
+
   bool get activa => estado == solicitada || estado == confirmada;
 
   /// Solo orienta la interfaz; la regla real la valida el servidor.

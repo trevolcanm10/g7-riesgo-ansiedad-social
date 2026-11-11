@@ -99,6 +99,16 @@ void main() {
     });
   });
 
+  group('Cita.prioridadPara', () {
+    test('solo el riesgo alto marca la solicitud como prioritaria', () {
+      expect(Cita.prioridadPara('ALTO'), 'ALTA');
+      expect(Cita.prioridadPara('alto'), 'ALTA');
+      expect(Cita.prioridadPara('MEDIO'), 'NORMAL');
+      expect(Cita.prioridadPara('BAJO'), 'NORMAL');
+      expect(Cita.prioridadPara(null), 'NORMAL');
+    });
+  });
+
   group('generarInicios', () {
     test('10:00-12:00 da 4 bloques de 30 min', () {
       final r = generarInicios(

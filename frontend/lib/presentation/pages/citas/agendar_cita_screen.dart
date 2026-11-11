@@ -46,12 +46,16 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
   }
 
   /// ALTA solo si el ultimo resultado fue de riesgo alto. Es informativa.
+  ///
+  /// Primero el resultado del test de esta sesion; el historial remoto es solo
+  /// un respaldo (hoy su endpoint no esta disponible en los microservicios).
   String _prioridad() {
-    final historial = context.read<EvaluacionViewModel>().historial;
-    final nivel = historial.isEmpty
-        ? null
-        : historial.first.resultado?.nivelRiesgo;
-    return nivel?.toUpperCase() == 'ALTO' ? 'ALTA' : 'NORMAL';
+    final evaluacion = context.read<EvaluacionViewModel>();
+    final historial = evaluacion.historial;
+    final nivel =
+        evaluacion.nivelRiesgo ??
+        (historial.isEmpty ? null : historial.first.resultado?.nivelRiesgo);
+    return Cita.prioridadPara(nivel);
   }
 
   Future<void> _confirmar() async {
@@ -161,7 +165,7 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
                               ),
                             ),
                             Text(
-                              'Si tu último resultado indicó riesgo alto, tu solicitud se marcará como prioritaria para que UNAYOE la vea primero. No cambia tus derechos ni se comparte tu cuestionario.',
+                              'Si el test que hiciste en esta sesión indicó riesgo alto, tu solicitud se marcará como prioritaria para que UNAYOE la vea primero. No cambia tus derechos ni se comparte tu cuestionario.',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: scheme.onSurfaceVariant,
