@@ -37,7 +37,34 @@ Con MySQL: crea una base, ejecuta `db/schema.sql` y completa `DB_*` en `.env` (c
 python -m unittest discover -s tests -t .
 ```
 
-Cubren las reglas con repositorios en memoria. **No hay pruebas contra MySQL real todavía.**
+Cubren las reglas con repositorios en memoria y el predictor de inasistencia.
+
+### Pruebas contra MySQL real (opcionales)
+
+`tests/test_mysql_integration.py` repite las pruebas de la API con los repositorios MySQL y agrega
+pruebas de concurrencia, restricciones y fechas. **Borran las tablas de Citas**, así que usan una
+base aparte cuyo nombre debe terminar en `_test`. Sin `TEST_DB_NAME` se omiten.
+
+```bash
+# crear la base una vez (pide la contraseña de MySQL)
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS citas_test CHARACTER SET utf8mb4"
+```
+
+Agregar a `services/citas/.env` (ese archivo no se versiona):
+
+```
+TEST_DB_NAME=citas_test
+TEST_DB_USER=root
+TEST_DB_PASSWORD=<tu contraseña>
+# opcionales: TEST_DB_HOST (localhost), TEST_DB_PORT (3306), TEST_DB_SSL (false)
+```
+
+```bash
+python -m unittest tests.test_mysql_integration
+```
+
+El esquema `db/schema.sql` lo aplica la propia prueba. La conexión con TLS (`DB_SSL=true`, como en
+Azure) **no** se ha probado todavía.
 
 ## Estructura
 
@@ -52,5 +79,6 @@ src/presentation/http.py     rutas Flask y manejo de errores ({"message": ...})
 ## Limitaciones conocidas
 
 - Reservar horario y crear la cita no comparten transacción: si falla el segundo paso se libera el horario (compensación). Es suficiente para el MVP.
-- El predictor de inasistencia es una **línea base por reglas** (`rule-based-baseline-v0`), no un modelo entrenado. Nunca debe usarse para negar o retrasar una cita.
+- **El límite de 2 citas activas no es atómico.** El servicio cuenta las citas activas y después reserva el horario; si un mismo estudiante envía dos solicitudes simultáneas, ambas pueden pasar la revisión y quedar con 3 citas. La reserva del horario sí es atómica (probado con 8 hilos), por lo que nunca se duplica un horario. Es poco probable con una persona usando la app y es aceptable para el MVP; si hiciera falta, se resuelve con un bloqueo por estudiante o una restricción en la base.
+- Por defecto el predictor de inasistencia es una **línea base por reglas** (`rule-based-baseline-v0`). Con `NO_SHOW_MODEL_PATH` se usa la regresión logística calibrada de `ml/` (ver `ml/README.md`), entrenada con un conjunto público de atención médica, no con estudiantes. En ambos casos solo sirve para decidir recordatorios y nunca debe usarse para negar o retrasar una cita.
 - Pendiente con el equipo: prefijo `/c` en APIM, base MySQL y despliegue de Citas, y conexión con Notificaciones para los recordatorios.

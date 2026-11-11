@@ -28,11 +28,14 @@ def iso(dt):
 
 
 class CitasApiTest(unittest.TestCase):
+    def make_repos(self):
+        """Repositorios a probar. test_mysql_integration los sustituye por los de MySQL."""
+        return InMemorySlotRepository(), InMemoryAppointmentRepository()
+
     def setUp(self):
         self.now = NOW
         clock = lambda: self.now
-        self.slots_repo = InMemorySlotRepository()
-        self.apps_repo = InMemoryAppointmentRepository()
+        self.slots_repo, self.apps_repo = self.make_repos()
         self.app = create_http_app(
             SlotService(self.slots_repo, clock),
             AppointmentService(self.slots_repo, self.apps_repo, RuleBasedNoShowPredictor(), clock),

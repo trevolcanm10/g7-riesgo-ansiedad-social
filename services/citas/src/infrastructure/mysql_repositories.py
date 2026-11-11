@@ -39,7 +39,9 @@ class Database:
 
 
 def _to_db(dt: datetime) -> datetime:
-    return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    # DATETIME(0) redondea los microsegundos hacia arriba (12:00:59.7 -> 12:01:00):
+    # se truncan para que ninguna marca de tiempo se adelante.
+    return dt.astimezone(timezone.utc).replace(tzinfo=None, microsecond=0)
 
 
 def _from_db(dt: datetime) -> datetime:
