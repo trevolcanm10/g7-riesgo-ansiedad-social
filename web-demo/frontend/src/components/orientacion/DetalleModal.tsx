@@ -18,7 +18,10 @@ const DetalleModal: React.FC<DetalleModalProps> = ({
   onAtender,
 }) => {
   const [tema, setTema] = useState<string>(
-    solicitud.tema_confirmado || solicitud.tema_sugerido || 'personal'
+    solicitud.tema_confirmado ||
+      (solicitud.tema_sugerido && solicitud.tema_sugerido !== 'sin_clasificar'
+        ? solicitud.tema_sugerido
+        : 'personal')
   );
   const [prioridad, setPrioridad] = useState<string>(
     solicitud.prioridad_confirmada || solicitud.prioridad_sugerida || 'media'
@@ -123,7 +126,11 @@ const DetalleModal: React.FC<DetalleModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white p-4 rounded-lg border border-indigo-100 shadow-sm">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">
-                Tema (Sugerido: {solicitud.tema_sugerido || 'sin definir'})
+                Tema (Sugerido:{' '}
+                {solicitud.tema_sugerido === 'sin_clasificar'
+                  ? 'Sin clasificar'
+                  : solicitud.tema_sugerido || 'sin definir'}
+                )
               </label>
               <select
                 disabled={esAtendida}

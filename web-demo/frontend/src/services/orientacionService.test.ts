@@ -42,20 +42,41 @@ describe('orientacionService (seguridad y contrato JWT)', () => {
     ).toThrow('expirado');
   });
 
-  it('loginPersonalUnayoe autentica personal UNAYOE contra /users/users/login', async () => {
+  it('loginPersonalUnayoe autentica personal UNAYOE leyendo accessToken contra /u/users/login', async () => {
     const futureExp = Math.floor(Date.now() / 1000) + 3600;
-    const token = fakeJwt({ userId: 77, role: 'PERSONAL_UNAYOE', exp: futureExp });
+    const accessToken = fakeJwt({ userId: 77, role: 'PERSONAL_UNAYOE', exp: futureExp });
     fetchMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ token }), { status: 200 })
+      new Response(
+        JSON.stringify({
+          accessToken,
+          user: { id: 77, email: 'unayoe@unmsm.edu.pe', role: 'PERSONAL_UNAYOE' },
+        }),
+        { status: 200 }
+      )
     );
 
     const { loginPersonalUnayoe } = await import('./orientacionService');
     const session = await loginPersonalUnayoe('unayoe@unmsm.edu.pe', 'clave');
 
-    expect(session).toEqual({ token, userId: 77, role: 'PERSONAL_UNAYOE' });
+    expect(session).toEqual({
+      token: accessToken,
+      userId: 77,
+      role: 'PERSONAL_UNAYOE',
+    });
     const [url, options] = fetchMock.mock.calls[0];
-    expect(url).toBe('https://apim-riesgo-ansiedad.azure-api.net/users/users/login');
+    expect(url).toBe('https://apim-g7-riesgo-ansiedad.azure-api.net/u/users/login');
     expect(options.headers['Ocp-Apim-Subscription-Key']).toBe('test-only-not-a-real-key');
+  });
+
+  it('loginPersonalUnayoe falla con mensaje claro si Usuarios no devuelve accessToken', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ user: { id: 77 } }), { status: 200 })
+    );
+
+    const { loginPersonalUnayoe } = await import('./orientacionService');
+    await expect(
+      loginPersonalUnayoe('unayoe@unmsm.edu.pe', 'clave')
+    ).rejects.toThrow('no devolvió un token válido');
   });
 
   it('obtenerSolicitudes envía Bearer JWT al prefijo /o y traduce 401/403', async () => {
@@ -69,7 +90,7 @@ describe('orientacionService (seguridad y contrato JWT)', () => {
     expect(data).toHaveLength(1);
     const [url, options] = fetchMock.mock.calls[0];
     expect(url).toBe(
-      'https://apim-riesgo-ansiedad.azure-api.net/o/api/v1/orientacion/solicitudes?estado=pendiente&prioridad=alta'
+      'https://apim-g7-riesgo-ansiedad.azure-api.net/o/api/v1/orientacion/solicitudes?estado=pendiente&prioridad=alta'
     );
     expect(options.headers.Authorization).toBe('Bearer jwt-staff-token');
     expect(options.headers['Ocp-Apim-Subscription-Key']).toBe('test-only-not-a-real-key');
@@ -94,7 +115,7 @@ describe('orientacionService (seguridad y contrato JWT)', () => {
 
     const [url, options] = fetchMock.mock.calls[0];
     expect(url).toBe(
-      'https://apim-riesgo-ansiedad.azure-api.net/o/api/v1/orientacion/solicitudes/1/atender'
+      'https://apim-g7-riesgo-ansiedad.azure-api.net/o/api/v1/orientacion/solicitudes/1/atender'
     );
     expect(options.method).toBe('PATCH');
     expect(JSON.parse(options.body)).not.toHaveProperty('atendido_por');

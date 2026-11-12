@@ -7,6 +7,20 @@ import {
 } from '../services/orientacionService';
 import type { SolicitudOrientacion, StaffSession } from '../types/orientacion';
 
+const TEMA_LABELS: Record<string, string> = {
+  academico: 'Académico',
+  ansiedad_estres: 'Ansiedad y estrés',
+  economico: 'Económico',
+  familiar: 'Familiar',
+  personal: 'Personal',
+  sin_clasificar: 'Sin clasificar',
+};
+
+function solicitudTemaLabel(tema?: string | null): string {
+  if (!tema) return 'Sin clasificar';
+  return TEMA_LABELS[tema] ?? tema.replace(/_/g, ' ');
+}
+
 const BandejaOrientacion: React.FC = () => {
   // La sesión JWT del orientador se conserva solo en memoria React (nunca en storage persistente)
   const [session, setSession] = useState<StaffSession | null>(null);
@@ -324,9 +338,11 @@ const BandejaOrientacion: React.FC = () => {
                       )}
                       {sol.mensaje}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 capitalize">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                       <span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md text-xs font-medium border border-indigo-100">
-                        {sol.tema_confirmado || sol.tema_sugerido || 'No clasificado'}
+                        {solicitudTemaLabel(
+                          sol.tema_confirmado || sol.tema_sugerido
+                        )}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

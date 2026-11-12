@@ -6,19 +6,29 @@ const STAFF_ROLES: ReadonlySet<string> = new Set<StaffRole>([
   'ADMINISTRADOR',
 ]);
 
+const DEFAULT_APIM_BASE_URL = 'https://apim-g7-riesgo-ansiedad.azure-api.net';
+
+const getOrientacionBaseUrl = (): string =>
+  (import.meta.env.VITE_APIM_BASE_URL || DEFAULT_APIM_BASE_URL).replace(/\/$/, '');
+
 const getOrientacionPath = (): string =>
   (import.meta.env.VITE_APIM_ORIENTACION_PATH || '/o/api/v1/orientacion/solicitudes').replace(/\/$/, '');
 
-const getLoginPath = (): string =>
-  import.meta.env.VITE_APIM_LOGIN_PATH || `${config.usersPath}/login`;
+const getLoginPath = (): string => {
+  if (import.meta.env.VITE_APIM_LOGIN_PATH) {
+    return import.meta.env.VITE_APIM_LOGIN_PATH;
+  }
+  const usersPath = (import.meta.env.VITE_APIM_USERS_PATH || '/u/users').replace(/\/$/, '');
+  return `${usersPath}/login`;
+};
 
-function assertGatewayReady(path: string): void {
+function assertGatewayReady(baseUrl: string, path: string): void {
   if (!config.key) {
     throw new Error(
       'El acceso al gateway APIM no está configurado. Solicita al responsable habilitar la clave.'
     );
   }
-  const base = new URL(config.baseUrl);
+  const base = new URL(baseUrl);
   const isLocalDev =
     base.hostname === 'localhost' || base.hostname === '127.0.0.1';
   const isValidApim =
@@ -80,10 +90,11 @@ export async function loginPersonalUnayoe(
   email: string,
   password: string
 ): Promise<StaffSession> {
+  const baseUrl = getOrientacionBaseUrl();
   const path = getLoginPath();
-  assertGatewayReady(path);
+  assertGatewayReady(baseUrl, path);
 
-  const response = await fetch(`${config.baseUrl}${path}`, {
+  const response = await fetch(`${baseUrl}${path}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -96,14 +107,23 @@ export async function loginPersonalUnayoe(
     throw new Error(mapHttpError(response.status, 'Error al iniciar sesión.'));
   }
 
-  const data = (await response.json()) as { token?: unknown };
-  if (typeof data.token !== 'string' || !data.token) {
+  const data = (await response.json()) as {
+    accessToken?: unknown;
+    token?: unknown;
+  };
+  const jwt =
+    typeof data.accessToken === 'string' && data.accessToken
+      ? data.accessToken
+      : typeof data.token === 'string' && data.token
+        ? data.token
+        : '';
+  if (!jwt) {
     throw new Error('El servidor de autenticación no devolvió un token válido.');
   }
 
-  const claims = parseJwtStaffClaims(data.token);
+  const claims = parseJwtStaffClaims(jwt);
   return {
-    token: data.token,
+    token: jwt,
     userId: claims.userId,
     role: claims.role,
   };
@@ -117,15 +137,16 @@ export async function obtenerSolicitudes(
   if (!token) {
     throw new Error('Debes iniciar sesión como personal UNAYOE.');
   }
+  const baseUrl = getOrientacionBaseUrl();
   const orientacionPath = getOrientacionPath();
-  assertGatewayReady(orientacionPath);
+  assertGatewayReady(baseUrl, orientacionPath);
 
   const params = new URLSearchParams();
   if (estado) params.append('estado', estado);
   if (prioridad) params.append('prioridad', prioridad);
 
   const query = params.toString() ? `?${params.toString()}` : '';
-  const url = `${config.baseUrl}${orientacionPath}${query}`;
+  const url = `${baseUrl}${orientacionPath}${query}`;
 
   const response = await fetch(url, {
     method: 'GET',
@@ -156,10 +177,11 @@ export async function atenderSolicitud(
   if (!token) {
     throw new Error('Debes iniciar sesión como personal UNAYOE.');
   }
+  const baseUrl = getOrientacionBaseUrl();
   const orientacionPath = getOrientacionPath();
-  assertGatewayReady(orientacionPath);
+  assertGatewayReady(baseUrl, orientacionPath);
 
-  const response = await fetch(`${config.baseUrl}${orientacionPath}/${id}/atender`, {
+  const response = await fetch(`${baseUrl}${orientacionPath}/${id}/atender`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
