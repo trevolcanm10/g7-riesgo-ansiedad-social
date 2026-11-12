@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:ansiedad_ml_app/data/models/evaluacion_model.dart';
 import 'package:ansiedad_ml_app/data/models/resultado_ml_model.dart';
 import 'dart:convert';
 
@@ -476,6 +477,107 @@ void main() {
           throwsFormatException,
         );
       }
+    });
+    test('historial llama a GET /risk-evaluations/me/history con JWT', () async {
+      final enviadas = <Uri>[];
+      final headersCapturados = <Map<String, String>>[];
+      await http.runWithClient(
+        () async {
+          final api = ApiService()..setToken('token-de-prueba');
+          final repo = EvaluacionRepositoryImpl(
+            EvaluacionRemoteDataSource(api),
+          );
+          await repo.obtenerHistorial();
+        },
+        () => MockClient((request) async {
+          enviadas.add(request.url);
+          headersCapturados.add(request.headers);
+          return http.Response(jsonEncode([]), 200,
+              headers: {'content-type': 'application/json'});
+        }),
+      );
+      expect(enviadas, isNotEmpty);
+      expect(
+        enviadas.last.toString(),
+        contains('/risk-evaluations/me/history'),
+      );
+      expect(
+        enviadas.last.toString(),
+        isNot(contains('/api/v1/evaluaciones/historial')),
+      );
+      expect(
+        headersCapturados.last['authorization'],
+        equals('Bearer token-de-prueba'),
+      );
+    });
+  });
+
+  group('EvaluacionModel.fromJson (camelCase del backend)', () {
+    final historialValido = {
+      'id': 10,
+      'userId': 42,
+      'createdAt': '2026-11-12T21:30:38.000Z',
+      'anxietyProbability': 0.85,
+      'riskLevel': 'ALTO',
+      'explanation': 'Riesgo elevado.',
+      'recommendations': [
+        {'id': 3, 'category': 'ALTO', 'title': 'Riesgo alto', 'description': 'Acude al servicio.'}
+      ],
+      'aiReport': {
+        'summary': 'Resumen.',
+        'strengths': [],
+        'concerningFactors': [],
+        'recommendations': [],
+        'sevenDayPlan': [],
+        'videoTopics': [],
+        'readingTopics': [],
+        'priorityIntervention': 'NO DISPONIBLE',
+        'motivationalMessage': 'Mensaje.',
+      },
+    };
+
+    test('lista vacia devuelve cero evaluaciones', () {
+      final datos = <Map<String, dynamic>>[];
+      final lista = datos
+          .map((json) => EvaluacionModel.fromJson(json))
+          .toList();
+      expect(lista, isEmpty);
+    });
+
+    test('una evaluacion mapea id, usuario, fecha, probabilidad, nivel y fecha', () {
+      final modelo = EvaluacionModel.fromJson(historialValido);
+      expect(modelo.idEvaluacion, 10);
+      expect(modelo.idUsuario, 42);
+      expect(modelo.fechaRealizacion, '2026-11-12T21:30:38.000Z');
+      expect(modelo.resultado, isNotNull);
+      expect(modelo.resultado!.nivelRiesgo, 'ALTO');
+      expect(modelo.resultado!.probabilidadAnsiedad, 0.85);
+      expect(modelo.resultado!.fechaPrediccion, '2026-11-12T21:30:38.000Z');
+    });
+
+    test('varias evaluaciones se parsean de forma independiente', () {
+      final datos = [
+        historialValido,
+        {...historialValido, 'id': 11, 'riskLevel': 'BAJO', 'anxietyProbability': 0.2},
+        {...historialValido, 'id': 12, 'riskLevel': 'MEDIO', 'anxietyProbability': 0.5},
+      ];
+      final lista = datos
+          .map((json) => EvaluacionModel.fromJson(json))
+          .toList();
+      expect(lista.length, 3);
+      expect(lista.map((e) => e.idEvaluacion), [10, 11, 12]);
+      expect(lista.map((e) => e.resultado!.nivelRiesgo), ['ALTO', 'BAJO', 'MEDIO']);
+      expect(
+        lista.map((e) => e.resultado!.probabilidadAnsiedad),
+        [0.85, 0.2, 0.5],
+      );
+    });
+
+    test('sin campos de resultado deja resultado nulo sin fallar', () {
+      final sinResultado = {'id': 99, 'userId': 1, 'createdAt': '2026-01-01'};
+      final modelo = EvaluacionModel.fromJson(sinResultado);
+      expect(modelo.idEvaluacion, 99);
+      expect(modelo.resultado, isNull);
     });
   });
 }

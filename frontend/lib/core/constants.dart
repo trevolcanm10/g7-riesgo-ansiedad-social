@@ -185,7 +185,7 @@ class AppConstants {
       ? gateway.evaluation
       : '$riskEvaluationOrigin/risk-evaluations/';
   static String get historialEvaluaciones =>
-      '$_baseUrl/api/v1/evaluaciones/historial';
+      '$riskEvaluationOrigin/risk-evaluations/me/history';
 
   // ==========================================
   // ENDPOINTS DE HÁBITOS
