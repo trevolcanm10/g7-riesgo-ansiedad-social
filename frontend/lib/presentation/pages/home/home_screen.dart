@@ -250,19 +250,19 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF6366F1).withOpacity(0.3),
+            color: const Color(0xFF6366F1).withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -274,6 +274,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 16),
           const Text(
             '¡Te damos la bienvenida!',
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
@@ -283,6 +284,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 8),
           const Text(
             'Tu salud mental es una prioridad. Realiza tu primera evaluación interactiva para estimar tu riesgo de ansiedad a través de Inteligencia Artificial y obtener recomendaciones preventivas de forma instantánea.',
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,
               color: Colors.white70,
@@ -797,25 +799,26 @@ class _HomeScreenState extends State<HomeScreen> {
                     size: 24,
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Row(
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Flexible(
-                            child: Text(
-                              'Orientación Confidencial',
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: colors.textPrimary,
-                              ),
+                          Text(
+                            'Orientación Confidencial',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: colors.textPrimary,
                             ),
                           ),
-                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
@@ -839,6 +842,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 4),
                       Text(
                         'Envía una consulta privada y revisa respuestas del equipo orientador.',
+                        textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 12.5,
                           color: colors.textSecondary,
@@ -848,10 +852,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: colors.textTertiary,
+                const SizedBox(width: 12),
+                SizedBox(
+                  width: 44,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Icon(
+                      Icons.chevron_right_rounded,
+                      color: colors.textTertiary,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -971,76 +981,103 @@ class _HomeScreenState extends State<HomeScreen> {
   // SECCIÓN INFORMATIVA PARA NUEVO USUARIO
   // ==========================================
   Widget _buildInfoSection() {
+    final colors = AppColors.of(context);
+
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 8.0),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
           child: Text(
             '¿Cómo funciona?',
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1E293B),
+              color: colors.textPrimary,
             ),
           ),
         ),
         _buildInfoTile(
+          colors: colors,
           icon: Icons.shield_outlined,
           title: 'Totalmente Privado',
-          description: 'Tus respuestas son confidenciales y se procesan de manera local y encriptada.',
+          description:
+              'Tus respuestas son confidenciales y se procesan de manera local y encriptada.',
         ),
         const SizedBox(height: 12),
         _buildInfoTile(
+          colors: colors,
           icon: Icons.auto_awesome_outlined,
           title: 'Algoritmo Multimodelo',
-          description: 'Combinamos predicciones de 6 modelos de Machine Learning para garantizar un resultado preciso.',
+          description:
+              'Combinamos predicciones de 6 modelos de Machine Learning para garantizar un resultado preciso.',
         ),
       ],
     );
   }
 
   Widget _buildInfoTile({
+    required AppColors colors,
     required IconData icon,
     required String title,
     required String description,
   }) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: colors.border),
+        boxShadow: [
+          BoxShadow(
+            color: colors.shadow,
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(icon, color: const Color(0xFF6366F1), size: 24),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: colors.primaryLight,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: colors.primary, size: 22),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E293B),
+                    color: colors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   description,
-                  style: const TextStyle(
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
                     fontSize: 13,
-                    color: Color(0xFF64748B),
+                    color: colors.textSecondary,
                     height: 1.4,
                   ),
                 ),
               ],
             ),
           ),
+          const SizedBox(width: 52),
         ],
       ),
     );
