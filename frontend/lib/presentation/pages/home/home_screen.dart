@@ -71,41 +71,46 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildHeader(nombreUsuario),
-                            const SizedBox(height: 20),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 720),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildHeader(nombreUsuario, colors),
+                                const SizedBox(height: 20),
 
-                            if (!tieneHistorial) ...[
-                              // ==========================================
-                              // PANTALLA DE BIENVENIDA (USUARIO NUEVO)
-                              // ==========================================
-                              _buildWelcomeCard(),
-                              const SizedBox(height: 20),
-                              _buildStartEvaluationButton(esNuevo: true),
-                              const SizedBox(height: 16),
-                              _buildOrientacionCard(),
-                              const SizedBox(height: 20),
-                              _buildInfoSection(),
-                            ] else ...[
-                              // ==========================================
-                              // DASHBOARD DINÁMICO CON HISTORIAL REAL
-                              // ==========================================
-                              _buildRiskCard(historial.first),
-                              const SizedBox(height: 16),
-                              _buildTrendChart(historial),
-                              const SizedBox(height: 16),
-                              _buildSecondaryMetrics(historial.first),
-                              const SizedBox(height: 16),
-                              _buildStartEvaluationButton(esNuevo: false),
-                              const SizedBox(height: 16),
-                              _buildOrientacionCard(),
-                              const SizedBox(height: 16),
-                              _buildQuickTip(historial.first),
-                            ],
-                            const SizedBox(height: 16),
-                          ],
+                                if (!tieneHistorial) ...[
+                                  // ==========================================
+                                  // PANTALLA DE BIENVENIDA (USUARIO NUEVO)
+                                  // ==========================================
+                                  _buildWelcomeCard(),
+                                  const SizedBox(height: 20),
+                                  _buildStartEvaluationButton(esNuevo: true),
+                                  const SizedBox(height: 16),
+                                  _buildOrientacionCard(),
+                                  const SizedBox(height: 20),
+                                  _buildInfoSection(),
+                                ] else ...[
+                                  // ==========================================
+                                  // DASHBOARD DINÁMICO CON HISTORIAL REAL
+                                  // ==========================================
+                                  _buildRiskCard(historial.first),
+                                  const SizedBox(height: 16),
+                                  _buildTrendChart(historial),
+                                  const SizedBox(height: 16),
+                                  _buildSecondaryMetrics(historial.first),
+                                  const SizedBox(height: 16),
+                                  _buildStartEvaluationButton(esNuevo: false),
+                                  const SizedBox(height: 16),
+                                  _buildOrientacionCard(),
+                                  const SizedBox(height: 16),
+                                  _buildQuickTip(historial.first),
+                                ],
+                                const SizedBox(height: 16),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -121,30 +126,128 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  String _saludoPorHora(DateTime now) {
+    if (now.hour < 12) return 'Buenos días';
+    if (now.hour < 18) return 'Buenas tardes';
+    return 'Buenas noches';
+  }
+
+  String _mesNombre(int mes) {
+    const meses = [
+      'enero',
+      'febrero',
+      'marzo',
+      'abril',
+      'mayo',
+      'junio',
+      'julio',
+      'agosto',
+      'septiembre',
+      'octubre',
+      'noviembre',
+      'diciembre',
+    ];
+    return meses[(mes - 1).clamp(0, 11)];
+  }
+
   // ==========================================
   // HEADER
   // ==========================================
-  Widget _buildHeader(String nombre) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '¡Hola, $nombre! 👋',
-          style: const TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1E293B),
+  Widget _buildHeader(String nombre, AppColors colors) {
+    final now = DateTime.now();
+    final saludo = _saludoPorHora(now);
+    final fecha = '${now.day} de ${_mesNombre(now.month)}';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: colors.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colors.border),
+        boxShadow: [
+          BoxShadow(
+            color: colors.shadow,
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          'Este es el estado de tu salud y bienestar mental.',
-          style: TextStyle(
-            fontSize: 14,
-            color: Color(0xFF94A3B8),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: colors.primaryLight,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(
+              Icons.waving_hand_rounded,
+              color: colors.primary,
+              size: 24,
+            ),
           ),
-        ),
-      ],
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$saludo · $fecha',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: colors.primary,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '¡Hola, $nombre!',
+                  style: TextStyle(
+                    fontSize: 21,
+                    fontWeight: FontWeight.bold,
+                    color: colors.textPrimary,
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Este es el estado de tu salud y bienestar mental.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: colors.textSecondary,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Tooltip(
+            message: 'Mi perfil',
+            child: InkWell(
+              onTap: () => Navigator.pushNamed(context, '/perfil'),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: colors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: colors.borderLight),
+                ),
+                child: Icon(
+                  Icons.person_outline_rounded,
+                  color: colors.textTertiary,
+                  size: 20,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
