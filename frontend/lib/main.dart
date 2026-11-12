@@ -47,6 +47,7 @@ import 'presentation/pages/evaluacion/evaluacion_screen.dart';
 import 'presentation/pages/evaluacion/resultado_screen.dart';
 import 'presentation/pages/evaluacion/historial_screen.dart';
 import 'presentation/pages/perfil/perfil_screen.dart';
+import 'presentation/pages/agenda/agenda_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -199,6 +200,8 @@ class _AnsiedadAppState extends State<AnsiedadApp> {
                 const SessionProtected(child: HistorialScreen()),
             '/perfil': (context) =>
                 const SessionProtected(child: PerfilScreen()),
+            '/agenda': (context) =>
+                const SessionProtected(child: AgendaScreen()),
           },
         );
       },

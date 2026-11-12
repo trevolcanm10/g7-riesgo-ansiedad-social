@@ -876,15 +876,21 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               _buildNavItem(
                 index: 1,
-                icon: Icons.show_chart_rounded,
-                label: 'Historial',
+                icon: Icons.calendar_month_outlined,
+                label: 'Agenda',
                 isActive: _currentNavIndex == 1,
               ),
               _buildNavItem(
                 index: 2,
+                icon: Icons.show_chart_rounded,
+                label: 'Historial',
+                isActive: _currentNavIndex == 2,
+              ),
+              _buildNavItem(
+                index: 3,
                 icon: Icons.person_outline_rounded,
                 label: 'Perfil',
-                isActive: _currentNavIndex == 2,
+                isActive: _currentNavIndex == 3,
               ),
             ],
           ),
@@ -909,9 +915,12 @@ class _HomeScreenState extends State<HomeScreen> {
             // Ya estamos aquí
             break;
           case 1:
-            Navigator.pushNamed(context, '/historial');
+            Navigator.pushNamed(context, '/agenda');
             break;
           case 2:
+            Navigator.pushNamed(context, '/historial');
+            break;
+          case 3:
             Navigator.pushNamed(context, '/perfil');
             break;
         }

@@ -16,6 +16,21 @@ import { UpdateUser } from "./application/useCases/UpdateUser.js";
 
 const app = express();
 
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS");
+    if (req.method === "OPTIONS") {
+      res.sendStatus(204);
+      return;
+    }
+  }
+  next();
+});
+
 app.use(express.json());
 
 const userRepository = new MySqlUserRepository();
