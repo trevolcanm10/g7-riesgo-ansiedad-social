@@ -132,35 +132,15 @@ class _HomeScreenState extends State<HomeScreen> {
     return 'Buenas noches';
   }
 
-  String _mesNombre(int mes) {
-    const meses = [
-      'enero',
-      'febrero',
-      'marzo',
-      'abril',
-      'mayo',
-      'junio',
-      'julio',
-      'agosto',
-      'septiembre',
-      'octubre',
-      'noviembre',
-      'diciembre',
-    ];
-    return meses[(mes - 1).clamp(0, 11)];
-  }
-
   // ==========================================
   // HEADER
   // ==========================================
   Widget _buildHeader(String nombre, AppColors colors) {
-    final now = DateTime.now();
-    final saludo = _saludoPorHora(now);
-    final fecha = '${now.day} de ${_mesNombre(now.month)}';
+    final saludo = _saludoPorHora(DateTime.now());
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       decoration: BoxDecoration(
         color: colors.card,
         borderRadius: BorderRadius.circular(20),
@@ -177,8 +157,8 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               color: colors.primaryLight,
               borderRadius: BorderRadius.circular(14),
@@ -186,16 +166,17 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Icon(
               Icons.waving_hand_rounded,
               color: colors.primary,
-              size: 24,
+              size: 22,
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
-                  '$saludo · $fecha',
+                  saludo,
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -205,6 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 3),
                 Text(
                   '¡Hola, $nombre!',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 21,
                     fontWeight: FontWeight.bold,
@@ -215,6 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 4),
                 Text(
                   'Este es el estado de tu salud y bienestar mental.',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 13,
                     color: colors.textSecondary,
@@ -224,24 +207,24 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           Tooltip(
             message: 'Mi perfil',
             child: InkWell(
               onTap: () => Navigator.pushNamed(context, '/perfil'),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
               child: Container(
-                width: 40,
-                height: 40,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   color: colors.surface,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: colors.borderLight),
                 ),
                 child: Icon(
                   Icons.person_outline_rounded,
                   color: colors.textTertiary,
-                  size: 20,
+                  size: 21,
                 ),
               ),
             ),
