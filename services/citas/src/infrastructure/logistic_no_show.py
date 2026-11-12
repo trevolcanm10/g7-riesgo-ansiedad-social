@@ -45,6 +45,10 @@ class LogisticNoShowPredictor(NoShowPredictor):
         p = 1.0 / (1.0 + math.exp(-(self._a * z + self._b)))
         factors = []
         for f, w, mean in zip(self._features, self._weights, self._means):
+            # La etiqueta de «mismo día» afirma que la cita ES del mismo día: si no lo es, no se
+            # menciona (su peso negativo solo significa que las demás citas tienen más riesgo).
+            if f == "same_day" and not x[f]:
+                continue
             # Aporte respecto al promedio de entrenamiento (en escala logit calibrada).
             if self._a * w * (x[f] - mean) > 0.05:
                 factors.append(self._labels[f])

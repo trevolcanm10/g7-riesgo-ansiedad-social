@@ -16,7 +16,11 @@ python -m pip install -r ml/requirements.txt
 python ml/train_no_show.py
 ```
 
-Genera `ml/artifacts/no_show_logreg_v1.json` (el modelo, evaluable sin scikit-learn) y
+Para ver el proceso paso a paso (datos, variables, validación temporal, entrenamiento, comparación,
+calibración y auditoría, con gráficos), abrir `ml/entrenamiento_no_show.ipynb`: reutiliza las funciones del
+script y **no guarda ni sobrescribe** el modelo ni las métricas.
+
+El script genera `ml/artifacts/no_show_logreg_v1.json` (el modelo, evaluable sin scikit-learn) y
 `ml/artifacts/metrics_v1.json` (métricas y auditoría por subgrupo).
 
 Para que el servicio lo use:

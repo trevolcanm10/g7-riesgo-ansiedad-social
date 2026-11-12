@@ -39,6 +39,16 @@ class LogisticNoShowTest(unittest.TestCase):
         far = self.model.predict(feats(lead_days=30))["probability"]
         self.assertLess(near, far)
 
+    def test_factors_only_name_what_is_true_of_the_appointment(self):
+        # Una cita de un día de anticipación NO es «del mismo día»: no debe decirse que lo es.
+        factors = self.model.predict(feats(lead_days=1))["factors"]
+        self.assertNotIn("Cita agendada para el mismo día", factors)
+        far = self.model.predict(feats(lead_days=30))["factors"]
+        self.assertIn("Cita agendada con mucha anticipación", far)
+        self.assertNotIn("Cita agendada para el mismo día", far)
+        same_day = self.model.predict(feats(lead_days=0))["factors"]
+        self.assertNotIn("Cita agendada para el mismo día", same_day)   # reduce el riesgo, no lo explica
+
     def test_extreme_inputs_are_capped(self):
         a = self.model.predict(feats(prior_no_shows=50, lead_days=500))
         b = self.model.predict(feats(prior_no_shows=3, lead_days=60))
