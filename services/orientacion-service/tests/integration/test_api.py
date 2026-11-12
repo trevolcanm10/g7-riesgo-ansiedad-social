@@ -277,3 +277,67 @@ def test_error_500_no_filtra_detalles_internos(app, client):
     body = resp.get_json()
     assert body == {"message": "Error interno del servidor"}
     assert "secretos_internos" not in str(body)
+
+
+def test_casos_borde_triaje_ml_y_atomicidad_bd(app, client):
+    from datetime import datetime, timezone
+    from app.infrastructure.persistence.repository import SQLAlchemySolicitudRepository
+
+    est = auth_headers(user_id=606, role="ESTUDIANTE")
+
+    # 1. Frustración académica aguda: prioridad alta sin alerta falsa de riesgo suicida
+    resp_acad = client.post(
+        "/api/v1/orientacion/solicitudes",
+        headers=est,
+        json={"mensaje": "No aguanto más este curso de cálculo"},
+    )
+    assert resp_acad.status_code == 201
+    acad = resp_acad.get_json()
+    assert acad["urgencia_detectada"] is False
+    assert acad["prioridad_sugerida"] == "alta"
+    assert "alertas_urgencia" not in acad
+
+    # 2. Expresión indirecta de riesgo vital -> urgencia real + líneas de ayuda
+    resp_riesgo = client.post(
+        "/api/v1/orientacion/solicitudes",
+        headers=est,
+        json={"mensaje": "Ojalá no despertara mañana"},
+    )
+    assert resp_riesgo.status_code == 201
+    riesgo = resp_riesgo.get_json()
+    assert riesgo["urgencia_detectada"] is True
+    assert riesgo["prioridad_sugerida"] == "alta"
+    assert "alertas_urgencia" in riesgo
+
+    # 3. Mensaje sin señal temática ("hola") -> sin_clasificar + prioridad baja
+    resp_saludo = client.post(
+        "/api/v1/orientacion/solicitudes",
+        headers=est,
+        json={"mensaje": "hola"},
+    )
+    assert resp_saludo.status_code == 201
+    saludo = resp_saludo.get_json()
+    assert saludo["tema_sugerido"] == "sin_clasificar"
+    assert saludo["prioridad_sugerida"] == "baja"
+    assert saludo["urgencia_detectada"] is False
+
+    # 4. Atomicidad real en SQLAlchemy (segunda escritura condicional devuelve None)
+    with app.app_context():
+        repo = SQLAlchemySolicitudRepository()
+        ahora = datetime.now(timezone.utc)
+        primera = repo.atender_si_pendiente(
+            solicitud_id=saludo["id"],
+            respuesta_escrita="Atendida primero",
+            atendido_por=77,
+            fecha_atencion=ahora,
+        )
+        segunda = repo.atender_si_pendiente(
+            solicitud_id=saludo["id"],
+            respuesta_escrita="Competidor concurrente",
+            atendido_por=88,
+            fecha_atencion=ahora,
+        )
+        assert primera is not None
+        assert primera.estado == "atendida"
+        assert primera.atendido_por == 77
+        assert segunda is None

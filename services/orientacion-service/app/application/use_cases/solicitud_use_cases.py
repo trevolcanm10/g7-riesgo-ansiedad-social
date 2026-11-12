@@ -56,8 +56,8 @@ class OrientacionUseCases:
         # Inferencia local ML
         tema_sug, prioridad_sug = self.classifier.predict(texto_limpio)
 
-        # Regla de Negocio: una urgencia crítica siempre fuerza prioridad alta
-        if urgencia.es_urgente:
+        # Regla de Negocio: una urgencia crítica o sobrecarga aguda fuerza prioridad alta
+        if urgencia.es_urgente or urgencia.eleva_prioridad:
             prioridad_sug = "alta"
 
         solicitud = SolicitudOrientacion(
@@ -159,17 +159,17 @@ class OrientacionUseCases:
         if solicitud.estado == "atendida":
             raise ConflictError("La solicitud ya fue atendida y no puede sobrescribirse")
 
-        solicitud.respuesta_escrita = respuesta.strip()
-        solicitud.atendido_por = orientador_id
-        solicitud.estado = "atendida"
-        solicitud.fecha_atencion = utc_now()
-
-        if tema_conf:
-            solicitud.tema_confirmado = tema_conf
-        if prio_conf:
-            solicitud.prioridad_confirmada = prio_conf
-
-        return self.repository.update(solicitud)
+        actualizada = self.repository.atender_si_pendiente(
+            solicitud_id=solicitud_id,
+            respuesta_escrita=respuesta.strip(),
+            atendido_por=orientador_id,
+            fecha_atencion=utc_now(),
+            tema_confirmado=tema_conf,
+            prioridad_confirmada=prio_conf,
+        )
+        if actualizada is None:
+            raise ConflictError("La solicitud ya fue atendida y no puede sobrescribirse")
+        return actualizada
 
     def metricas_temas(self, actor_role: str) -> List[dict]:
         if actor_role not in STAFF_ROLES:

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import List, Optional
 from app.domain.entities.solicitud import SolicitudOrientacion
 
@@ -25,6 +26,18 @@ class ISolicitudRepository(ABC):
 
     @abstractmethod
     def update(self, solicitud: SolicitudOrientacion) -> SolicitudOrientacion:
+        pass
+
+    @abstractmethod
+    def atender_si_pendiente(
+        self,
+        solicitud_id: int,
+        respuesta_escrita: str,
+        atendido_por: int,
+        fecha_atencion: datetime,
+        tema_confirmado: Optional[str] = None,
+        prioridad_confirmada: Optional[str] = None,
+    ) -> Optional[SolicitudOrientacion]:
         pass
 
     @abstractmethod

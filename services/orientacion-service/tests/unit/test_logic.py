@@ -17,6 +17,14 @@ from app.infrastructure.ml.scikit_classifier import ScikitLocalClassifier
         "NO ME SIENTO SEGURO!!! Necesito ayuda ahora",
         "Ya no quiero seguir viviendo, sería mejor muerta",
         "He pensado en quitarme la vida",
+        "Ojalá no despertara mañana",
+        "Me corto cuando me siento mal",
+        "Siento que todos estarían mejor sin mí",
+        "No le encuentro sentido a seguir",
+        "Quiero desaparecer",
+        "Pienso en terminar con todo",
+        "No aguanto más",
+        "No aguanto más este curso de cálculo, quiero morir",
     ],
 )
 def test_detector_urgencia_detecta_variantes_criticas(mensaje):
@@ -42,7 +50,34 @@ def test_detector_urgencia_no_marca_mensajes_no_criticos(mensaje):
     analisis = UrgenciaDomainService.detectar(mensaje)
 
     assert analisis.es_urgente is False
+    assert analisis.eleva_prioridad is False
     assert analisis.coincidencias == []
+    assert analisis.lineas_ayuda == []
+
+
+@pytest.mark.parametrize(
+    "mensaje",
+    [
+        "No aguanto más este curso de cálculo",
+        "No soporto más los exámenes finales",
+        "Me corté el cabello ayer y estoy bien",
+    ],
+)
+def test_detector_urgencia_evita_falsos_positivos_no_vitales(mensaje):
+    analisis = UrgenciaDomainService.detectar(mensaje)
+
+    assert analisis.es_urgente is False
+    assert analisis.coincidencias == []
+    assert analisis.lineas_ayuda == []
+
+
+def test_frustracion_academica_aguda_eleva_prioridad_sin_alerta_suicida():
+    analisis = UrgenciaDomainService.detectar(
+        "No aguanto más este curso de cálculo"
+    )
+
+    assert analisis.es_urgente is False
+    assert analisis.eleva_prioridad is True
     assert analisis.lineas_ayuda == []
 
 
@@ -133,6 +168,29 @@ def test_coherencia_evaluacion_y_no_reatencion(mocker):
         )
 
 
+def test_atender_solicitud_concurrencia_atomica_lanza_conflicto(mocker):
+    mock_repo = mocker.MagicMock()
+    mock_repo.find_by_id.return_value = SolicitudOrientacion(
+        id=99,
+        estudiante_id=10,
+        mensaje="Consulta pendiente al leer",
+        estado="pendiente",
+    )
+    # Simula que otro worker ganó el UPDATE ... WHERE estado = 'pendiente'
+    mock_repo.atender_si_pendiente.return_value = None
+
+    use_cases = OrientacionUseCases(mock_repo, mocker.MagicMock())
+    with pytest.raises(ConflictError):
+        use_cases.atender_solicitud(
+            solicitud_id=99,
+            respuesta="Respuesta concurrente",
+            orientador_id=77,
+            actor_role="PERSONAL_UNAYOE",
+            tema_conf="academico",
+            prio_conf="alta",
+        )
+
+
 def test_scikit_classifier_fallback_cuando_no_hay_modelos(tmp_path):
     classifier = ScikitLocalClassifier(artifacts_dir=str(tmp_path))
 
@@ -140,3 +198,16 @@ def test_scikit_classifier_fallback_cuando_no_hay_modelos(tmp_path):
     tema, prioridad = classifier.predict("No puedo pagar la matrícula este ciclo")
     assert tema == "economico"
     assert prioridad in {"alta", "media", "baja"}
+    assert classifier.predict("hola") == ("sin_clasificar", "baja")
+    assert classifier.predict("asdfgh") == ("sin_clasificar", "baja")
+
+
+def test_scikit_classifier_con_artefactos_reales_evita_ruido_y_ansiedad_familiar():
+    classifier = ScikitLocalClassifier()
+    assert classifier.model_status == "trained-tfidf-logreg"
+
+    tema_ansiedad, _ = classifier.predict("Tengo mucha ansiedad por mis exámenes")
+    assert tema_ansiedad == "ansiedad_estres"
+
+    assert classifier.predict("hola") == ("sin_clasificar", "baja")
+    assert classifier.predict("asdfgh") == ("sin_clasificar", "baja")

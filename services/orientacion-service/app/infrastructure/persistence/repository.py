@@ -1,5 +1,6 @@
+from datetime import datetime
 from typing import List, Optional
-from sqlalchemy import case, desc, text
+from sqlalchemy import case, desc, text, update as sa_update
 from app.application.interfaces.solicitud_repository_port import ISolicitudRepository
 from app.domain.entities.solicitud import SolicitudOrientacion
 from app.infrastructure.persistence.db_models import db, SolicitudModel
@@ -103,6 +104,40 @@ class SQLAlchemySolicitudRepository(ISolicitudRepository):
             db.session.commit()
             return self._to_domain(model)
         return solicitud
+
+    def atender_si_pendiente(
+        self,
+        solicitud_id: int,
+        respuesta_escrita: str,
+        atendido_por: int,
+        fecha_atencion: datetime,
+        tema_confirmado: Optional[str] = None,
+        prioridad_confirmada: Optional[str] = None,
+    ) -> Optional[SolicitudOrientacion]:
+        values = {
+            "estado": "atendida",
+            "respuesta_escrita": respuesta_escrita,
+            "atendido_por": atendido_por,
+            "fecha_atencion": fecha_atencion,
+        }
+        if tema_confirmado is not None:
+            values["tema_confirmado"] = tema_confirmado
+        if prioridad_confirmada is not None:
+            values["prioridad_confirmada"] = prioridad_confirmada
+
+        stmt = (
+            sa_update(SolicitudModel)
+            .where(SolicitudModel.id == solicitud_id, SolicitudModel.estado == "pendiente")
+            .values(**values)
+        )
+        result = db.session.execute(stmt)
+        if result.rowcount != 1:
+            db.session.rollback()
+            return None
+
+        db.session.commit()
+        model = db.session.get(SolicitudModel, solicitud_id)
+        return self._to_domain(model) if model else None
 
     def count_by_tema(self) -> List[dict]:
         tema_efectivo = db.func.coalesce(

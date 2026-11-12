@@ -11,6 +11,7 @@ class Role(str, Enum):
 
 
 TEMAS_VALIDOS = ("academico", "ansiedad_estres", "economico", "familiar", "personal")
+TEMAS_SUGERIDOS = TEMAS_VALIDOS + ("sin_clasificar",)
 PRIORIDADES_VALIDAS = ("alta", "media", "baja")
 ESTADOS_VALIDOS = ("pendiente", "atendida")
 
@@ -34,6 +35,7 @@ class UrgenciaAnalisis:
     es_urgente: bool
     coincidencias: List[str]
     lineas_ayuda: List[str]
+    eleva_prioridad: bool = False
 
 
 @dataclass
