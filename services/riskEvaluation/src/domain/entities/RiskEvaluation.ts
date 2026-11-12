@@ -1,5 +1,15 @@
 export type RiskLevel = "BAJO" | "MEDIO" | "ALTO";
 
+export interface ShapExplanation {
+  estado: "disponible" | "no_disponible";
+  escala: "log_odds_riesgo_clase_0";
+  factores: Array<{
+    nombre: string;
+    valor: number;
+    direccion: "aumenta" | "disminuye" | "neutra";
+  }>;
+}
+
 export interface RiskRecommendation {
   id: number;
   category: RiskLevel;
@@ -47,6 +57,7 @@ export interface RiskEvaluationProps {
   explanation: string;
   recommendations: RiskRecommendation[];
   aiReport: AIReport;
+  shapExplanation?: ShapExplanation;
 
   createdAt: Date;
 }
@@ -74,6 +85,7 @@ export class RiskEvaluation {
   private explanation: string;
   private recommendations: RiskRecommendation[];
   private aiReport: AIReport;
+  private shapExplanation?: ShapExplanation;
   private createdAt: Date;
 
   constructor(props: RiskEvaluationProps) {
@@ -99,6 +111,7 @@ export class RiskEvaluation {
     this.explanation = props.explanation;
     this.recommendations = props.recommendations;
     this.aiReport = props.aiReport;
+    this.shapExplanation = props.shapExplanation;
     this.createdAt = props.createdAt;
   }
 
@@ -195,6 +208,10 @@ export class RiskEvaluation {
 
   getAiReport(): AIReport {
     return this.aiReport;
+  }
+
+  getShapExplanation(): ShapExplanation | undefined {
+    return this.shapExplanation;
   }
 
   getCreatedAt(): Date {

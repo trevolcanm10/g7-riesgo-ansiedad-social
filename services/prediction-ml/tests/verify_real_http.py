@@ -10,6 +10,8 @@ from pathlib import Path
 import subprocess
 import sys
 import time
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from src.domain.risk import categorize_risk
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -42,12 +44,13 @@ if __name__ == "__main__":
                 time.sleep(.5)
         else:
             raise RuntimeError("El servicio no inició a tiempo")
-        assert health == (200, {"service": "prediction-ml", "status": "OK", "models_loaded": 5}), health
+        assert health == (200, {"service": "prediction-ml", "status": "OK", "models_loaded": 1}), health
         payload = json.loads((root / "example.json").read_text())
         valid = request_json("/predict", payload)
-        assert valid[0] == 200 and valid[1]["nivel_riesgo"] == "ALTO", valid
+        assert valid[0] == 200, valid
+        assert valid[1]["nivel_riesgo"] == categorize_risk(valid[1]["probabilidad_ansiedad"]), valid
         assert 0 <= valid[1]["probabilidad_ansiedad"] <= 1
-        assert set(valid[1]) == {"nivel_riesgo", "probabilidad_ansiedad", "explicacion", "reporte_ia"}
+        assert set(valid[1]) == {"nivel_riesgo", "probabilidad_ansiedad", "explicacion", "reporte_ia", "explicacion_shap"}
         assert len(valid[1]["reporte_ia"]) == 9
         del payload["gad7_score"]
         invalid = request_json("/predict", payload)

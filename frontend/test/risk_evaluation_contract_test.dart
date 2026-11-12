@@ -190,6 +190,30 @@ void main() {
     });
   });
   group('lectura de la respuesta 201', () {
+    test('conserva SHAP de clase 0 y admite explicación no disponible', () {
+      final response = respuestaValida()..['shapExplanation'] = {
+        'estado': 'disponible',
+        'escala': 'log_odds_riesgo_clase_0',
+        'factores': [
+          {'nombre': 'PHQ9', 'valor': 0.7, 'direccion': 'aumenta'},
+          {'nombre': 'SleepHours', 'valor': -0.3, 'direccion': 'disminuye'},
+          {'nombre': 'GAD7', 'valor': 0.2, 'direccion': 'aumenta'},
+        ],
+      };
+      final result = ResultadoMlModel.fromRiskEvaluation(response).toEntity();
+      expect(result.shapExplanation!.disponible, isTrue);
+      expect(result.shapExplanation!.factores.map((f) => f.nombre), ['PHQ9', 'SleepHours', 'GAD7']);
+      expect(result.shapExplanation!.factores[1].direccion, 'disminuye');
+      expect(result.shapExplanation!.factores[1].valor, -0.3);
+
+      response['shapExplanation'] = {
+        'estado': 'no_disponible', 'escala': 'log_odds_riesgo_clase_0', 'factores': [],
+      };
+      final unavailable = ResultadoMlModel.fromRiskEvaluation(response).toEntity();
+      expect(unavailable.probabilidadAnsiedad, 0.42);
+      expect(unavailable.shapExplanation!.disponible, isFalse);
+      expect(ResultadoMlModel.fromRiskEvaluation(respuestaValida()).toEntity().shapExplanation, isNull);
+    });
     Future<
       ({double prob, String nivel, String? exp, int recs, ReporteIA? reporte})
     >

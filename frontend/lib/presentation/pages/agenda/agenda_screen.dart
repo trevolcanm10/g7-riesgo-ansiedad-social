@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../core/app_colors.dart';
 import '../../../data/repositories/agenda_local_repository.dart';
 import '../../../domain/entities/actividad_academica.dart';
+import '../../../domain/services/calcular_carga_semanal.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 
 class AgendaScreen extends StatefulWidget {
@@ -128,6 +129,40 @@ class _AgendaScreenState extends State<AgendaScreen> {
 
   String _month(int month) => const ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'][month - 1];
 
+  Widget _weeklyLoad(AppColors colors) {
+    final carga = calcularCargaSemanal(_items, _selected);
+    final label = switch (carga.nivel) {
+      NivelCargaAcademica.baja => 'BAJA',
+      NivelCargaAcademica.moderada => 'MODERADA',
+      NivelCargaAcademica.alta => 'ALTA',
+    };
+    final color = switch (carga.nivel) {
+      NivelCargaAcademica.baja => const Color(0xFF059669),
+      NivelCargaAcademica.moderada => const Color(0xFFD97706),
+      NivelCargaAcademica.alta => colors.danger,
+    };
+    return Card(
+      color: colors.card,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Icon(Icons.event_available_outlined, color: color),
+            const SizedBox(width: 8),
+            Expanded(child: Text('Carga semanal · ${_date(carga.lunes)}–${_date(carga.domingo)}',
+              style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w600))),
+            Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+          ]),
+          const SizedBox(height: 8),
+          Text('${carga.horasConocidas.toStringAsFixed(1)} h conocidas · ${carga.pendientes} pendientes · ${carga.completadas} completadas',
+            style: TextStyle(color: colors.textTertiary)),
+          if (carga.estimacionParcial)
+            Text('Estimación parcial: faltan duraciones', style: TextStyle(color: colors.textTertiary)),
+        ]),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
@@ -138,6 +173,10 @@ class _AgendaScreenState extends State<AgendaScreen> {
       body: RefreshIndicator(onRefresh: _load, child: ListView(padding: const EdgeInsets.all(20), children: [
         Text('Organiza tus actividades académicas', style: TextStyle(color: colors.textSecondary)),
         const SizedBox(height: 16), _calendar(colors),
+        if (!_loading && _error == null) ...[
+          const SizedBox(height: 8),
+          _weeklyLoad(colors),
+        ],
         SegmentedButton<bool>(segments: const [ButtonSegment(value: false, label: Text('Calendario')), ButtonSegment(value: true, label: Text('Próximas actividades'))],
           selected: {_listView}, onSelectionChanged: (v) => setState(() => _listView = v.first)),
         const SizedBox(height: 12),

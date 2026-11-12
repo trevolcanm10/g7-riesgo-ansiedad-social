@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../domain/entities/recomendacion.dart';
+import '../../../domain/entities/shap_explanation.dart';
+import '../../../core/app_colors.dart';
 import '../../../presentation/viewmodels/evaluacion_viewmodel.dart';
 import '../../widgets/risk_indicator.dart';
 
@@ -38,6 +40,8 @@ class ResultadoScreen extends StatelessWidget {
                   probabilidad: evVM.probabilidad!,
                   nivelRiesgo: evVM.nivelRiesgo ?? '',
                 ),
+                const SizedBox(height: 16),
+                _buildShap(context, evVM.ultimoResultado?.shapExplanation),
                 const SizedBox(height: 16),
 
                 if (evVM.explicacion != null)
@@ -189,6 +193,55 @@ class ResultadoScreen extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+
+  static const _shapNames = <String, String>{
+    'PHQ9': 'Síntomas depresivos (PHQ-9)',
+    'GAD7': 'Síntomas de ansiedad (GAD-7)',
+    'OnlineStress': 'Estrés en línea',
+    'FinancialStress': 'Estrés financiero',
+    'ExerciseFreq': 'Frecuencia de ejercicio',
+    'SocialActivity': 'Actividad social',
+    'SleepHours': 'Horas de sueño',
+  };
+
+  Widget _buildShap(BuildContext context, ShapExplanation? explanation) {
+    final colors = AppColors.of(context);
+    final available = explanation?.disponible == true && explanation!.factores.isNotEmpty;
+    return Card(
+      color: colors.card,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('¿Qué influyó en tu resultado?',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: colors.textPrimary)),
+          const SizedBox(height: 8),
+          if (!available)
+            Text('Explicación no disponible para esta evaluación.',
+                style: TextStyle(color: colors.textTertiary))
+          else ...explanation.factores.map((factor) {
+            final increases = factor.direccion == 'aumenta';
+            final direction = increases ? 'Aumentó' : factor.direccion == 'disminuye' ? 'Redujo' : 'No cambió';
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              child: Row(children: [
+                Icon(increases ? Icons.trending_up : factor.direccion == 'disminuye' ? Icons.trending_down : Icons.trending_flat,
+                    color: increases ? colors.danger : colors.primary),
+                const SizedBox(width: 10),
+                Expanded(child: Text(_shapNames[factor.nombre] ?? factor.nombre,
+                    style: TextStyle(color: colors.textPrimary))),
+                Text('$direction la estimación de riesgo', style: TextStyle(color: colors.textTertiary, fontSize: 12)),
+              ]),
+            );
+          }),
+          if (available) ...[
+            const SizedBox(height: 6),
+            Text('Contribuciones al riesgo de clase 0 en escala log-odds; no son porcentajes ni un diagnóstico.',
+                style: TextStyle(color: colors.textTertiary, fontSize: 12)),
+          ],
+        ]),
       ),
     );
   }
