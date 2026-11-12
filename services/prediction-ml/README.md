@@ -113,28 +113,25 @@ curl -H 'Content-Type: application/json' --data-binary @example.json http://loca
 
 ## Arquitectura
 
-`app.py` es la raíz de composición. Conecta el adaptador de salida `EnsemblePredictor` con `PredictRiskUseCase` y el adaptador de entrada Flask.
+`app.py` es la raíz de composición. Conecta el adaptador de salida `XGBoostPredictor` con `PredictRiskUseCase` y el adaptador de entrada Flask.
 
 - Domain: puerto `RiskPredictor`, errores y reglas de categorización; solo biblioteca estándar.
 - Application: caso de uso dependiente del puerto, sin bibliotecas ML.
-- Infrastructure: carga de cinco artefactos confiables del repositorio, verificación de metadatos y soft voting.
+- Infrastructure: `XGBoostPredictor` carga `xgboost_weighted_model.pkl`, verifica metadatos (clases {0,1}, 7 features, orden contractual, `predict_proba`) y provee explicación SHAP (TreeExplainer, top 3 factores, escala log-odds de clase 0). `EnsemblePredictor` (5 modelos, soft voting) fue eliminado por artefacto `catboost_weighted_model.pkl` inexistente.
 - Presentation: validación del contrato JSON y traducción HTTP.
 
 SRP separa estas responsabilidades. DIP hace depender el caso de uso de una abstracción. OCP permite reemplazar el predictor al componer la aplicación sin cambiar el caso de uso.
 
-Se construye un DataFrame en orden PHQ9, GAD7, OnlineStress, FinancialStress, ExerciseFreq, SocialActivity, SleepHours. Para KNN, entrenado sin nombres, se convierte a ndarray preservando ese orden. Cada modelo localiza clase 0 en `classes_`; se promedian sus cinco probabilidades con igual peso. BAJO < 0.35; MEDIO entre 0.35 y 0.70 inclusive; ALTO > 0.70. No hay entrenamiento ni fallback ni integración con usuarios.
+Se construye un DataFrame en orden PHQ9, GAD7, OnlineStress, FinancialStress, ExerciseFreq, SocialActivity, SleepHours. XGBoost localiza clase 0 (riesgo) en `classes_` y devuelve su probabilidad. BAJO < 0.35; MEDIO entre 0.35 y 0.70 inclusive; ALTO > 0.70. SHAP explica la probabilidad de clase 0 con los 3 factores de mayor impacto absoluto. No hay entrenamiento ni integración con usuarios.
 
 ## Metadatos y compatibilidad
 
-En la verificación de esta integración, el Python local resolvió scikit-learn
-1.9.0, distinto del 1.6.1 fijado en requirements.txt y utilizado al serializar
-los modelos. La prueba HTTP local pasó, pero emitió InconsistentVersionWarning.
-No se instalaron ni cambiaron dependencias. Antes de desplegar, reproducir el
-entorno fijado y validar los artefactos; el smoke test no garantiza equivalencia
-entre versiones.
+`models_loaded` reporta 1 (único artefacto XGBoost). En la verificación de esta integración, el Python local resolvió scikit-learn 1.9.0, distinto del 1.6.1 fijado en requirements.txt y utilizado al serializar los modelos. La prueba HTTP local pasó, pero emitió InconsistentVersionWarning. No se instalaron ni cambiaron dependencias. Antes de desplegar, reproducir el entorno fijado y validar los artefactos; el smoke test no garantiza equivalencia entre versiones.
 
-Los cinco modelos contienen clases 0 y 1. CatBoost, LightGBM, Random Forest y XGBoost conservan los siete nombres en el orden requerido. KNN indica siete features pero no sus nombres, por lo que no es posible corroborar su orden original mediante metadatos; se aplica el contrato indicado. CatBoost reporta `n_features_in_=0` tras deserializar; sus siete nombres verifican la dimensión.
-
-Se utiliza scikit-learn 1.6.1. XGBoost 3.3.0 emite un warning al cargar el pickle generado por una versión anterior: la compatibilidad entre versiones de snapshots pickle no está garantizada. No se oculta el warning y no se modifican los artefactos. Las versiones originales de las otras bibliotecas no fueron suministradas. Cualquier incompatibilidad detectada impide utilizar un ensamble parcial.
+El modelo contiene clases 0 y 1 y conserva los siete nombres de feature en el orden requerido. Se utiliza scikit-learn 1.6.1. XGBoost 3.3.0 emite un warning al cargar el pickle generado por una versión anterior: la compatibilidad entre versiones de snapshots pickle no está garantizada. No se oculta el warning y no se modifican los artefactos. Las versiones originales de las otras bibliotecas no fueron suministradas.
 
 En Windows, joblib también puede advertir que no pudo detectar núcleos físicos y utilizar núcleos lógicos. La inferencia verificada finaliza correctamente. `verify_real_http.py` inicia temporalmente el servicio en el puerto 5001, verifica las tres solicitudes con modelos reales y detiene su proceso; ejecutar con ese puerto libre.
+
+## Evidencia de entrenamiento
+
+No hay scripts de entrenamiento, métricas ni notebooks en el repositorio. Solo existen los artefactos serializados (`.pkl`) en `src/infrastructure/models/`. Las métricas del ensamble anterior (CatBoost+KNN+LightGBM+RandomForest+XGBoost) no están documentadas.
