@@ -84,6 +84,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               _buildWelcomeCard(),
                               const SizedBox(height: 20),
                               _buildStartEvaluationButton(esNuevo: true),
+                              const SizedBox(height: 16),
+                              _buildOrientacionCard(),
                               const SizedBox(height: 20),
                               _buildInfoSection(),
                             ] else ...[
@@ -97,6 +99,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               _buildSecondaryMetrics(historial.first),
                               const SizedBox(height: 16),
                               _buildStartEvaluationButton(esNuevo: false),
+                              const SizedBox(height: 16),
+                              _buildOrientacionCard(),
                               const SizedBox(height: 16),
                               _buildQuickTip(historial.first),
                             ],
@@ -658,6 +662,72 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  // ==========================================
+  // ACCESO A ORIENTACIÓN CONFIDENCIAL (M2)
+  // ==========================================
+  Widget _buildOrientacionCard() {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: () => Navigator.pushNamed(context, '/orientacion'),
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEEF2FF),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.support_agent_rounded,
+                  color: Color(0xFF4F46E5),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Orientación Confidencial UNAYOE',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E293B),
+                      ),
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      'Envía una consulta privada y revisa respuestas del equipo orientador.',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: Color(0xFF64748B),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

@@ -219,6 +219,37 @@ class AppConstants {
       '$citasOrigin/appointments/$id/reschedule';
 
   // ==========================================
+  // ENDPOINTS DE ORIENTACIÓN (microservicio Orientación, prefijo /o en APIM)
+  // ==========================================
+  static const String _orientacionPort = '5002';
+  static const String _orientacionBaseUrl =
+      String.fromEnvironment('ORIENTACION_BASE_URL');
+
+  /// Origen del microservicio Orientación Confidencial.
+  /// ORIENTACION_BASE_URL tiene prioridad; si no, con APIM usa `<APIM>/o`;
+  /// si tampoco, usa el host local de la plataforma en el puerto 5002.
+  static String get orientacionOrigin {
+    final configurada = _orientacionBaseUrl.replaceAll(RegExp(r'/+$'), '');
+    if (configurada.isNotEmpty) return configurada;
+    if (gateway.enabled) return gateway.orientacionOrigin;
+    try {
+      if (Platform.isAndroid) return 'http://10.0.2.2:$_orientacionPort';
+    } catch (_) {
+      // Sin dart:io (web): se usa localhost.
+    }
+    return 'http://localhost:$_orientacionPort';
+  }
+
+  static String get orientacionSolicitudes =>
+      '$orientacionOrigin/api/v1/orientacion/solicitudes';
+  static String orientacionSolicitudDetalle(int id) =>
+      '$orientacionSolicitudes/$id';
+  static String orientacionSolicitudAtender(int id) =>
+      '$orientacionSolicitudes/$id/atender';
+  static String get orientacionMetricasTemas =>
+      '$orientacionSolicitudes/metricas/conteo-temas';
+
+  // ==========================================
   // ENDPOINTS DE HÁBITOS
   // ==========================================
   static String get habitos => '$_baseUrl/habitos';

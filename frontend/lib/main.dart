@@ -22,6 +22,7 @@ import 'data/datasources/local/escuela_local_datasource.dart';
 import 'data/repositories/escuela_repository_impl.dart';
 import 'data/datasources/remote/citas_remote_datasource.dart';
 import 'data/repositories/citas_repository_impl.dart';
+import 'data/datasources/remote/orientacion_remote_datasource.dart';
 
 // Domain UseCases
 import 'domain/usecases/login_usecase.dart';
@@ -42,9 +43,11 @@ import 'presentation/viewmodels/theme_viewmodel.dart';
 import 'presentation/viewmodels/escuela_viewmodel.dart';
 import 'presentation/viewmodels/citas_viewmodel.dart';
 import 'presentation/viewmodels/agenda_unayoe_viewmodel.dart';
+import 'presentation/viewmodels/orientacion_viewmodel.dart';
 import 'presentation/pages/citas/publicar_horarios_screen.dart';
 import 'presentation/pages/citas/agendar_cita_screen.dart';
 import 'presentation/pages/citas/mis_citas_screen.dart';
+import 'presentation/pages/orientacion/orientacion_screen.dart';
 import 'presentation/pages/onboarding/onboarding_screen.dart';
 import 'presentation/pages/auth/login_screen.dart';
 import 'presentation/pages/admin/admin_home_screen.dart';
@@ -132,11 +135,17 @@ class _AnsiedadAppState extends State<AnsiedadApp> {
     );
     final citasVM = CitasViewModel(citasRepository);
     final agendaVM = AgendaUnayoeViewModel(citasRepository);
+    final orientacionVM = OrientacionViewModel(
+      OrientacionRemoteDataSource(apiService),
+      authVM,
+      evaluationVM,
+    );
     authVM.onSessionReset = () {
       evaluationVM.limpiarSesion();
       medicoVM.limpiarSesion();
       citasVM.limpiarSesion();
       agendaVM.limpiarSesion();
+      orientacionVM.limpiarSesion();
     };
     apiService.onUnauthorized = authVM.invalidarSesion;
     _providers = [
@@ -147,6 +156,7 @@ class _AnsiedadAppState extends State<AnsiedadApp> {
       ChangeNotifierProvider(create: (_) => medicoVM, lazy: false),
       ChangeNotifierProvider(create: (_) => citasVM),
       ChangeNotifierProvider(create: (_) => agendaVM),
+      ChangeNotifierProvider(create: (_) => orientacionVM),
       ChangeNotifierProvider(
         create: (_) => EscuelaViewModel(obtenerEscuelasUseCase),
       ),
@@ -218,6 +228,8 @@ class _AnsiedadAppState extends State<AnsiedadApp> {
                 const SessionProtected(child: MisCitasScreen()),
             '/agendar-cita': (context) =>
                 const SessionProtected(child: AgendarCitaScreen()),
+            '/orientacion': (context) =>
+                const SessionProtected(child: OrientacionScreen()),
             '/perfil': (context) =>
                 const SessionProtected(child: PerfilScreen()),
           },
