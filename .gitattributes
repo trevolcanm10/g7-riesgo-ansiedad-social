@@ -1,0 +1,19 @@
+# Normaliza los finales de linea en los archivos de texto para que el
+# diff no cambie segun la configuracion del editor de cada persona.
+* text=auto
+
+# El modelo de agrupamiento es un binario: nunca debe tratarse como texto.
+*.joblib binary
+*.pkl binary
+
+# Los scripts de Python usan LF.
+*.py text eol=lf
+
+# Los archivos de PowerShell y de Windows usan CRLF.
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Los datasets y las consultas SQL usan LF.
+*.csv text eol=lf
+*.sql text eol=lf

@@ -5,3 +5,14 @@ dist/
 
 # Config local de Flutter DevTools (no versionar)
 frontend/devtools_options.yaml
+
+# Editores y herramientas de verificacion local (no versionar)
+.vscode/
+.idea/
+.playwright-mcp/
+
+# Entornos virtuales de Python
+.venv/
+venv/
+__pycache__/
+.pytest_cache/

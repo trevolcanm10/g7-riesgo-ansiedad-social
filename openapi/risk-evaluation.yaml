@@ -98,6 +98,65 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MessageError"
+  /risk-evaluations/summary:
+    get:
+      tags:
+        - Risk Evaluations
+      summary: Consultar la última evaluación de varios estudiantes
+      description: |
+        Devuelve la evaluación más reciente de cada uno de los estudiantes
+        indicados, únicamente con el identificador de usuario, la
+        probabilidad de ansiedad, el nivel de riesgo y la fecha.
+
+        No incluye el reporte de IA, las explicaciones ni las recomendaciones:
+        el consumidor es el Panel Institucional, que solo necesita correlacionar
+        el nivel de riesgo con los perfiles de agrupamiento.
+
+        Requiere rol institucional (`PERSONAL_UNAYOE` o `ADMINISTRADOR`).
+      operationId: getRiskEvaluationSummary
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userIds
+          in: query
+          required: true
+          description: Identificadores de usuario separados por comas
+          schema:
+            type: string
+            example: "1,2,3,4,5"
+      responses:
+        "200":
+          description: Resumen consultado; puede ser una lista vacía
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RiskEvaluationSummary"
+        "400":
+          description: No se indicó un parámetro userIds válido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+        "401":
+          description: Falta un token válido o el usuario no está autenticado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+        "403":
+          description: El rol no tiene permiso para consultar el resumen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+        "500":
+          description: Error interno al consultar el resumen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
   /health:
     get:
       tags:
@@ -261,6 +320,29 @@ components:
         createdAt:
           type: string
           format: date-time
+    RiskEvaluationSummary:
+      type: object
+      required:
+        - userId
+        - anxietyProbability
+        - riskLevel
+        - createdAt
+      properties:
+        userId:
+          type: integer
+          description: Identificador del usuario evaluado
+          example: 42
+        anxietyProbability:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Probabilidad estimada de ansiedad
+        riskLevel:
+          $ref: "#/components/schemas/RiskLevel"
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha de la evaluación
     RiskLevel:
       type: string
       enum:

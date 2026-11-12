@@ -4,4 +4,5 @@ export interface RiskEvaluationRepository {
   save(riskEvaluation: RiskEvaluation): Promise<RiskEvaluation>;
   findById(id: number): Promise<RiskEvaluation | null>;
   findByUserId(userId: number): Promise<RiskEvaluation[]>;
+  findLatestByUserIds(userIds: number[]): Promise<RiskEvaluation[]>;
 }

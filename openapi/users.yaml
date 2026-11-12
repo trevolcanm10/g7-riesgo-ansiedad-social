@@ -273,6 +273,65 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MessageError"
+  /users/by-code/{code}:
+    get:
+      tags:
+        - Users
+      summary: Resolver un código de estudiante a su identificador
+      description: |
+        Devuelve el identificador numérico y el código del estudiante que
+        corresponde al código indicado.
+
+        Lo consume el Panel Institucional para correlacionar las atenciones con
+        las evaluaciones de riesgo sin compartir bases de datos. Devuelve
+        **únicamente** el identificador y el código: no expone nombre,
+        apellidos, correo ni ningún otro dato personal.
+
+        Requiere rol institucional (`PERSONAL_UNAYOE` o `ADMINISTRADOR`).
+      operationId: getUserByCode
+      parameters:
+        - name: code
+          in: path
+          required: true
+          description: Código de estudiante
+          schema:
+            type: string
+            minLength: 1
+          example: "20260001"
+      responses:
+        "200":
+          description: Estudiante resuelto
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserCodeResolution"
+              example:
+                id: 42
+                code: "20260001"
+        "400":
+          description: No se indicó un código de estudiante
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+        "401":
+          description: Falta un token válido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+        "403":
+          description: El rol no tiene permiso para resolver códigos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+        "404":
+          description: No existe ningún estudiante con ese código
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
   /health:
     get:
       tags:
@@ -438,6 +497,20 @@ components:
         createdAt:
           type: string
           format: date-time
+    UserCodeResolution:
+      type: object
+      required:
+        - id
+        - code
+      properties:
+        id:
+          type: integer
+          description: Identificador numérico del usuario
+          example: 42
+        code:
+          type: string
+          description: Código de estudiante
+          example: "20260001"
     MessageError:
       type: object
       required:

@@ -135,6 +135,32 @@ export class MySqlRiskEvaluationRepository implements RiskEvaluationRepository {
     return rows.map((row) => this.toDomain(row));
   }
 
+  async findLatestByUserIds(userIds: number[]): Promise<RiskEvaluation[]> {
+    if (userIds.length === 0) {
+      return [];
+    }
+
+    const marcadores = userIds.map(() => "?").join(", ");
+
+    // Se toma la evaluacion de id mas alto por usuario: es la mas reciente
+    // insertada. La lista de ids se parametriza, nunca se concatena.
+    const [rows] = await pool.execute<RiskEvaluationRow[]>(
+      `
+        ${this.selectQuery()}
+        WHERE e.id IN (
+          SELECT MAX(inner_e.id)
+          FROM risk_evaluations inner_e
+          WHERE inner_e.user_id IN (${marcadores})
+          GROUP BY inner_e.user_id
+        )
+        ORDER BY e.user_id
+      `,
+      userIds,
+    );
+
+    return rows.map((row) => this.toDomain(row));
+  }
+
   private selectQuery(): string {
     return `
       SELECT

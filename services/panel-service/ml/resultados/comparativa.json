@@ -1,0 +1,345 @@
+{
+  "nota_ia": "Las estimaciones son orientativas y no constituyen un diagnostico clinico. Los perfiles provienen de un dataset sintetico y no describen poblaciones reales.",
+  "dataset": {
+    "origen": "Kaggle: yuanchunhong/university-student-mental-health-indicators",
+    "licencia": "CC0-1.0 (dominio publico)",
+    "filas": 1800,
+    "features": [
+      "PHQ9",
+      "GAD7",
+      "OnlineStress",
+      "FinancialStress",
+      "ExerciseFreq",
+      "SocialActivity",
+      "SleepHours"
+    ],
+    "tipo": "sintetico"
+  },
+  "random_state": 42,
+  "principal": {
+    "algoritmo": "kmeans",
+    "k": 8,
+    "silueta": 0.103353,
+    "davies_bouldin": 1.797103,
+    "inercia": 8062.809548
+  },
+  "linea_base_jerarquica": {
+    "algoritmo": "jerarquico_ward",
+    "k": 2,
+    "silueta": 0.059057,
+    "davies_bouldin": 3.803741
+  },
+  "barrido": [
+    {
+      "algoritmo": "kmeans",
+      "k": 2,
+      "silueta": 0.100447,
+      "davies_bouldin": 2.870311,
+      "inercia": 11312.744963
+    },
+    {
+      "algoritmo": "kmeans",
+      "k": 3,
+      "silueta": 0.093973,
+      "davies_bouldin": 2.48554,
+      "inercia": 10453.227096
+    },
+    {
+      "algoritmo": "kmeans",
+      "k": 4,
+      "silueta": 0.094381,
+      "davies_bouldin": 2.240124,
+      "inercia": 9776.11245
+    },
+    {
+      "algoritmo": "kmeans",
+      "k": 5,
+      "silueta": 0.095075,
+      "davies_bouldin": 2.106805,
+      "inercia": 9267.790374
+    },
+    {
+      "algoritmo": "kmeans",
+      "k": 6,
+      "silueta": 0.09529,
+      "davies_bouldin": 1.946301,
+      "inercia": 8805.668568
+    },
+    {
+      "algoritmo": "kmeans",
+      "k": 7,
+      "silueta": 0.100372,
+      "davies_bouldin": 1.870656,
+      "inercia": 8398.641629
+    },
+    {
+      "algoritmo": "kmeans",
+      "k": 8,
+      "silueta": 0.103353,
+      "davies_bouldin": 1.797103,
+      "inercia": 8062.809548
+    },
+    {
+      "algoritmo": "kmeans",
+      "k": 9,
+      "silueta": 0.100635,
+      "davies_bouldin": 1.787603,
+      "inercia": 7819.558186
+    },
+    {
+      "algoritmo": "kmeans",
+      "k": 10,
+      "silueta": 0.101068,
+      "davies_bouldin": 1.774189,
+      "inercia": 7589.968185
+    },
+    {
+      "algoritmo": "jerarquico_ward",
+      "k": 2,
+      "silueta": 0.059057,
+      "davies_bouldin": 3.803741
+    },
+    {
+      "algoritmo": "jerarquico_ward",
+      "k": 3,
+      "silueta": 0.038762,
+      "davies_bouldin": 3.287809
+    },
+    {
+      "algoritmo": "jerarquico_ward",
+      "k": 4,
+      "silueta": 0.038639,
+      "davies_bouldin": 2.959518
+    },
+    {
+      "algoritmo": "jerarquico_ward",
+      "k": 5,
+      "silueta": 0.038154,
+      "davies_bouldin": 2.697392
+    },
+    {
+      "algoritmo": "jerarquico_ward",
+      "k": 6,
+      "silueta": 0.044734,
+      "davies_bouldin": 2.516134
+    },
+    {
+      "algoritmo": "jerarquico_ward",
+      "k": 7,
+      "silueta": 0.042288,
+      "davies_bouldin": 2.436771
+    },
+    {
+      "algoritmo": "jerarquico_ward",
+      "k": 8,
+      "silueta": 0.043398,
+      "davies_bouldin": 2.325313
+    },
+    {
+      "algoritmo": "jerarquico_ward",
+      "k": 9,
+      "silueta": 0.039792,
+      "davies_bouldin": 2.239109
+    },
+    {
+      "algoritmo": "jerarquico_ward",
+      "k": 10,
+      "silueta": 0.040494,
+      "davies_bouldin": 2.151807
+    }
+  ],
+  "perfiles": [
+    {
+      "cluster": 0,
+      "n": 205,
+      "descripcion": "Perfil de bienestar estable: indicadores de malestar en rangos bajos y recursos de apoyo disponibles.",
+      "medias": {
+        "PHQ9": 10.362,
+        "GAD7": 6.177,
+        "OnlineStress": 6.473,
+        "FinancialStress": 4.658,
+        "ExerciseFreq": 4.089,
+        "SocialActivity": 7.076,
+        "SleepHours": 6.016
+      },
+      "centroide_escalado": {
+        "PHQ9": 0.4273,
+        "GAD7": -0.2343,
+        "OnlineStress": 0.7779,
+        "FinancialStress": 0.3785,
+        "ExerciseFreq": 0.5921,
+        "SocialActivity": 1.0106,
+        "SleepHours": -0.6293
+      },
+      "nivel_orientativo": "moderado"
+    },
+    {
+      "cluster": 1,
+      "n": 245,
+      "descripcion": "Perfil de estres academico y financier marcado, con apoyo familiar presente.",
+      "medias": {
+        "PHQ9": 6.2,
+        "GAD7": 5.549,
+        "OnlineStress": 4.843,
+        "FinancialStress": 2.78,
+        "ExerciseFreq": 1.536,
+        "SocialActivity": 6.398,
+        "SleepHours": 7.773
+      },
+      "centroide_escalado": {
+        "PHQ9": -0.4491,
+        "GAD7": -0.396,
+        "OnlineStress": -0.0638,
+        "FinancialStress": -0.6459,
+        "ExerciseFreq": -0.7665,
+        "SocialActivity": 0.6734,
+        "SleepHours": 0.588
+      },
+      "nivel_orientativo": "bajo"
+    },
+    {
+      "cluster": 2,
+      "n": 228,
+      "descripcion": "Perfil de aislamiento social y menor autoeficacia, con aplicacion sostenida del estres en linea.",
+      "medias": {
+        "PHQ9": 8.15,
+        "GAD7": 5.122,
+        "OnlineStress": 6.204,
+        "FinancialStress": 5.319,
+        "ExerciseFreq": 2.115,
+        "SocialActivity": 3.146,
+        "SleepHours": 7.506
+      },
+      "centroide_escalado": {
+        "PHQ9": -0.0384,
+        "GAD7": -0.5059,
+        "OnlineStress": 0.6391,
+        "FinancialStress": 0.7392,
+        "ExerciseFreq": -0.4581,
+        "SocialActivity": -0.9453,
+        "SleepHours": 0.4033
+      },
+      "nivel_orientativo": "bajo"
+    },
+    {
+      "cluster": 3,
+      "n": 238,
+      "descripcion": "Perfil de sintomatologia depresiva y ansiosa elevada, con habitos de sueno y alimentacion irregulares.",
+      "medias": {
+        "PHQ9": 14.271,
+        "GAD7": 5.399,
+        "OnlineStress": 3.916,
+        "FinancialStress": 2.719,
+        "ExerciseFreq": 2.987,
+        "SocialActivity": 4.509,
+        "SleepHours": 6.821
+      },
+      "centroide_escalado": {
+        "PHQ9": 1.2502,
+        "GAD7": -0.4347,
+        "OnlineStress": -0.5423,
+        "FinancialStress": -0.6788,
+        "ExerciseFreq": 0.0055,
+        "SocialActivity": -0.2667,
+        "SleepHours": -0.0718
+      },
+      "nivel_orientativo": "moderado"
+    },
+    {
+      "cluster": 4,
+      "n": 215,
+      "descripcion": "Perfil de riesgo medio: presencia simultanea de estres academico y descanso insuficiente.",
+      "medias": {
+        "PHQ9": 4.884,
+        "GAD7": 4.613,
+        "OnlineStress": 3.032,
+        "FinancialStress": 4.694,
+        "ExerciseFreq": 4.0,
+        "SocialActivity": 5.293,
+        "SleepHours": 6.375
+      },
+      "centroide_escalado": {
+        "PHQ9": -0.7261,
+        "GAD7": -0.6372,
+        "OnlineStress": -0.9993,
+        "FinancialStress": 0.3986,
+        "ExerciseFreq": 0.5449,
+        "SocialActivity": 0.1233,
+        "SleepHours": -0.3807
+      },
+      "nivel_orientativo": "bajo"
+    },
+    {
+      "cluster": 5,
+      "n": 236,
+      "descripcion": "Perfil de alta carga de estres con apoyo familiar reducido.",
+      "medias": {
+        "PHQ9": 9.841,
+        "GAD7": 11.646,
+        "OnlineStress": 4.329,
+        "FinancialStress": 5.294,
+        "ExerciseFreq": 2.074,
+        "SocialActivity": 5.41,
+        "SleepHours": 7.101
+      },
+      "centroide_escalado": {
+        "PHQ9": 0.3175,
+        "GAD7": 1.1741,
+        "OnlineStress": -0.3293,
+        "FinancialStress": 0.7255,
+        "ExerciseFreq": -0.4803,
+        "SocialActivity": 0.1816,
+        "SleepHours": 0.1227
+      },
+      "nivel_orientativo": "elevado"
+    },
+    {
+      "cluster": 6,
+      "n": 209,
+      "descripcion": "Perfil con indicadores predominantemente favorables y recursos de apoyo sostenidos.",
+      "medias": {
+        "PHQ9": 7.082,
+        "GAD7": 8.664,
+        "OnlineStress": 5.23,
+        "FinancialStress": 3.581,
+        "ExerciseFreq": 5.265,
+        "SocialActivity": 4.386,
+        "SleepHours": 8.201
+      },
+      "centroide_escalado": {
+        "PHQ9": -0.2632,
+        "GAD7": 0.4062,
+        "OnlineStress": 0.1359,
+        "FinancialStress": -0.2088,
+        "ExerciseFreq": 1.2181,
+        "SocialActivity": -0.3282,
+        "SleepHours": 0.8848
+      },
+      "nivel_orientativo": "moderado"
+    },
+    {
+      "cluster": 7,
+      "n": 224,
+      "descripcion": "Perfil de uso intensivo de pantallas con desbalance entre estres y recursos.",
+      "medias": {
+        "PHQ9": 5.572,
+        "GAD7": 9.494,
+        "OnlineStress": 5.862,
+        "FinancialStress": 2.821,
+        "ExerciseFreq": 2.231,
+        "SocialActivity": 4.203,
+        "SleepHours": 5.494
+      },
+      "centroide_escalado": {
+        "PHQ9": -0.5812,
+        "GAD7": 0.62,
+        "OnlineStress": 0.4628,
+        "FinancialStress": -0.6231,
+        "ExerciseFreq": -0.3967,
+        "SocialActivity": -0.4193,
+        "SleepHours": -0.991
+      },
+      "nivel_orientativo": "moderado"
+    }
+  ]
+}

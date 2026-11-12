@@ -1,0 +1,692 @@
+﻿openapi: 3.0.3
+info:
+  title: Panel Institucional y Analítica API
+  version: 1.0.0
+  description: |
+    API del microservicio de Panel Institucional y Analítica (Módulo 4).
+
+    Registra atenciones a estudiantes, expone estadísticas anonimizadas con
+    indicadores generados por un modelo de agrupamiento y genera el informe
+    mensual en CSV.
+
+    **Privacidad (k=5).** Toda agrupación con menos de cinco estudiantes se
+    omite de la respuesta. Los grupos suprimidos no aparecen en ningún campo;
+    el campo `grupos_omitidos_por_privacidad` informa únicamente cuántos se
+    ocultaron.
+
+    **IA responsable.** Los perfiles devueltos por el modelo de agrupamiento
+    son estimaciones orientativas y no constituyen un diagnóstico clínico.
+    Provienen de un dataset sintético y no describen poblaciones reales.
+servers:
+  - url: http://localhost:5003
+    description: Servidor de desarrollo local
+  - url: http://localhost:5003
+    description: Contenedor Docker de producción
+tags:
+  - name: Atenciones
+    description: Registro y consulta de atenciones institucionales
+  - name: Analítica
+    description: Estadísticas anonimizadas e indicadores de IA
+  - name: Informes
+    description: Generación de informes mensuales
+  - name: Salud
+    description: Estado del servicio
+security:
+  - bearerAuth: []
+paths:
+  /api/panel/atencion:
+    post:
+      tags:
+        - Atenciones
+      summary: Registrar una atención a un estudiante
+      description: |
+        Registra una atención institucional. Si se proporcionan los siete
+        indicadores del contrato de evaluación de riesgo, el servicio asigna
+        el perfil de agrupamiento correspondiente. Esa asignación es una
+        estimación orientativa y no un diagnóstico clínico.
+
+        Si la atención se registra sin indicadores, `cluster_id` queda en
+        `null` y la atención no participa de los perfiles de IA.
+      operationId: registrarAtencion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AtencionCreateRequest"
+            example:
+              estudiante_codigo: "20260001"
+              modalidad: presencial
+              tipo: orientacion
+              fecha_atencion: "2026-03-15T10:00:00"
+              indicadores:
+                phq9: 8
+                gad7: 6
+                online_stress: 6
+                financial_stress: 5
+                exercise_freq: 3
+                social_activity: 6
+                sleep_hours: 7
+              notas: "Se coordina seguimiento con el servicio de orientación."
+              seguimiento_requerido: true
+      responses:
+        "201":
+          description: Atención registrada correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Atencion"
+        "400":
+          description: Datos de la atención no válidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        "401":
+          description: Falta un token válido o el token ha expirado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+        "403":
+          description: El rol no tiene permiso para usar el panel institucional
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerError"
+  /api/panel/atenciones:
+    get:
+      tags:
+        - Atenciones
+      summary: Listar atenciones registradas
+      description: |
+        Devuelve una página de atenciones con filtros opcionales. A diferencia
+        de las estadísticas, este listado es un recurso operativo del personal
+        institucional y no aplica la regla k=5: el personal autorizado necesita
+        ver los casos que atiende.
+      operationId: listarAtenciones
+      parameters:
+        - name: limite
+          in: query
+          required: false
+          description: Número máximo de atenciones a devolver (máximo 200)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: offset
+          in: query
+          required: false
+          description: Desplazamiento de la página
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: tipo
+          in: query
+          required: false
+          description: Filtra por tipo de atención
+          schema:
+            type: string
+            enum:
+              - orientacion
+              - seguimiento
+              - derivacion
+              - evaluacion
+              - emergencia
+        - name: modalidad
+          in: query
+          required: false
+          description: Filtra por modalidad de atención
+          schema:
+            type: string
+            enum:
+              - presencial
+              - virtual
+              - telefonica
+              - correo
+        - name: periodo
+          in: query
+          required: false
+          description: Filtra por mes en formato YYYY-MM
+          schema:
+            type: string
+            pattern: '^\d{4}-(0[1-9]|1[0-2])$'
+      responses:
+        "200":
+          description: Página de atenciones
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AtencionesPagina"
+        "400":
+          description: Parámetros de filtrado no válidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+        "401":
+          description: Falta un token válido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+        "403":
+          description: El rol no tiene permiso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+  /api/panel/estadisticas:
+    get:
+      tags:
+        - Analítica
+      summary: Obtener estadísticas anonimizadas del panel
+      description: |
+        Devuelve el total de atenciones, las distribuciones por tipo,
+        modalidad, estado y periodo, y los perfiles generados por el modelo de
+        agrupamiento.
+
+        **Regla de privacidad k=5.** Toda agrupación con menos de cinco
+        estudiantes se omite por completo. El campo
+        `grupos_omitidos_por_privacidad` informa cuántos grupos se ocultaron
+        sin revelar su contenido.
+
+        Los perfiles de IA son estimaciones orientativas y no constituyen un
+        diagnóstico clínico.
+      operationId: obtenerEstadisticas
+      parameters:
+        - name: periodo
+          in: query
+          required: false
+          description: Acota las estadísticas a un mes en formato YYYY-MM
+          schema:
+            type: string
+            pattern: '^\d{4}-(0[1-9]|1[0-2])$'
+      responses:
+        "200":
+          description: Estadísticas anonimizadas del panel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Estadisticas"
+        "400":
+          description: El periodo no tiene el formato YYYY-MM
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+        "401":
+          description: Falta un token válido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+        "403":
+          description: El rol no tiene permiso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+  /api/panel/informe:
+    get:
+      tags:
+        - Informes
+      summary: Generar el informe mensual de atenciones
+      description: |
+        Genera y devuelve el informe del periodo en formato CSV. El archivo
+        lleva BOM UTF-8 para que Excel lo interprete correctamente.
+
+        El informe es un agregado por tipo de atención y modalidad: no
+        incluye identificadores de estudiantes. Las filas con menos de cinco
+        atenciones se omiten, igual que en las estadísticas.
+      operationId: generarInforme
+      parameters:
+        - name: periodo
+          in: query
+          required: false
+          description: Mes del informe en formato YYYY-MM. Si se omite, cubre todo el histórico.
+          schema:
+            type: string
+            pattern: '^\d{4}-(0[1-9]|1[0-2])$'
+      responses:
+        "200":
+          description: Informe CSV descargable
+          headers:
+            Content-Disposition:
+              description: Nombre del archivo generado
+              schema:
+                type: string
+                example: 'attachment; filename="informe_atenciones_2026-03.csv"'
+          content:
+            text/csv:
+              schema:
+                type: string
+              example: |
+                tipo_atencion,modalidad,total_atenciones,requieren_seguimiento
+                orientacion,todas,14,
+                TOTAL,todas,14,3
+        "400":
+          description: El periodo no tiene el formato YYYY-MM
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+        "401":
+          description: Falta un token válido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+        "403":
+          description: El rol no tiene permiso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageError"
+  /api/panel/health:
+    get:
+      tags:
+        - Salud
+      summary: Estado del servicio y de la base de datos
+      description: Endpoint público para orquestadores y balanceadores. No requiere token.
+      operationId: obtenerHealth
+      security: []
+      responses:
+        "200":
+          description: Servicio operativo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+        "503":
+          description: La base de datos no está disponible
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Token emitido por el microservicio de usuarios. Debe corresponder a un
+        usuario con rol `PERSONAL_UNAYOE` o `ADMINISTRADOR`. La firma se
+        verifica con el secreto compartido entre servicios.
+  schemas:
+    AtencionCreateRequest:
+      type: object
+      required:
+        - estudiante_codigo
+        - modalidad
+        - tipo
+      properties:
+        estudiante_codigo:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: Código del estudiante. El panel no almacena nombres ni correos.
+          example: "20260001"
+        modalidad:
+          type: string
+          enum:
+            - presencial
+            - virtual
+            - telefonica
+            - correo
+          description: Modalidad de la atención
+        tipo:
+          type: string
+          enum:
+            - orientacion
+            - seguimiento
+            - derivacion
+            - evaluacion
+            - emergencia
+          description: Tipo de atención
+        fecha_atencion:
+          type: string
+          format: date-time
+          nullable: true
+          description: Fecha de la atención. Si se omite, se toma la fecha actual.
+        indicadores:
+          $ref: "#/components/schemas/Indicadores"
+        notas:
+          type: string
+          maxLength: 2000
+          nullable: true
+          description: Notas internas de la atención
+        seguimiento_requerido:
+          type: boolean
+          default: false
+          description: Indica si la atención requiere seguimiento posterior
+    Indicadores:
+      type: object
+      description: |
+        Indicadores del contrato de evaluación de riesgo. Todos son
+        opcionales. Para que el modelo de agrupamiento asigne un perfil deben
+        enviarse los siete.
+      properties:
+        phq9:
+          type: number
+          minimum: 0
+          maximum: 27
+          description: Puntuación total PHQ-9
+        gad7:
+          type: number
+          minimum: 0
+          maximum: 21
+          description: Puntuación total GAD-7
+        online_stress:
+          type: number
+          minimum: 1
+          maximum: 10
+          description: Estrés en línea
+        financial_stress:
+          type: number
+          minimum: 1
+          maximum: 10
+          description: Estrés financiero
+        exercise_freq:
+          type: number
+          minimum: 0
+          maximum: 7
+          description: Frecuencia de ejercicio semanal
+        social_activity:
+          type: number
+          minimum: 0
+          maximum: 10
+          description: Actividad social
+        sleep_hours:
+          type: number
+          minimum: 3
+          maximum: 10
+          description: Horas de sueño por noche
+    Atencion:
+      type: object
+      required:
+        - id
+        - estudiante_codigo
+        - modalidad
+        - tipo
+        - estado
+        - indicadores
+        - seguimiento_requerido
+        - fecha_atencion
+        - fecha_creacion
+      properties:
+        id:
+          type: integer
+          description: Identificador de la atención
+        estudiante_codigo:
+          type: string
+        modalidad:
+          type: string
+        tipo:
+          type: string
+        estado:
+          type: string
+          enum:
+            - registrada
+            - en_seguimiento
+            - cerrada
+        indicadores:
+          $ref: "#/components/schemas/Indicadores"
+        cluster_id:
+          type: integer
+          nullable: true
+          description: |
+            Perfil de agrupamiento asignado. Es una estimación orientativa y
+            no un diagnóstico clínico. Nulo si la atención se registró sin
+            indicadores.
+        seguimiento_requerido:
+          type: boolean
+        registrado_por:
+          type: string
+          nullable: true
+          description: Identidad de la persona que registró la atención, resuelta vía HTTP contra el servicio de usuarios
+        notas:
+          type: string
+          nullable: true
+        fecha_atencion:
+          type: string
+          format: date-time
+        fecha_creacion:
+          type: string
+          format: date-time
+    AtencionesPagina:
+      type: object
+      required:
+        - total
+        - limite
+        - offset
+        - atenciones
+      properties:
+        total:
+          type: integer
+          description: Número total de atenciones que cumplen el filtro
+        limite:
+          type: integer
+        offset:
+          type: integer
+        atenciones:
+          type: array
+          items:
+            $ref: "#/components/schemas/Atencion"
+    GrupoEstadistico:
+      type: object
+      required:
+        - etiqueta
+        - n
+      properties:
+        etiqueta:
+          type: string
+          description: Valor de la dimensión agrupada
+          example: orientacion
+        n:
+          type: integer
+          minimum: 5
+          description: |
+            Número de estudiantes del grupo. Por la regla de privacidad k=5
+            nunca es menor de cinco en una respuesta.
+    PerfilIA:
+      type: object
+      required:
+        - cluster
+        - n
+        - porcentaje
+        - descripcion
+        - nivel_orientativo
+        - riesgo
+        - riesgo_omitidos
+        - riesgo_disponible
+      properties:
+        cluster:
+          type: integer
+          description: Identificador del perfil de agrupamiento
+        n:
+          type: integer
+          minimum: 5
+          description: |
+            Número de estudiantes observados en el perfil. Por la regla de
+            privacidad k=5 nunca es menor de cinco en una respuesta.
+        porcentaje:
+          type: number
+          description: |
+            Porcentaje de estudiantes del perfil sobre el total de
+            estudiantes con perfil asignado en el periodo.
+        descripcion:
+          type: string
+          description: Descripción orientativa del perfil
+        medias:
+          type: object
+          additionalProperties:
+            type: number
+          description: Media de cada indicador en el perfil
+        nivel_orientativo:
+          type: string
+          enum:
+            - bajo
+            - moderado
+            - elevado
+            - no_clasificado
+          description: Nivel descriptivo del perfil. No es una clasificación clínica.
+        riesgo:
+          type: object
+          description: |
+            Conteo de estudiantes por nivel de riesgo dentro del perfil. Se
+            obtiene por HTTP consultando al microservicio de evaluación de
+            riesgo. Las celdas con menos de cinco estudiantes se omiten.
+          additionalProperties:
+            type: integer
+          example:
+            ALTO: 68
+            MEDIO: 120
+            BAJO: 40
+        riesgo_omitidos:
+          type: integer
+          minimum: 0
+          description: |
+            Número de celdas de nivel de riesgo ocultas por la regla de
+            privacidad k=5. Se informa la cantidad, nunca su contenido.
+        riesgo_disponible:
+          type: boolean
+          description: |
+            Indica si el microservicio de evaluación de riesgo respondió. Si
+            es false, el perfil se muestra sin la correlación de riesgo y el
+            panel funciona con normalidad.
+    Estadisticas:
+      type: object
+      required:
+        - periodo
+        - total_atenciones
+        - requieren_seguimiento
+        - por_tipo
+        - por_modalidad
+        - por_estado
+        - por_periodo
+        - perfiles_ia
+        - grupos_omitidos_por_privacidad
+        - minimo_grupo_publicable
+        - riesgo_disponible
+        - nota_ia
+      properties:
+        periodo:
+          type: string
+          nullable: true
+          description: Periodo consultado en formato YYYY-MM. Nulo si se solicitó todo el histórico.
+        total_atenciones:
+          type: integer
+          description: Total de atenciones del periodo
+        requieren_seguimiento:
+          type: integer
+          description: Atenciones que requieren seguimiento
+        por_tipo:
+          type: array
+          items:
+            $ref: "#/components/schemas/GrupoEstadistico"
+        por_modalidad:
+          type: array
+          items:
+            $ref: "#/components/schemas/GrupoEstadistico"
+        por_estado:
+          type: array
+          items:
+            $ref: "#/components/schemas/GrupoEstadistico"
+        por_periodo:
+          type: array
+          items:
+            $ref: "#/components/schemas/GrupoEstadistico"
+        perfiles_ia:
+          type: array
+          items:
+            $ref: "#/components/schemas/PerfilIA"
+          description: Perfiles del modelo de agrupamiento, sujetos a la regla k=5
+        grupos_omitidos_por_privacidad:
+          type: integer
+          minimum: 0
+          description: |
+            Número de grupos ocultos por la regla de privacidad k=5. Se
+            informa la cantidad, nunca su contenido.
+        minimo_grupo_publicable:
+          type: integer
+          example: 5
+          description: Mínimo de estudiantes exigido por la regla de privacidad
+        riesgo_disponible:
+          type: boolean
+          description: |
+            Indica si el microservicio de evaluación de riesgo respondió y se
+            pudo correlacionar con los perfiles de agrupamiento. Si es false, el
+            panel funciona con normalidad sin esa correlación.
+        nota_ia:
+          type: string
+          description: |
+            Aviso obligatorio: las estimaciones son orientativas y no
+            constituyen un diagnóstico clínico.
+          example: "Las estimaciones son orientativas y no constituyen un diagnóstico clínico. Los perfiles provienen de un dataset sintético y no describen poblaciones reales."
+    MessageError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          example: "El rol no tiene permiso para usar el panel institucional."
+    ValidationError:
+      type: object
+      required:
+        - error
+        - detalles
+      properties:
+        error:
+          type: string
+          example: Datos de la atención no válidos.
+        detalles:
+          type: array
+          items:
+            type: object
+            properties:
+              campo:
+                type: string
+                example: modalidad
+              mensaje:
+                type: string
+                example: Modalidad no valida.
+    ServerError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          example: Error interno del servidor.
+    HealthStatus:
+      type: object
+      required:
+        - service
+        - status
+        - database
+      properties:
+        service:
+          type: string
+          enum:
+            - panel
+        status:
+          type: string
+          enum:
+            - OK
+            - ERROR
+        database:
+          type: string
+          enum:
+            - OK
+            - UNAVAILABLE

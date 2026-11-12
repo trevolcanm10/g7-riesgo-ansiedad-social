@@ -9,6 +9,13 @@ export const createRiskEvaluationRouter = (
   const router = Router();
 
   router.get(
+    "/summary",
+    authMiddleware,
+    createRoleMiddleware("PERSONAL_UNAYOE", "ADMINISTRADOR"),
+    (req, res) => riskEvaluationController.getSummary(req, res),
+  );
+
+  router.get(
     "/me/history",
     authMiddleware,
     createRoleMiddleware("ESTUDIANTE", "ADMINISTRADOR"),

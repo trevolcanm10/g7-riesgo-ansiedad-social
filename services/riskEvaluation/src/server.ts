@@ -7,6 +7,7 @@ import { MySqlRiskRecommendationRepository } from "./infrastructure/repositories
 import { JwtTokenService } from "./infrastructure/services/JwtTokenService.js";
 import { CreateRiskEvaluation } from "./application/useCases/CreateRiskEvaluation.js";
 import { GetRiskEvaluationHistory } from "./application/useCases/GetRiskEvaluationHistory.js";
+import { GetRiskEvaluationSummary } from "./application/useCases/GetRiskEvaluationSummary.js";
 import { RiskEvaluationController } from "./presentation/controllers/RiskEvaluationController.js";
 import { createAuthMiddleware } from "./presentation/middlewares/authMiddleware.js";
 import { createRiskEvaluationRouter } from "./presentation/routes/riskEvaluationRoutes.js";
@@ -36,9 +37,14 @@ const getRiskEvaluationHistory = new GetRiskEvaluationHistory(
   riskEvaluationRepository,
 );
 
+const getRiskEvaluationSummary = new GetRiskEvaluationSummary(
+  riskEvaluationRepository,
+);
+
 const riskEvaluationController = new RiskEvaluationController(
   createRiskEvaluation,
   getRiskEvaluationHistory,
+  getRiskEvaluationSummary,
 );
 
 const authMiddleware = createAuthMiddleware(tokenService);
