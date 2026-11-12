@@ -20,6 +20,10 @@ La primera versión combina atributos explícitos del recurso con los intereses 
 
 Cuando existen interacciones compartidas entre estudiantes, calcula similitud coseno item-item sobre interacciones implícitas. En ese caso, el resultado combina 75 % de la puntuación por contenido/popularidad y 25 % de la señal colaborativa. Eventos usados: vista = 1, clic = 2, inscripción = 4 y finalización = 3. El motor no crea interacciones al mostrar una recomendación: el cliente registra vistas/clics de forma explícita mediante POST /interactions.
 
+Para que las llamadas repetidas no inflen el ranking, cada combinación de usuario, recurso y tipo de evento aporta como máximo una vez por consulta. El endpoint aún conserva cada llamada recibida en el historial; configura límites de peticiones en el gateway para proteger el almacenamiento.
+
+Cada consulta del recomendador considera como máximo los 2 000 recursos publicados más recientes y hasta 50 000 interacciones de los últimos 180 días. Son límites operativos de esta versión inicial; con un catálogo mayor conviene precalcular similitudes o agregarlas en la base de datos.
+
 Modos de salida:
 
 - CONTENT_BASED: hay preferencias y aún no existe señal colaborativa útil.
@@ -27,7 +31,7 @@ Modos de salida:
 - POPULARITY_FALLBACK: el estudiante aún no tiene preferencias ni historial útil.
 - NO_CATALOG: no hay recursos publicados disponibles.
 
-Los datos de seed_demo.sql son sintéticos y solo permiten probar el catálogo. Los pesos son una línea base inicial, no métricas validadas con estudiantes. Para evaluar el trabajo del curso, comparar contra popularidad con un conjunto de interacciones de prueba y reportar Precision@K, Recall@K y cobertura; no presentar esos resultados como rendimiento real hasta medirlos.
+Los datos de seed_demo.sql son sintéticos y solo permiten probar el catálogo. Los pesos son una línea base inicial, no métricas validadas con estudiantes. La evaluación offline reproducible con perfiles sintéticos y sus límites están en `ml/evaluation_report.md`; ejecútala con `python ml/evaluate_recommender.py` desde esta carpeta. El estado del arte resumido está en `../../docs/Estado_del_Arte_Apoyo_Academico.md`. No presentes los resultados sintéticos como rendimiento real.
 
 Los códigos de curso y etiquetas en el catálogo demostrativo son ejemplos. Sustitúyelos por el catálogo aprobado por FISI/UNAYOE antes de una demostración institucional.
 
@@ -40,7 +44,7 @@ El contrato completo está en ../../openapi/academic-support.yaml.
 | GET /health | Estado del servicio y la base | Público |
 | GET /resources | Catálogo, filtros y paginación | JWT |
 | GET /resources/{id} | Ver un recurso publicado | JWT |
-| POST /resources | Publicar tutoría/taller/material | JWT; estudiante solo tutorías |
+| POST /resources | Publicar tutoría/taller/material | JWT; estudiante: una tutoría publicada |
 | PATCH /resources/{id} | Editar recurso | Personal UNAYOE/admin; dueño de tutoría |
 | DELETE /resources/{id} | Cancelar recurso sin borrar historial | Personal UNAYOE/admin; dueño de tutoría |
 | GET /students/me/preferences | Consultar preferencias | Estudiante |
@@ -79,7 +83,7 @@ Ejemplo:
 
 Tipos permitidos: TUTORING, WORKSHOP y MATERIAL. Talleres y tutorías requieren inicio/fin ISO 8601 con zona horaria, modalidad y location si son presenciales o híbridos. Talleres requieren capacity positiva. Materiales requieren URL HTTP/HTTPS. Todos los recursos tienen título, descripción y lista de etiquetas. Los códigos de curso son opcionales.
 
-Un estudiante puede publicar solo una oferta de tutoría propia. Personal UNAYOE y administradores pueden publicar los tres tipos. La API no permite que el cliente elija creatorUserId, status o isSynthetic.
+Un estudiante puede mantener solo una oferta de tutoría propia publicada. Para publicar otra, debe cancelar la anterior. Personal UNAYOE y administradores pueden publicar los tres tipos. La API no permite que el cliente elija creatorUserId, status o isSynthetic.
 
 ## Configuración local
 
@@ -111,6 +115,14 @@ Con `.env` configurado y `schema.sql` aplicado, puedes comprobar la conexión re
     python -m unittest discover -s tests -p test_mysql_live.py -v
 
 Esta prueba consulta únicamente la base configurada y su esquema. Sin la variable de activación, se omite durante la suite normal de pruebas.
+
+También hay pruebas de integración del repositorio que crean y eliminan datos de prueba. Ejecútalas solo contra una base aislada cuyo nombre termine en `_test` (por ejemplo, `academic_support_test`), con `schema.sql` aplicado:
+
+    $env:DB_NAME = "academic_support_test"
+    $env:ACADEMIC_SUPPORT_MYSQL_INTEGRATION = "1"
+    python -m unittest discover -s tests -p test_mysql_repository_integration.py -v
+
+Estas pruebas cubren filtros SQL, preferencias, edición/cancelación, la oferta única de tutoría por estudiante y la concurrencia sobre el último cupo. Se niegan a ejecutarse si `DB_NAME` no termina en `_test`.
 
 El servidor escucha en http://localhost:5003. GET /health devuelve 503 si MySQL no está disponible. Para producción, usa Gunicorn o la imagen Docker incluida; no uses el servidor de desarrollo de Flask.
 

@@ -192,7 +192,7 @@ class AcademicSupportService:
         if user.role == "ESTUDIANTE" and resource_type != "TUTORING":
             raise ForbiddenError("Los estudiantes solo pueden publicar ofertas de tutoría")
         data = self._normalize_resource(body, resource_type, for_create=True)
-        record = self._repository.create_resource(data, user.user_id)
+        record = self._repository.create_resource(data, user.user_id, user.role)
         return self._resource_to_response(record)
 
     def update_resource(

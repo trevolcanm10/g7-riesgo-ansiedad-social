@@ -1,0 +1,40 @@
+{
+  "synthetic_data": true,
+  "seed": 20261112,
+  "protocol": {
+    "users": 90,
+    "catalog_resources": 30,
+    "training_interactions": 360,
+    "relevant_items_per_user": 1,
+    "train_items_per_user": 4,
+    "k": 5,
+    "candidate_policy": "Exclude the user's training interactions before ranking.",
+    "note": "Constructed data only; metrics do not estimate real student outcomes."
+  },
+  "metrics": {
+    "POPULARITY": {
+      "precision_at_5": 0.0267,
+      "hit_rate_at_5": 0.1333,
+      "coverage": 0.2667,
+      "hits": 12,
+      "users": 90,
+      "unique_recommended_resources": 8
+    },
+    "CONTENT_BASED": {
+      "precision_at_5": 0.1711,
+      "hit_rate_at_5": 0.8556,
+      "coverage": 0.9,
+      "hits": 77,
+      "users": 90,
+      "unique_recommended_resources": 27
+    },
+    "HYBRID": {
+      "precision_at_5": 0.1644,
+      "hit_rate_at_5": 0.8222,
+      "coverage": 1.0,
+      "hits": 74,
+      "users": 90,
+      "unique_recommended_resources": 30
+    }
+  }
+}

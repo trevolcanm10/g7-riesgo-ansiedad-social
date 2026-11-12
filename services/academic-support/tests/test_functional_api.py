@@ -166,7 +166,22 @@ class FakeAcademicSupportRepository:
         record = self.resources.get(resource_id)
         return self._with_capacity(record) if record else None
 
-    def create_resource(self, data: dict[str, Any], creator_user_id: int) -> dict[str, Any]:
+    def create_resource(
+        self, data: dict[str, Any], creator_user_id: int, creator_role: str
+    ) -> dict[str, Any]:
+        if (
+            creator_role == "ESTUDIANTE"
+            and data["resource_type"] == "TUTORING"
+            and any(
+                item["creator_user_id"] == creator_user_id
+                and item["resource_type"] == "TUTORING"
+                and item["status"] == "PUBLISHED"
+                for item in self.resources.values()
+            )
+        ):
+            raise ConflictError(
+                "Ya tienes una tutoría publicada; cancélala antes de crear otra"
+            )
         record = self.add_resource(
             data["resource_type"],
             data["title"],
@@ -611,6 +626,26 @@ class AcademicSupportFunctionalApiTests(unittest.TestCase):
             any("interacciones similares" in reason for reason in material["reasons"])
         )
 
+    def test_13a_repeated_interactions_do_not_inflate_recommendation_scores(self) -> None:
+        self.repository._record_event(101, self.workshop_id, "CLICK")
+        self.repository._record_event(202, self.workshop_id, "CLICK")
+        self.repository._record_event(202, self.material_id, "CLICK")
+        baseline = self.client.get("/recommendations", headers=self.headers())
+        baseline_scores = {
+            item["resource"]["id"]: item["score"] for item in baseline.json["items"]
+        }
+
+        for _ in range(100):
+            self.repository._record_event(202, self.workshop_id, "CLICK")
+        repeated = self.client.get("/recommendations", headers=self.headers())
+        repeated_scores = {
+            item["resource"]["id"]: item["score"] for item in repeated.json["items"]
+        }
+
+        self.assertEqual(baseline.status_code, 200)
+        self.assertEqual(repeated.status_code, 200)
+        self.assertEqual(baseline_scores, repeated_scores)
+
     def test_14_latest_dismissal_suppresses_resource_recommendation(self) -> None:
         self.repository._record_event(101, self.workshop_id, "CLICK")
         self.repository._record_event(101, self.workshop_id, "DISMISS")
@@ -635,7 +670,7 @@ class AcademicSupportFunctionalApiTests(unittest.TestCase):
         self.assertNotIn(full_id, ids)
         self.assertNotIn(self.workshop_id, ids)
 
-    def test_16_student_can_publish_tutoring_but_not_workshop(self) -> None:
+    def test_16_student_can_publish_only_one_active_tutoring_offer(self) -> None:
         start = datetime.now(timezone.utc) + timedelta(days=5)
         tutoring = {
             "type": "TUTORING",
@@ -655,9 +690,25 @@ class AcademicSupportFunctionalApiTests(unittest.TestCase):
             headers=self.headers(user_id=301),
             json=self.workshop_payload(),
         )
+        duplicate = self.client.post(
+            "/resources", headers=self.headers(user_id=301), json=tutoring
+        )
+        another_student = self.client.post(
+            "/resources", headers=self.headers(user_id=302), json=tutoring
+        )
+        cancelled = self.client.delete(
+            f"/resources/{created.json['id']}", headers=self.headers(user_id=301)
+        )
+        replacement = self.client.post(
+            "/resources", headers=self.headers(user_id=301), json=tutoring
+        )
         self.assertEqual(created.status_code, 201)
         self.assertEqual(created.json["providerUserId"], 301)
         self.assertEqual(denied.status_code, 403)
+        self.assertEqual(duplicate.status_code, 409)
+        self.assertEqual(another_student.status_code, 201)
+        self.assertEqual(cancelled.status_code, 204)
+        self.assertEqual(replacement.status_code, 201)
 
     def test_17_staff_can_publish_workshop_and_material(self) -> None:
         workshop = self.client.post(

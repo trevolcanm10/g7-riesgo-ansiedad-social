@@ -230,34 +230,64 @@ class MySqlAcademicSupportRepository:
                 row = cursor.fetchone()
         return self._decode_resource(row) if row else None
 
-    def create_resource(self, data: dict[str, Any], creator_user_id: int) -> dict[str, Any]:
+    def create_resource(
+        self, data: dict[str, Any], creator_user_id: int, creator_role: str
+    ) -> dict[str, Any]:
         with self._connect() as connection:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    """
-                    INSERT INTO support_resources
-                        (resource_type, title, description, tags, course_codes, modality,
-                         location, start_at, end_at, capacity, url, creator_user_id,
-                         status, is_synthetic)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'PUBLISHED', FALSE)
-                    """,
-                    (
-                        data["resource_type"],
-                        data["title"],
-                        data["description"],
-                        self._json(data["tags"]),
-                        self._json(data["course_codes"]),
-                        data["modality"],
-                        data["location"],
-                        data["start_at"],
-                        data["end_at"],
-                        data["capacity"],
-                        data["url"],
-                        creator_user_id,
-                    ),
-                )
-                resource_id = int(cursor.lastrowid)
-            connection.commit()
+            try:
+                with connection.cursor() as cursor:
+                    if creator_role == "ESTUDIANTE" and data["resource_type"] == "TUTORING":
+                        # Serialize concurrent creates by the same student across service instances.
+                        lock_name = f"g7-as-tutoring-{creator_user_id}"
+                        cursor.execute("SELECT GET_LOCK(%s, 5) AS acquired", (lock_name,))
+                        if cursor.fetchone()["acquired"] != 1:
+                            raise ConflictError(
+                                "No se pudo validar tu oferta de tutoría; vuelve a intentarlo"
+                            )
+                        cursor.execute(
+                            """
+                            SELECT id
+                            FROM support_resources
+                            WHERE creator_user_id = %s
+                              AND resource_type = 'TUTORING'
+                              AND status = 'PUBLISHED'
+                            LIMIT 1
+                            """,
+                            (creator_user_id,),
+                        )
+                        if cursor.fetchone() is not None:
+                            raise ConflictError(
+                                "Ya tienes una tutoría publicada; cancélala antes de crear otra"
+                            )
+
+                    cursor.execute(
+                        """
+                        INSERT INTO support_resources
+                            (resource_type, title, description, tags, course_codes, modality,
+                             location, start_at, end_at, capacity, url, creator_user_id,
+                             status, is_synthetic)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'PUBLISHED', FALSE)
+                        """,
+                        (
+                            data["resource_type"],
+                            data["title"],
+                            data["description"],
+                            self._json(data["tags"]),
+                            self._json(data["course_codes"]),
+                            data["modality"],
+                            data["location"],
+                            data["start_at"],
+                            data["end_at"],
+                            data["capacity"],
+                            data["url"],
+                            creator_user_id,
+                        ),
+                    )
+                    resource_id = int(cursor.lastrowid)
+                connection.commit()
+            except Exception:
+                connection.rollback()
+                raise
         resource = self.get_resource_record(resource_id)
         if resource is None:
             raise NotFoundError("No se pudo recuperar el recurso creado")

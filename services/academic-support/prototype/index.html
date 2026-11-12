@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Recomendador de actividades | Apoyo académico</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #202b35;
+      --muted: #687780;
+      --line: #e4e9e7;
+      --paper: #ffffff;
+      --canvas: #f5f7f5;
+      --green: #26765f;
+      --green-dark: #1d5e4b;
+      --green-pale: #e8f4ee;
+      --lavender: #f0edfb;
+      --gold: #f5ead0;
+      --shadow: 0 16px 45px rgba(37, 58, 50, .07);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--ink);
+      font: 15px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    button, select { font: inherit; }
+    button { cursor: pointer; }
+    .topbar {
+      height: 72px;
+      background: rgba(255,255,255,.9);
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 clamp(20px, 5vw, 76px);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      backdrop-filter: blur(12px);
+    }
+    .brand { display: flex; gap: 11px; align-items: center; font-weight: 750; letter-spacing: -.02em; }
+    .brand-mark { width: 34px; height: 34px; border-radius: 11px; background: var(--green); color: white; display: grid; place-items: center; font-size: 17px; }
+    .brand small { color: var(--muted); display: block; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+    .top-links { display: flex; align-items: center; gap: 28px; color: var(--muted); font-size: 13px; }
+    .top-links span:first-child { color: var(--green-dark); font-weight: 700; }
+    .profile { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; background: var(--lavender); color: #584b8e; font-weight: 750; }
+    main { width: min(1220px, calc(100% - 40px)); margin: 34px auto 60px; }
+    .hero {
+      min-height: 194px;
+      border-radius: 24px;
+      padding: 32px clamp(24px, 4vw, 50px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      background: linear-gradient(112deg, #eaf4ed 2%, #f1f0fb 100%);
+      overflow: hidden;
+      position: relative;
+    }
+    .hero::after { content: "✳"; position: absolute; right: 9%; top: -44px; font-size: 220px; color: rgba(255,255,255,.53); line-height: 1; transform: rotate(14deg); pointer-events: none; }
+    .hero-copy, .hero-note { position: relative; z-index: 1; }
+    .eyebrow { color: var(--green-dark); font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    h1 { font-size: clamp(28px, 4vw, 39px); line-height: 1.1; margin: 10px 0 10px; letter-spacing: -.045em; max-width: 630px; }
+    .hero p { color: #596a67; margin: 0; max-width: 570px; }
+    .hero-note { min-width: 190px; border: 1px solid rgba(255,255,255,.9); background: rgba(255,255,255,.55); border-radius: 17px; padding: 15px 17px; color: #455a51; font-size: 12px; }
+    .hero-note strong { display: block; font-size: 13px; margin-bottom: 3px; color: var(--green-dark); }
+    .layout { display: grid; grid-template-columns: 310px minmax(0, 1fr); gap: 23px; align-items: start; margin-top: 25px; }
+    .panel { background: var(--paper); border: 1px solid var(--line); border-radius: 19px; box-shadow: var(--shadow); }
+    .preferences { padding: 23px; }
+    .panel-heading { margin: 0; font-size: 17px; letter-spacing: -.02em; }
+    .panel-subtitle { color: var(--muted); font-size: 12px; margin: 5px 0 21px; }
+    .field { border-top: 1px solid #edf0ee; padding: 17px 0; }
+    .field:first-of-type { border-top: 0; padding-top: 0; }
+    .field-title { display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 750; margin-bottom: 10px; }
+    .optional { color: #8b969a; font-size: 10px; font-weight: 600; }
+    .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+    .chip {
+      border: 1px solid #e0e7e2;
+      color: #58665f;
+      background: #fff;
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-size: 11px;
+      transition: .15s ease;
+    }
+    .chip:hover { border-color: #8ab6a1; }
+    .chip.selected { background: var(--green-pale); border-color: #a9cfba; color: #24644d; font-weight: 700; }
+    .select {
+      width: 100%; border: 1px solid #dce4df; border-radius: 10px; background: white;
+      padding: 10px 11px; color: var(--ink); font-size: 12px;
+    }
+    .availability { display: flex; align-items: center; gap: 9px; font-size: 12px; color: #56645d; }
+    .availability input { accent-color: var(--green); width: 15px; height: 15px; }
+    .primary {
+      width: 100%; border: 0; border-radius: 11px; padding: 12px 14px; color: white;
+      background: var(--green); font-size: 12px; font-weight: 750; box-shadow: 0 7px 16px rgba(38,118,95,.18);
+      transition: background .15s ease, transform .15s ease;
+    }
+    .primary:hover { background: var(--green-dark); transform: translateY(-1px); }
+    .privacy { margin: 12px 0 0; color: #86918e; font-size: 10px; text-align: center; }
+    .results { padding: 23px; min-height: 500px; }
+    .results-head { display: flex; justify-content: space-between; align-items: end; gap: 15px; margin-bottom: 18px; }
+    .results-head h2 { margin: 0; font-size: 20px; letter-spacing: -.03em; }
+    .results-head p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+    .sort-label { color: var(--muted); font-size: 10px; text-align: right; }
+    .sort-label strong { display: block; color: #426e5b; font-size: 11px; margin-top: 2px; }
+    .result-list { display: grid; gap: 13px; }
+    .resource {
+      border: 1px solid #e8ece9; border-radius: 15px; padding: 16px;
+      display: grid; grid-template-columns: 52px minmax(0,1fr); gap: 13px;
+      transition: box-shadow .16s ease, border-color .16s ease;
+    }
+    .resource:hover { border-color: #c4dbce; box-shadow: 0 7px 20px rgba(38,79,59,.06); }
+    .resource-icon { width: 50px; height: 50px; border-radius: 15px; display: grid; place-items: center; font-size: 23px; }
+    .icon-green { background: #eaf5ed; }
+    .icon-purple { background: #f1edfb; }
+    .icon-yellow { background: #fbf2df; }
+    .icon-blue { background: #e9f2f8; }
+    .resource-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .kind { color: #597567; font-size: 9px; letter-spacing: .09em; font-weight: 800; text-transform: uppercase; }
+    .score { border-radius: 999px; background: #edf6f0; color: #2d7355; padding: 4px 8px; font-size: 10px; font-weight: 800; white-space: nowrap; }
+    .resource h3 { margin: 4px 0 4px; font-size: 15px; letter-spacing: -.02em; }
+    .description { margin: 0; color: var(--muted); font-size: 11px; }
+    .meta { display: flex; flex-wrap: wrap; gap: 7px 14px; color: #718079; margin-top: 10px; font-size: 10px; }
+    .reasons { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .reason { border-radius: 6px; background: #f4f7f4; color: #537061; padding: 4px 7px; font-size: 9px; }
+    .resource-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
+    .action {
+      border: 1px solid #cbded2; background: white; color: var(--green-dark); border-radius: 8px;
+      padding: 7px 10px; font-size: 10px; font-weight: 750;
+    }
+    .action:hover { background: var(--green-pale); }
+    .action.done { background: var(--green-pale); border-color: #b7d7c4; }
+    .empty { border: 1px dashed #cfdbd3; border-radius: 14px; padding: 35px 20px; text-align: center; color: var(--muted); font-size: 13px; }
+    .bottom-note { margin-top: 18px; padding: 13px 15px; border-radius: 12px; background: #f7f6fc; color: #635d79; font-size: 10px; }
+    .toast { position: fixed; bottom: 22px; left: 50%; transform: translate(-50%, 15px); opacity: 0; pointer-events: none; background: #243b32; color: white; padding: 11px 16px; border-radius: 10px; font-size: 12px; box-shadow: var(--shadow); transition: .2s ease; z-index: 5; }
+    .toast.visible { opacity: 1; transform: translate(-50%, 0); }
+    .demo-stamp { position: fixed; bottom: 14px; right: 16px; background: #fff; border: 1px solid var(--line); color: #737f79; border-radius: 999px; padding: 6px 10px; font-size: 9px; z-index: 3; }
+    @media (max-width: 850px) {
+      .layout { grid-template-columns: 1fr; }
+      .preferences { order: 1; }
+      .results { order: 2; }
+      .hero-note { display: none; }
+    }
+    @media (max-width: 560px) {
+      .topbar { height: 62px; padding: 0 18px; }
+      .top-links span { display: none; }
+      main { width: min(100% - 24px, 520px); margin-top: 17px; }
+      .hero { padding: 25px 22px; min-height: 180px; border-radius: 18px; }
+      .hero::after { right: -14px; top: -12px; font-size: 145px; }
+      .layout { gap: 14px; margin-top: 15px; }
+      .preferences, .results { padding: 18px; }
+      .results-head { align-items: start; flex-direction: column; }
+      .sort-label { text-align: left; }
+      .resource { grid-template-columns: 42px minmax(0,1fr); gap: 10px; padding: 13px; }
+      .resource-icon { width: 41px; height: 41px; border-radius: 12px; font-size: 19px; }
+      .demo-stamp { bottom: 8px; right: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">✦</div>
+      <div><small>Apoyo académico</small>Encuentra tu espacio</div>
+    </div>
+    <nav class="top-links" aria-label="Navegación del prototipo">
+      <span>Recomendaciones</span>
+      <span>Mis talleres</span>
+      <div class="profile" aria-label="Perfil de estudiante">J</div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow">Un espacio para avanzar</div>
+        <h1>Actividades que conectan con lo que necesitas.</h1>
+        <p>Explora talleres, tutorías y materiales sugeridos según tus intereses, cursos y disponibilidad.</p>
+      </div>
+      <div class="hero-note"><strong>Recomendaciones explicables</strong>Verás por qué cada opción puede ser útil para ti.</div>
+    </section>
+
+    <div class="layout">
+      <aside class="panel preferences" aria-labelledby="preferences-title">
+        <h2 class="panel-heading" id="preferences-title">Tus preferencias</h2>
+        <p class="panel-subtitle">Ajusta tu perfil para personalizar la lista.</p>
+
+        <section class="field">
+          <div class="field-title">Temas que te interesan <span class="optional">OPCIONAL</span></div>
+          <div class="chips" id="interest-chips">
+            <button class="chip selected" type="button" data-value="Organización" aria-pressed="true">Organización</button>
+            <button class="chip" type="button" data-value="Comunicación" aria-pressed="false">Comunicación</button>
+            <button class="chip selected" type="button" data-value="Técnicas de estudio" aria-pressed="true">Técnicas de estudio</button>
+            <button class="chip" type="button" data-value="Programación" aria-pressed="false">Programación</button>
+          </div>
+        </section>
+
+        <section class="field">
+          <label class="field-title" for="course">Curso de interés <span class="optional">OPCIONAL</span></label>
+          <select class="select" id="course">
+            <option value="">Cualquier curso</option>
+            <option value="INF101" selected>INF101 · Fundamentos de programación</option>
+            <option value="MAT102">MAT102 · Matemática básica</option>
+            <option value="COM101">COM101 · Comunicación</option>
+          </select>
+        </section>
+
+        <section class="field">
+          <div class="field-title">Modalidad preferida <span class="optional">OPCIONAL</span></div>
+          <select class="select" id="modality">
+            <option value="">Cualquiera</option>
+            <option value="PRESENCIAL">Presencial</option>
+            <option value="REMOTO">Remoto</option>
+            <option value="HIBRIDO" selected>Híbrido</option>
+          </select>
+        </section>
+
+        <section class="field">
+          <div class="field-title">Disponibilidad</div>
+          <label class="availability"><input id="availability" type="checkbox" checked> Martes, de 15:00 a 18:00</label>
+        </section>
+
+        <button class="primary" id="refresh" type="button">Actualizar recomendaciones</button>
+        <p class="privacy">Tus preferencias se usan para ordenar actividades académicas.</p>
+      </aside>
+
+      <section class="panel results" aria-labelledby="results-title">
+        <div class="results-head">
+          <div>
+            <h2 id="results-title">Recomendado para ti</h2>
+            <p id="result-summary">Opciones ordenadas según tus preferencias.</p>
+          </div>
+          <div class="sort-label">Ordenado por<strong id="mode-label">Coincidencia con tu perfil</strong></div>
+        </div>
+        <div class="result-list" id="result-list" aria-live="polite"></div>
+        <div class="bottom-note">Las sugerencias son una guía para explorar el catálogo. Puedes cambiar tus preferencias cuando quieras.</div>
+      </section>
+    </div>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="demo-stamp">Prototipo local · catálogo de demostración</div>
+
+  <script>
+    const resources = [
+      {
+        id: 1, type: "WORKSHOP", label: "Taller", title: "Organiza tu semestre con calma",
+        description: "Un espacio práctico para ordenar tareas, planificar semanas y probar técnicas de estudio.",
+        tags: ["Organización", "Técnicas de estudio"], courses: ["INF101", "MAT102"],
+        modality: "HIBRIDO", weekday: 1, start: 16 * 60, end: 18 * 60,
+        when: "Martes · 16:00", icon: "✎", iconClass: "icon-green", capacity: 18, seats: 6, popularity: 22
+      },
+      {
+        id: 2, type: "TUTORING", label: "Tutoría entre pares", title: "Fundamentos de programación, paso a paso",
+        description: "Repasa conceptos iniciales y resuelve ejercicios acompañado por otro estudiante.",
+        tags: ["Programación", "Organización"], courses: ["INF101"],
+        modality: "REMOTO", weekday: 1, start: 15 * 60, end: 16 * 60,
+        when: "Martes · 15:00", icon: "⌘", iconClass: "icon-purple", capacity: null, seats: null, popularity: 18
+      },
+      {
+        id: 3, type: "MATERIAL", label: "Material de apoyo", title: "Guía para organizar el semestre",
+        description: "Una guía breve con ideas para dividir proyectos, registrar avances y preparar evaluaciones.",
+        tags: ["Organización", "Técnicas de estudio"], courses: ["INF101", "MAT102"],
+        modality: null, weekday: null, start: null, end: null,
+        when: "Disponible en línea", icon: "▤", iconClass: "icon-yellow", capacity: null, seats: null, popularity: 25
+      },
+      {
+        id: 4, type: "WORKSHOP", label: "Taller", title: "Comunicación oral para exposiciones",
+        description: "Practica cómo estructurar ideas y presentar trabajos en un entorno de aprendizaje grupal.",
+        tags: ["Comunicación", "Presentaciones"], courses: ["COM101"],
+        modality: "PRESENCIAL", weekday: 2, start: 17 * 60, end: 18 * 60,
+        when: "Miércoles · 17:00", icon: "◌", iconClass: "icon-blue", capacity: 20, seats: 9, popularity: 15
+      }
+    ];
+    const enrolled = new Set();
+    const saved = new Set();
+    const selectedInterests = new Set(["Organización", "Técnicas de estudio"]);
+
+    function getPreferences() {
+      return {
+        interests: selectedInterests,
+        course: document.getElementById("course").value,
+        modality: document.getElementById("modality").value,
+        hasAvailability: document.getElementById("availability").checked
+      };
+    }
+
+    function scoreResource(resource, preferences) {
+      const weights = [];
+      const reasons = [];
+      if (preferences.interests.size) {
+        const matches = [...preferences.interests].filter(item => resource.tags.includes(item));
+        weights.push([0.45, matches.length / preferences.interests.size]);
+        if (matches.length) reasons.push(`Coincide con tus intereses: ${matches.join(", ")}`);
+      }
+      if (preferences.course) {
+        const matches = resource.courses.includes(preferences.course);
+        weights.push([0.35, matches ? 1 : 0]);
+        if (matches) reasons.push(`Relacionado con ${preferences.course}`);
+      }
+      if (preferences.hasAvailability) {
+        const matches = resource.weekday === 1 && resource.start !== null &&
+          resource.start < 18 * 60 && resource.end > 15 * 60;
+        weights.push([0.15, matches ? 1 : 0]);
+        if (matches) reasons.push("Coincide con tu disponibilidad");
+      }
+      if (preferences.modality) {
+        const matches = resource.modality === preferences.modality;
+        weights.push([0.05, matches ? 1 : 0]);
+        if (matches) reasons.push("Coincide con tu modalidad preferida");
+      }
+      const totalWeight = weights.reduce((sum, [weight]) => sum + weight, 0);
+      const content = totalWeight ? weights.reduce((sum, [weight, value]) => sum + weight * value, 0) / totalWeight : 0;
+      const maxPopularity = Math.max(...resources.map(item => item.popularity));
+      const popularity = resource.popularity / maxPopularity;
+      const score = totalWeight ? 0.9 * content + 0.1 * popularity : popularity;
+      if (!reasons.length) reasons.push("Sugerencia inicial basada en la actividad del catálogo");
+      return { score, reasons };
+    }
+
+    function render() {
+      const preferences = getPreferences();
+      const hasProfile = preferences.interests.size || preferences.course || preferences.modality || preferences.hasAvailability;
+      const ranked = resources
+        .filter(resource => !(resource.type === "WORKSHOP" && resource.seats === 0))
+        .map(resource => ({ resource, ...scoreResource(resource, preferences) }))
+        .sort((a, b) => b.score - a.score || b.resource.id - a.resource.id);
+
+      document.getElementById("mode-label").textContent = hasProfile ? "Coincidencia con tu perfil" : "Actividad del catálogo";
+      document.getElementById("result-summary").textContent = `${ranked.length} opciones disponibles · puedes ajustar tus preferencias`;
+      document.getElementById("result-list").innerHTML = ranked.map(({ resource, score, reasons }) => {
+        const isWorkshop = resource.type === "WORKSHOP";
+        const isEnrolled = enrolled.has(resource.id);
+        const isSaved = saved.has(resource.id);
+        const actionLabel = isWorkshop ? (isEnrolled ? "Inscripción simulada ✓" : `Inscribirme · ${resource.seats} cupos`) : (isSaved ? "Guardado ✓" : "Guardar recurso");
+        const actionClass = isEnrolled || isSaved ? "action done" : "action";
+        const meta = [resource.when, resource.modality ? resource.modality.toLowerCase() : "lectura libre", resource.courses[0] ? `Curso ${resource.courses[0]}` : ""].filter(Boolean);
+        return `<article class="resource">
+          <div class="resource-icon ${resource.iconClass}" aria-hidden="true">${resource.icon}</div>
+          <div>
+            <div class="resource-top"><span class="kind">${resource.label}</span><span class="score">${Math.round(score * 100)}% afinidad</span></div>
+            <h3>${resource.title}</h3>
+            <p class="description">${resource.description}</p>
+            <div class="meta">${meta.map(item => `<span>${item}</span>`).join("")}</div>
+            <div class="reasons">${reasons.slice(0, 3).map(reason => `<span class="reason">${reason}</span>`).join("")}</div>
+            <div class="resource-actions"><button class="action ${actionClass}" type="button" data-action="${isWorkshop ? "enroll" : "save"}" data-id="${resource.id}">${actionLabel}</button></div>
+          </div>
+        </article>`;
+      }).join("") || `<div class="empty">No encontramos opciones disponibles con esos filtros.</div>`;
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("visible");
+      window.setTimeout(() => toast.classList.remove("visible"), 2300);
+    }
+
+    document.getElementById("interest-chips").addEventListener("click", event => {
+      const button = event.target.closest("button[data-value]");
+      if (!button) return;
+      const value = button.dataset.value;
+      if (selectedInterests.has(value)) selectedInterests.delete(value); else selectedInterests.add(value);
+      button.classList.toggle("selected", selectedInterests.has(value));
+      button.setAttribute("aria-pressed", String(selectedInterests.has(value)));
+    });
+    document.getElementById("refresh").addEventListener("click", () => {
+      render();
+      showToast("Preferencias aplicadas a la lista de demostración");
+    });
+    document.getElementById("result-list").addEventListener("click", event => {
+      const button = event.target.closest("button[data-action]");
+      if (!button) return;
+      const id = Number(button.dataset.id);
+      const resource = resources.find(item => item.id === id);
+      if (button.dataset.action === "enroll") {
+        if (enrolled.has(id)) {
+          enrolled.delete(id);
+          resource.seats += 1;
+          showToast("Inscripción de demostración cancelada");
+        } else if (resource.seats > 0) {
+          enrolled.add(id);
+          resource.seats -= 1;
+          showToast("¡Listo! La inscripción se simuló correctamente");
+        }
+      } else {
+        if (saved.has(id)) saved.delete(id); else saved.add(id);
+        showToast(saved.has(id) ? "Recurso guardado en esta demostración" : "Recurso quitado de guardados");
+      }
+      render();
+    });
+    render();
+  </script>
+</body>
+</html>

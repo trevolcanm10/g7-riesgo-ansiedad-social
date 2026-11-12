@@ -95,6 +95,7 @@ class HybridRecommendationEngine:
             lambda: defaultdict(float)
         )
         popularity: dict[int, float] = defaultdict(float)
+        counted_events: set[tuple[int, int, str]] = set()
         for event in interactions:
             event_type = str(event.get("event_type", "")).upper()
             try:
@@ -107,6 +108,10 @@ class HybridRecommendationEngine:
             weight = EVENT_WEIGHTS.get(event_type, 0.0)
             if weight <= 0:
                 continue
+            event_key = (event_user, event_resource, event_type)
+            if event_key in counted_events:
+                continue
+            counted_events.add(event_key)
             resource_users[event_resource][event_user] += weight
             popularity[event_resource] += weight
             if event_user == user_id:
