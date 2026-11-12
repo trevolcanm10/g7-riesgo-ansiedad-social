@@ -669,62 +669,106 @@ class _HomeScreenState extends State<HomeScreen> {
   // ACCESO A ORIENTACIÓN CONFIDENCIAL (M2)
   // ==========================================
   Widget _buildOrientacionCard() {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        onTap: () => Navigator.pushNamed(context, '/orientacion'),
+    final colors = Theme.of(context).extension<AppColors>() ??
+        (Theme.of(context).brightness == Brightness.dark
+            ? AppColors.dark
+            : AppColors.light);
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: colors.card,
         borderRadius: BorderRadius.circular(20),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: colors.border),
+        boxShadow: [
+          BoxShadow(
+            color: colors.shadow,
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEEF2FF),
-                  borderRadius: BorderRadius.circular(14),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: () => Navigator.pushNamed(context, '/orientacion'),
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: colors.primaryLight,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.support_agent_rounded,
+                    color: colors.primary,
+                    size: 24,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.support_agent_rounded,
-                  color: Color(0xFF4F46E5),
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 14),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Orientación Confidencial UNAYOE',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E293B),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              'Orientación Confidencial',
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: colors.textPrimary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.chipBg,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              'UNAYOE',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                color: colors.primary,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    SizedBox(height: 3),
-                    Text(
-                      'Envía una consulta privada y revisa respuestas del equipo orientador.',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        color: Color(0xFF64748B),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Envía una consulta privada y revisa respuestas del equipo orientador.',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: colors.textSecondary,
+                          height: 1.35,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: Color(0xFF64748B),
-              ),
-            ],
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: colors.textTertiary,
+                ),
+              ],
+            ),
           ),
         ),
       ),
