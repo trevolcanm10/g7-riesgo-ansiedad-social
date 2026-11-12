@@ -29,6 +29,171 @@
     "joblib": "1.3.2",
     "numpy": "1.26.4"
   },
+  "metricas_validacion_cruzada_5fold": {
+    "n_splits": 5,
+    "tema": {
+      "tfidf_logreg": {
+        "accuracy": 0.532,
+        "macro_f1": 0.5307,
+        "por_clase": {
+          "academico": {
+            "precision": 0.4783,
+            "recall": 0.44,
+            "f1": 0.4583,
+            "soporte": 50
+          },
+          "ansiedad_estres": {
+            "precision": 0.4138,
+            "recall": 0.48,
+            "f1": 0.4444,
+            "soporte": 50
+          },
+          "economico": {
+            "precision": 0.625,
+            "recall": 0.6,
+            "f1": 0.6122,
+            "soporte": 50
+          },
+          "familiar": {
+            "precision": 0.625,
+            "recall": 0.7,
+            "f1": 0.6604,
+            "soporte": 50
+          },
+          "personal": {
+            "precision": 0.5238,
+            "recall": 0.44,
+            "f1": 0.4783,
+            "soporte": 50
+          }
+        }
+      },
+      "linea_base_palabras_clave": {
+        "accuracy": 0.684,
+        "macro_f1": 0.6918,
+        "por_clase": {
+          "academico": {
+            "precision": 0.8,
+            "recall": 0.56,
+            "f1": 0.6588,
+            "soporte": 50
+          },
+          "ansiedad_estres": {
+            "precision": 0.88,
+            "recall": 0.44,
+            "f1": 0.5867,
+            "soporte": 50
+          },
+          "economico": {
+            "precision": 0.931,
+            "recall": 0.54,
+            "f1": 0.6835,
+            "soporte": 50
+          },
+          "familiar": {
+            "precision": 0.9592,
+            "recall": 0.94,
+            "f1": 0.9495,
+            "soporte": 50
+          },
+          "personal": {
+            "precision": 0.4196,
+            "recall": 0.94,
+            "f1": 0.5802,
+            "soporte": 50
+          }
+        }
+      },
+      "estrategia_hibrida_desplegada": {
+        "accuracy": 0.696,
+        "macro_f1": 0.692,
+        "por_clase": {
+          "academico": {
+            "precision": 0.6226,
+            "recall": 0.66,
+            "f1": 0.6408,
+            "soporte": 50
+          },
+          "ansiedad_estres": {
+            "precision": 0.5741,
+            "recall": 0.62,
+            "f1": 0.5962,
+            "soporte": 50
+          },
+          "economico": {
+            "precision": 0.7778,
+            "recall": 0.7,
+            "f1": 0.7368,
+            "soporte": 50
+          },
+          "familiar": {
+            "precision": 0.8,
+            "recall": 0.96,
+            "f1": 0.8727,
+            "soporte": 50
+          },
+          "personal": {
+            "precision": 0.7105,
+            "recall": 0.54,
+            "f1": 0.6136,
+            "soporte": 50
+          }
+        }
+      }
+    },
+    "prioridad": {
+      "tfidf_logreg": {
+        "accuracy": 0.692,
+        "macro_f1": 0.6923,
+        "por_clase": {
+          "alta": {
+            "precision": 0.6032,
+            "recall": 0.4691,
+            "f1": 0.5278,
+            "soporte": 81
+          },
+          "baja": {
+            "precision": 0.8831,
+            "recall": 0.8947,
+            "f1": 0.8889,
+            "soporte": 76
+          },
+          "media": {
+            "precision": 0.6091,
+            "recall": 0.7204,
+            "f1": 0.6601,
+            "soporte": 93
+          }
+        },
+        "recall_prioridad_alta": 0.4691
+      },
+      "linea_base_palabras_clave": {
+        "accuracy": 0.432,
+        "macro_f1": 0.3359,
+        "por_clase": {
+          "alta": {
+            "precision": 0.7692,
+            "recall": 0.1235,
+            "f1": 0.2128,
+            "soporte": 81
+          },
+          "baja": {
+            "precision": 0.7857,
+            "recall": 0.1447,
+            "f1": 0.2444,
+            "soporte": 76
+          },
+          "media": {
+            "precision": 0.3901,
+            "recall": 0.9355,
+            "f1": 0.5506,
+            "soporte": 93
+          }
+        },
+        "recall_prioridad_alta": 0.1235
+      }
+    }
+  },
   "metricas_prueba": {
     "tema": {
       "tfidf_logreg": {
@@ -68,37 +233,37 @@
         }
       },
       "linea_base_palabras_clave": {
-        "accuracy": 0.76,
-        "macro_f1": 0.7585,
+        "accuracy": 0.78,
+        "macro_f1": 0.7832,
         "por_clase": {
           "academico": {
-            "precision": 1.0,
-            "recall": 0.4,
-            "f1": 0.5714,
+            "precision": 0.875,
+            "recall": 0.7,
+            "f1": 0.7778,
             "soporte": 10
           },
           "ansiedad_estres": {
-            "precision": 1.0,
-            "recall": 0.6,
-            "f1": 0.75,
+            "precision": 0.8333,
+            "recall": 0.5,
+            "f1": 0.625,
             "soporte": 10
           },
           "economico": {
-            "precision": 0.8182,
-            "recall": 0.9,
-            "f1": 0.8571,
+            "precision": 1.0,
+            "recall": 0.7,
+            "f1": 0.8235,
             "soporte": 10
           },
           "familiar": {
             "precision": 1.0,
-            "recall": 0.9,
-            "f1": 0.9474,
+            "recall": 1.0,
+            "f1": 1.0,
             "soporte": 10
           },
           "personal": {
-            "precision": 0.5,
+            "precision": 0.5263,
             "recall": 1.0,
-            "f1": 0.6667,
+            "f1": 0.6897,
             "soporte": 10
           }
         }

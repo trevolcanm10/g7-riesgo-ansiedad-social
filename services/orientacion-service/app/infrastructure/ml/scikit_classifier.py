@@ -1,11 +1,16 @@
 import logging
 import os
-from typing import Tuple
+import re
+from typing import Optional, Tuple
 
 import joblib
 
 from app.application.interfaces.ml_classifier_port import IMLClassifier
-from app.domain.entities.solicitud import PRIORIDADES_VALIDAS, TEMAS_VALIDOS
+from app.domain.entities.solicitud import (
+    PRIORIDADES_VALIDAS,
+    TEMAS_SUGERIDOS,
+    TEMAS_VALIDOS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -56,19 +61,171 @@ class ScikitLocalClassifier(IMLClassifier):
         )
         return sin_tildes
 
+    _GREETINGS_ONLY = frozenset(
+        {
+            "hola",
+            "holi",
+            "buenas",
+            "buenos dias",
+            "buenas tardes",
+            "buenas noches",
+            "saludos",
+            "hi",
+            "hello",
+            "hey",
+            "ok",
+            "gracias",
+            "test",
+            "prueba",
+        }
+    )
+
+    _REGLAS_TEMA: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
+        (
+            "economico",
+            (
+                "dinero",
+                "pagar",
+                "pago",
+                "pagos",
+                "matricula",
+                "pension",
+                "pensiones",
+                "beca",
+                "becas",
+                "economico",
+                "economica",
+                "economicos",
+                "trabajo",
+                "deuda",
+                "deudas",
+                "alquiler",
+                "prestamo",
+                "pasajes",
+                "ingresos",
+                "finanzas",
+            ),
+        ),
+        (
+            "ansiedad_estres",
+            (
+                "ansiedad",
+                "ansioso",
+                "ansiosa",
+                "estres",
+                "estresado",
+                "estresada",
+                "panico",
+                "angustia",
+                "angustiado",
+                "angustiada",
+                "nervios",
+                "nervioso",
+                "nerviosa",
+                "insomnio",
+                "ataque",
+                "ataques",
+                "abrumado",
+                "abrumada",
+                "palpitaciones",
+                "colapso",
+                "agotado",
+                "agotada",
+            ),
+        ),
+        (
+            "familiar",
+            (
+                "familia",
+                "familiar",
+                "familiares",
+                "padres",
+                "mama",
+                "papa",
+                "madre",
+                "padre",
+                "casa",
+                "hermano",
+                "hermana",
+                "hogar",
+                "divorcio",
+                "discusion",
+                "discusiones",
+                "violencia",
+            ),
+        ),
+        (
+            "academico",
+            (
+                "curso",
+                "cursos",
+                "nota",
+                "notas",
+                "examen",
+                "examenes",
+                "parcial",
+                "parciales",
+                "final",
+                "finales",
+                "ciclo",
+                "semestre",
+                "profesor",
+                "profesora",
+                "docente",
+                "tesis",
+                "repitencia",
+                "creditos",
+                "calculo",
+                "algoritmos",
+                "laboratorio",
+                "promedio",
+                "fechas",
+                "horarios",
+            ),
+        ),
+        (
+            "personal",
+            (
+                "soledad",
+                "solo",
+                "sola",
+                "triste",
+                "tristeza",
+                "deprimido",
+                "deprimida",
+                "motivacion",
+                "desmotivado",
+                "desmotivada",
+                "pareja",
+                "relacion",
+                "relaciones",
+                "autoestima",
+                "amigos",
+                "amistad",
+                "duelo",
+                "aislamiento",
+                "inseguro",
+                "insegura",
+                "vacio",
+            ),
+        ),
+    )
+
+    @staticmethod
+    def _tokenizar(texto_norm: str) -> Tuple[str, ...]:
+        return tuple(re.findall(r"[a-z0-9_]+", texto_norm))
+
     @classmethod
-    def _fallback_tema(cls, texto_l: str) -> str:
+    def _fallback_tema(cls, texto_l: str, default: str = "sin_clasificar") -> str:
         norm = cls._normalizar(texto_l)
-        reglas = (
-            ("economico", ("dinero", "pagar", "pago", "matricula", "pension", "beca", "economico", "economica", "trabajo", "deuda")),
-            ("ansiedad_estres", ("ansiedad", "estres", "panico", "angustia", "nervios", "insomnio", "ataque")),
-            ("familiar", ("familia", "padres", "mama", "papa", "casa", "hermano", "hermana", "hogar")),
-            ("academico", ("curso", "nota", "examen", "parcial", "ciclo", "profesor", "tesis", "repitencia", "creditos")),
-        )
-        mejor_tema = "personal"
+        tokens = set(cls._tokenizar(norm))
+        if not tokens:
+            return default
+
+        mejor_tema = default
         mejor_puntaje = 0
-        for tema, palabras in reglas:
-            puntaje = sum(1 for p in palabras if p in norm)
+        for tema, palabras in cls._REGLAS_TEMA:
+            puntaje = sum(1 for p in palabras if p in tokens)
             if puntaje > mejor_puntaje:
                 mejor_puntaje = puntaje
                 mejor_tema = tema
@@ -77,31 +234,101 @@ class ScikitLocalClassifier(IMLClassifier):
     @classmethod
     def _fallback_prioridad(cls, texto_l: str) -> str:
         norm = cls._normalizar(texto_l)
-        if any(p in norm for p in ("urgente", "crisis", "desesperado", "desesperada", "no puedo", "colapso")):
+        if any(
+            p in norm
+            for p in (
+                "urgente",
+                "crisis",
+                "desesperado",
+                "desesperada",
+                "no puedo",
+                "no aguanto",
+                "no soporto",
+                "colapso",
+            )
+        ):
             return "alta"
         if any(p in norm for p in ("consulta", "duda", "informacion", "horarios")):
             return "baja"
         return "media"
 
+    @staticmethod
+    def _tfidf_nnz(pipeline, text: str) -> Optional[int]:
+        try:
+            named_steps = getattr(pipeline, "named_steps", None)
+            if named_steps and "tfidf" in named_steps:
+                return int(named_steps["tfidf"].transform([text]).nnz)
+        except Exception:
+            return None
+        return None
+
+    def _is_low_signal(self, text: str, tema_reglas: Optional[str]) -> bool:
+        norm = self._normalizar(text)
+        limpio = re.sub(r"[^\w\s]", "", norm).strip()
+        if not limpio or limpio in self._GREETINGS_ONLY:
+            return True
+        if tema_reglas is not None:
+            return False
+        tokens = self._tokenizar(norm)
+        return len(tokens) < 3
+
     def predict(self, text: str) -> Tuple[str, str]:
         texto_l = text.lower()
-        tema = self._fallback_tema(texto_l)
-        prioridad = self._fallback_prioridad(texto_l)
+        tema_reglas: Optional[str] = self._fallback_tema(texto_l, default="") or None
+        prioridad_reglas = self._fallback_prioridad(texto_l)
 
-        if self.modelo_tema is not None:
-            try:
-                pred_tema = str(self.modelo_tema.predict([text])[0])
-                if pred_tema in TEMAS_VALIDOS:
-                    tema = pred_tema
-            except Exception:
-                logger.exception("Error en inferencia local de tema; usando respaldo")
+        # Mensajes vacíos de señal (saludos cortos, ruido tipo "asdfgh") no deben
+        # recibir sesgo de intercepto del modelo lineal ni categoría arbitraria.
+        if self._is_low_signal(text, tema_reglas):
+            if self.modelo_tema is not None:
+                nnz = self._tfidf_nnz(self.modelo_tema, text)
+                if nnz is None or nnz < 2:
+                    return "sin_clasificar", "baja"
+            else:
+                return "sin_clasificar", "baja"
 
+        # Decisión validada por CV 5-fold (N6): las reglas léxicas superan a
+        # TF-IDF+LogReg en tema en el corpus actual; ML actúa como respaldo si
+        # no hubo coincidencia léxica pero sí suficiente vocabulario y confianza.
+        if tema_reglas in TEMAS_VALIDOS:
+            tema = tema_reglas
+        else:
+            tema = "sin_clasificar"
+            if self.modelo_tema is not None:
+                try:
+                    nnz_tema = self._tfidf_nnz(self.modelo_tema, text)
+                    if nnz_tema is None or nnz_tema >= 2:
+                        if hasattr(self.modelo_tema, "predict_proba"):
+                            probs = self.modelo_tema.predict_proba([text])[0]
+                            clases = self.modelo_tema.classes_
+                            idx_max = int(max(range(len(probs)), key=lambda i: probs[i]))
+                            pred_tema = str(clases[idx_max])
+                            if probs[idx_max] >= 0.40 and pred_tema in TEMAS_VALIDOS:
+                                tema = pred_tema
+                        else:
+                            pred_tema = str(self.modelo_tema.predict([text])[0])
+                            if pred_tema in TEMAS_VALIDOS:
+                                tema = pred_tema
+                except Exception:
+                    logger.exception("Error en inferencia local de tema; usando respaldo")
+
+        if tema == "sin_clasificar":
+            return "sin_clasificar", "baja"
+
+        prioridad = prioridad_reglas
         if self.modelo_prioridad is not None:
             try:
-                pred_prio = str(self.modelo_prioridad.predict([text])[0])
-                if pred_prio in PRIORIDADES_VALIDAS:
-                    prioridad = pred_prio
+                nnz_prio = self._tfidf_nnz(self.modelo_prioridad, text)
+                if nnz_prio is not None and nnz_prio == 0:
+                    prioridad = "baja" if prioridad_reglas != "alta" else "alta"
+                else:
+                    pred_prio = str(self.modelo_prioridad.predict([text])[0])
+                    if pred_prio in PRIORIDADES_VALIDAS:
+                        # No degradar una señal léxica explícita de prioridad alta
+                        prioridad = "alta" if prioridad_reglas == "alta" else pred_prio
             except Exception:
                 logger.exception("Error en inferencia local de prioridad; usando respaldo")
 
+        if tema not in TEMAS_SUGERIDOS:
+            tema = "sin_clasificar"
         return tema, prioridad

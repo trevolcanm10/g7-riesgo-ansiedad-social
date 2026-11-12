@@ -18,7 +18,7 @@ import sklearn
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report, f1_score, recall_score
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedKFold, cross_val_predict, train_test_split
 from sklearn.pipeline import Pipeline
 
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -115,8 +115,11 @@ def main() -> None:
     modelo_prioridad.fit(X_train, y_prio_train)
     pred_prio_ml = list(modelo_prioridad.predict(X_test))
 
-    # Línea base por palabras clave (misma lógica del fallback en ScikitLocalClassifier)
-    pred_tema_base = [ScikitLocalClassifier._fallback_tema(t.lower()) for t in X_test]
+    # Línea base por palabras clave (reglas léxicas deterministas sobre las 5 clases)
+    pred_tema_base = [
+        ScikitLocalClassifier._fallback_tema(t.lower(), default="personal")
+        for t in X_test
+    ]
     pred_prio_base = [ScikitLocalClassifier._fallback_prioridad(t.lower()) for t in X_test]
 
     clases_tema = sorted(set(temas))
@@ -133,6 +136,46 @@ def main() -> None:
     )
     recall_alta_base = round(
         float(recall_score(y_prio_test, pred_prio_base, labels=["alta"], average=None, zero_division=0)[0]),
+        4,
+    )
+
+    # Validación cruzada estratificada (5 folds) sobre los 250 mensajes del corpus
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    cv_pred_tema_ml = list(
+        cross_val_predict(construir_pipeline(), textos, temas, cv=cv)
+    )
+    cv_pred_tema_base = [
+        ScikitLocalClassifier._fallback_tema(t.lower(), default="personal")
+        for t in textos
+    ]
+    # Estrategia desplegada para tema: reglas léxicas cuando hay señal directa,
+    # con respaldo de TF-IDF+LogReg out-of-fold cuando las reglas no encuentran coincidencia.
+    cv_pred_tema_hibrido = [
+        (
+            ScikitLocalClassifier._fallback_tema(t.lower(), default="")
+            or pred_ml
+        )
+        for t, pred_ml in zip(textos, cv_pred_tema_ml)
+    ]
+
+    cv_pred_prio_ml = list(
+        cross_val_predict(construir_pipeline(), textos, prioridades, cv=cv)
+    )
+    cv_pred_prio_base = [
+        ScikitLocalClassifier._fallback_prioridad(t.lower()) for t in textos
+    ]
+
+    cv_metricas_tema_ml = evaluar_modelo(temas, cv_pred_tema_ml, clases_tema)
+    cv_metricas_tema_base = evaluar_modelo(temas, cv_pred_tema_base, clases_tema)
+    cv_metricas_tema_hibrido = evaluar_modelo(temas, cv_pred_tema_hibrido, clases_tema)
+    cv_metricas_prio_ml = evaluar_modelo(prioridades, cv_pred_prio_ml, clases_prio)
+    cv_metricas_prio_base = evaluar_modelo(prioridades, cv_pred_prio_base, clases_prio)
+    cv_recall_alta_ml = round(
+        float(recall_score(prioridades, cv_pred_prio_ml, labels=["alta"], average=None, zero_division=0)[0]),
+        4,
+    )
+    cv_recall_alta_base = round(
+        float(recall_score(prioridades, cv_pred_prio_base, labels=["alta"], average=None, zero_division=0)[0]),
         4,
     )
 
@@ -160,6 +203,24 @@ def main() -> None:
             "scikit_learn": sklearn.__version__,
             "joblib": joblib.__version__,
             "numpy": np.__version__,
+        },
+        "metricas_validacion_cruzada_5fold": {
+            "n_splits": 5,
+            "tema": {
+                "tfidf_logreg": cv_metricas_tema_ml,
+                "linea_base_palabras_clave": cv_metricas_tema_base,
+                "estrategia_hibrida_desplegada": cv_metricas_tema_hibrido,
+            },
+            "prioridad": {
+                "tfidf_logreg": {
+                    **cv_metricas_prio_ml,
+                    "recall_prioridad_alta": cv_recall_alta_ml,
+                },
+                "linea_base_palabras_clave": {
+                    **cv_metricas_prio_base,
+                    "recall_prioridad_alta": cv_recall_alta_base,
+                },
+            },
         },
         "metricas_prueba": {
             "tema": {
@@ -197,6 +258,16 @@ def main() -> None:
     print(
         f"Prioridad -> TF-IDF+LogReg Recall(alta)={recall_alta_ml}, Macro-F1={metricas_prio_ml['macro_f1']} | "
         f"Línea base Recall(alta)={recall_alta_base}, Macro-F1={metricas_prio_base['macro_f1']}"
+    )
+    print("=== Validación cruzada estratificada (5 folds, 250 mensajes) ===")
+    print(
+        f"Tema      -> TF-IDF+LogReg Macro-F1={cv_metricas_tema_ml['macro_f1']} | "
+        f"Reglas Macro-F1={cv_metricas_tema_base['macro_f1']} | "
+        f"Híbrido desplegado Macro-F1={cv_metricas_tema_hibrido['macro_f1']}"
+    )
+    print(
+        f"Prioridad -> TF-IDF+LogReg Recall(alta)={cv_recall_alta_ml}, Macro-F1={cv_metricas_prio_ml['macro_f1']} | "
+        f"Línea base Recall(alta)={cv_recall_alta_base}, Macro-F1={cv_metricas_prio_base['macro_f1']}"
     )
 
 

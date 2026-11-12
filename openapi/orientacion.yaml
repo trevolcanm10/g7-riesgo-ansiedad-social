@@ -306,6 +306,10 @@ components:
     TemaOrientacion:
       type: string
       enum: [academico, ansiedad_estres, economico, familiar, personal]
+    TemaSugeridoOrientacion:
+      type: string
+      enum: [academico, ansiedad_estres, economico, familiar, personal, sin_clasificar]
+      description: Incluye 'sin_clasificar' para mensajes sin señal temática suficiente (ej. saludos cortos o ruido).
     PrioridadOrientacion:
       type: string
       enum: [alta, media, baja]
@@ -400,7 +404,7 @@ components:
           nullable: true
         tema_sugerido:
           allOf:
-            - $ref: "#/components/schemas/TemaOrientacion"
+            - $ref: "#/components/schemas/TemaSugeridoOrientacion"
           nullable: true
         prioridad_sugerida:
           allOf:
@@ -447,7 +451,7 @@ components:
         - cantidad
       properties:
         tema:
-          $ref: "#/components/schemas/TemaOrientacion"
+          $ref: "#/components/schemas/TemaSugeridoOrientacion"
         cantidad:
           type: integer
           example: 14
