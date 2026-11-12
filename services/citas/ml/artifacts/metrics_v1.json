@@ -1,0 +1,117 @@
+{
+  "metricas_test": {
+    "reglas_v0": {
+      "auc_roc": 0.6175,
+      "auc_pr": 0.2395,
+      "brier": 0.1518,
+      "ece": 0.0526,
+      "umbral": 0.25,
+      "recall": 0.5885,
+      "precision": 0.2613,
+      "tasa_marcadas": 0.4158
+    },
+    "regresion_logistica_calibrada": {
+      "auc_roc": 0.699,
+      "auc_pr": 0.2874,
+      "brier": 0.1395,
+      "ece": 0.0196,
+      "umbral": 0.3153,
+      "recall": 0.3095,
+      "precision": 0.3071,
+      "tasa_marcadas": 0.186
+    },
+    "gradient_boosting": {
+      "auc_roc": 0.7021,
+      "auc_pr": 0.2854,
+      "brier": 0.1394,
+      "ece": 0.0345,
+      "umbral": 0.3395,
+      "recall": 0.3152,
+      "precision": 0.3074,
+      "tasa_marcadas": 0.1893
+    },
+    "referencia_azar": {
+      "auc_pr": 0.1846,
+      "auc_roc": 0.5,
+      "recall": 0.2,
+      "precision": 0.1846
+    }
+  },
+  "subgrupos_test_regresion_logistica": {
+    "sexo": {
+      "Female": {
+        "n": 9135,
+        "tasa_real": 0.188,
+        "prob_media": 0.195,
+        "tasa_marcadas": 0.179,
+        "recall": 0.294,
+        "precision": 0.308
+      },
+      "Male": {
+        "n": 17314,
+        "tasa_real": 0.183,
+        "prob_media": 0.205,
+        "tasa_marcadas": 0.19,
+        "recall": 0.318,
+        "precision": 0.307
+      }
+    },
+    "edad": {
+      "0-17": {
+        "n": 6498,
+        "tasa_real": 0.201,
+        "prob_media": 0.188,
+        "tasa_marcadas": 0.179,
+        "recall": 0.318,
+        "precision": 0.357
+      },
+      "18-29": {
+        "n": 3852,
+        "tasa_real": 0.232,
+        "prob_media": 0.203,
+        "tasa_marcadas": 0.187,
+        "recall": 0.295,
+        "precision": 0.365
+      },
+      "30-59": {
+        "n": 10828,
+        "tasa_real": 0.18,
+        "prob_media": 0.205,
+        "tasa_marcadas": 0.19,
+        "recall": 0.316,
+        "precision": 0.301
+      },
+      "60+": {
+        "n": 5271,
+        "tasa_real": 0.138,
+        "prob_media": 0.21,
+        "tasa_marcadas": 0.187,
+        "recall": 0.296,
+        "precision": 0.22
+      }
+    },
+    "beca": {
+      "con_beca": {
+        "n": 2561,
+        "tasa_real": 0.209,
+        "prob_media": 0.192,
+        "tasa_marcadas": 0.169,
+        "recall": 0.321,
+        "precision": 0.397
+      },
+      "sin_beca": {
+        "n": 23888,
+        "tasa_real": 0.182,
+        "prob_media": 0.203,
+        "tasa_marcadas": 0.188,
+        "recall": 0.308,
+        "precision": 0.298
+      }
+    }
+  },
+  "cortes": [
+    "2016-05-20",
+    "2016-06-01"
+  ],
+  "cobertura_historial_test": 0.16
+}

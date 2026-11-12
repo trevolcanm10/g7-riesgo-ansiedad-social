@@ -154,6 +154,7 @@ void main() {
         await api.get(url);
         await api.getList('$url/list');
         await api.put(url);
+        await api.patch(url, body: {"x": 1});
         await api.delete(url);
         await api.getWithToken(url, 'candidate-fixture');
       },
@@ -165,7 +166,7 @@ void main() {
         );
         expect(
           request.headers['Authorization'],
-          calls == 5 ? 'Bearer candidate-fixture' : 'Bearer active-fixture',
+          calls == 6 ? 'Bearer candidate-fixture' : 'Bearer active-fixture',
         );
         return http.Response(
           request.url.path.endsWith('/list') ? '[]' : '{}',
@@ -173,7 +174,7 @@ void main() {
         );
       }),
     );
-    expect(calls, 5);
+    expect(calls, 6);
   });
 
   test(

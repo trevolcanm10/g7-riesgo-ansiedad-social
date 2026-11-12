@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../../core/jwt_claims.dart';
 import '../../../domain/entities/usuario.dart';
 import '../../../domain/usecases/login_usecase.dart';
 import '../../../domain/usecases/register_usecase.dart';
@@ -84,6 +85,13 @@ class AuthViewModel extends ChangeNotifier {
   String? get nombre => _usuario?.nombre;
   String? get correo => _usuario?.correo;
   int? get idUsuario => _usuario?.idUsuario;
+
+  /// Rol leido del JWT solo para decidir que pantalla mostrar. No es una
+  /// verificacion: cada servicio vuelve a validar el token y el rol.
+  String? get rol => rolDeToken(_token);
+  bool get esPersonalUnayoe =>
+      rol == 'PERSONAL_UNAYOE' || rol == 'ADMINISTRADOR';
+  bool get esAdministrador => rol == 'ADMINISTRADOR';
 
   // ==========================================
   // LOGIN

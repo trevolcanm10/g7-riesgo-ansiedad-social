@@ -1,0 +1,126 @@
+"""Repositorios en memoria: para pruebas y para ensayar sin MySQL (USE_IN_MEMORY=true)."""
+import copy
+import threading
+from datetime import datetime
+
+from src.domain.errors import ConflictError
+from src.domain.model import ACTIVE_STATUSES, Appointment, Slot, SlotStatus
+from src.domain.ports import AppointmentRepository, SlotRepository
+
+
+class InMemorySlotRepository(SlotRepository):
+    def __init__(self):
+        self._items: dict[int, Slot] = {}
+        self._seq = 0
+        self._lock = threading.Lock()
+
+    def add(self, slot):
+        with self._lock:
+            self._seq += 1
+            slot.id = self._seq
+            self._items[slot.id] = copy.copy(slot)
+            return copy.copy(slot)
+
+    def add_many(self, slots):
+        with self._lock:
+            keys = set()
+            for s in slots:
+                key = (s.staff_user_id, s.start_at)
+                if key in keys or any(i.staff_user_id == s.staff_user_id and i.start_at == s.start_at
+                                      for i in self._items.values()):
+                    raise ConflictError(f"Ya existe un horario en {s.start_at.isoformat()}")
+                keys.add(key)
+            created = []
+            for s in slots:
+                self._seq += 1
+                s.id = self._seq
+                self._items[s.id] = copy.copy(s)
+                created.append(copy.copy(s))
+            return created
+
+    def get(self, slot_id):
+        s = self._items.get(slot_id)
+        return copy.copy(s) if s else None
+
+    def list_free(self, start, end, staff_user_id):
+        return sorted(
+            (copy.copy(s) for s in self._items.values()
+             if s.status == SlotStatus.LIBRE and start <= s.start_at < end
+             and (staff_user_id is None or s.staff_user_id == staff_user_id)),
+            key=lambda s: s.start_at)
+
+    def list_for_staff(self, staff_user_id, after, before):
+        return sorted(
+            (copy.copy(s) for s in self._items.values()
+             if s.staff_user_id == staff_user_id and after < s.start_at < before),
+            key=lambda s: s.start_at)
+
+    def reserve(self, slot_id):
+        with self._lock:
+            s = self._items.get(slot_id)
+            if s is None or s.status != SlotStatus.LIBRE:
+                return False
+            s.status = SlotStatus.RESERVADO
+            return True
+
+    def release(self, slot_id):
+        with self._lock:
+            s = self._items.get(slot_id)
+            if s is not None and s.status == SlotStatus.RESERVADO:
+                s.status = SlotStatus.LIBRE
+
+
+class InMemoryAppointmentRepository(AppointmentRepository):
+    def __init__(self):
+        self._items: dict[int, Appointment] = {}
+        self.events: list[tuple] = []
+        self._seq = 0
+        self._lock = threading.Lock()
+
+    def add(self, appointment):
+        with self._lock:
+            self._seq += 1
+            appointment.id = self._seq
+            self._items[appointment.id] = copy.copy(appointment)
+            return copy.copy(appointment)
+
+    def get(self, appointment_id):
+        a = self._items.get(appointment_id)
+        return copy.copy(a) if a else None
+
+    def update(self, appointment, *, expect_status=None, expect_slot_id=None):
+        with self._lock:
+            current = self._items.get(appointment.id)
+            if current is None:
+                return False
+            if expect_status is not None and current.status != expect_status:
+                return False
+            if expect_slot_id is not None and current.slot_id != expect_slot_id:
+                return False
+            self._items[appointment.id] = copy.copy(appointment)
+            return True
+
+    def list_for_student(self, student_user_id):
+        return sorted((copy.copy(a) for a in self._items.values()
+                       if a.student_user_id == student_user_id), key=lambda a: a.start_at)
+
+    def list_agenda(self, staff_user_id, status, start, end):
+        return sorted(
+            (copy.copy(a) for a in self._items.values()
+             if (staff_user_id is None or a.staff_user_id == staff_user_id)
+             and (status is None or a.status.value == status)
+             and (start is None or a.start_at >= start)
+             and (end is None or a.start_at < end)),
+            key=lambda a: a.start_at)
+
+    def count_active(self, student_user_id):
+        return sum(1 for a in self._items.values()
+                   if a.student_user_id == student_user_id and a.status in ACTIVE_STATUSES)
+
+    def count_by_status(self, student_user_id, status, *, before=None, exclude_id=None):
+        return sum(1 for a in self._items.values()
+                   if a.student_user_id == student_user_id and a.status.value == status
+                   and a.id != exclude_id and (before is None or a.start_at < before))
+
+    def add_event(self, appointment_id, event_type, actor_user_id, created_at):
+        self.events.append((appointment_id, event_type, actor_user_id, created_at))
