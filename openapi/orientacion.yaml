@@ -1,0 +1,474 @@
+openapi: 3.0.3
+info:
+  title: Orientación Confidencial Service API
+  version: 2.0.0
+  description: >
+    API del microservicio de orientación confidencial (M2 - UNAYOE FISI UNMSM).
+    Requiere autenticación JWT (HS256, emitido por Users) en todos los endpoints
+    de /api/v1/orientacion/solicitudes. La identidad del estudiante y del orientador
+    se deriva exclusivamente del claim `userId` del token.
+servers:
+  - url: https://apim-g7-riesgo-ansiedad.azure-api.net/o
+    description: Vía API Management (prefijo /o por aprovisionar/confirmar con administrador APIM)
+  - url: http://localhost:5002
+    description: Servidor de desarrollo local / contenedor Docker
+tags:
+  - name: Health
+    description: Estado de salud del microservicio y del modelo local
+  - name: Solicitudes
+    description: Gestión y atención de solicitudes de orientación confidencial
+  - name: Métricas
+    description: Métricas analíticas por tema de orientación (UNAYOE)
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Estado del servicio, MySQL y clasificador local
+      operationId: healthOrientacion
+      responses:
+        "200":
+          description: Servicio y base de datos operativos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+        "503":
+          description: Base de datos no disponible
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /api/v1/orientacion/solicitudes:
+    post:
+      tags:
+        - Solicitudes
+      summary: Crear una solicitud de orientación confidencial
+      description: >
+        Solo rol `ESTUDIANTE`. Extrae `estudiante_id` del JWT (`userId`).
+        Ejecuta inferencia 100 % local (TF-IDF + Regresión Logística) y detección
+        heurística determinista de urgencia antes de persistir en MySQL.
+      operationId: crearSolicitudOrientacion
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SolicitudCreateRequest"
+            example:
+              mensaje: "Tengo mucha ansiedad por mis exámenes finales y necesito apoyo"
+              comparte_evaluacion_riesgo: true
+              evaluacion_riesgo_id: 12
+      responses:
+        "201":
+          description: Solicitud creada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolicitudOrientacionCreatedResponse"
+        "400":
+          description: Errores de validación en los datos enviados o campos no permitidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/ServerError"
+    get:
+      tags:
+        - Solicitudes
+      summary: Listar solicitudes de orientación
+      description: >
+        Para `ESTUDIANTE`, retorna únicamente sus propias solicitudes.
+        Para `PERSONAL_UNAYOE` y `ADMINISTRADOR`, retorna la bandeja ordenada por
+        prioridad efectiva (`alta`, `media`, `baja`) y fecha descendente.
+      operationId: listarSolicitudesOrientacion
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: estado
+          in: query
+          required: false
+          description: Filtrar por estado de la solicitud
+          schema:
+            type: string
+            enum: [pendiente, atendida]
+        - name: prioridad
+          in: query
+          required: false
+          description: Filtrar por prioridad efectiva (confirmada o sugerida)
+          schema:
+            type: string
+            enum: [alta, media, baja]
+        - name: estudiante_id
+          in: query
+          required: false
+          description: Filtrar por ID entero del estudiante (solo aplicado para PERSONAL_UNAYOE / ADMINISTRADOR)
+          schema:
+            type: integer
+            minimum: 1
+        - name: limit
+          in: query
+          required: false
+          description: Cantidad máxima de registros (1-100, por defecto 50)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          required: false
+          description: Desplazamiento de paginación (por defecto 0)
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Lista de solicitudes de orientación
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SolicitudOrientacion"
+        "400":
+          $ref: "#/components/responses/DomainError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /api/v1/orientacion/solicitudes/{id}:
+    get:
+      tags:
+        - Solicitudes
+      summary: Obtener el detalle de una solicitud de orientación
+      description: >
+        `PERSONAL_UNAYOE` y `ADMINISTRADOR` pueden consultar cualquier solicitud.
+        `ESTUDIANTE` solo puede consultar solicitudes propias; intentar acceder a una
+        ajena retorna `404` para no filtrar su existencia.
+      operationId: obtenerSolicitudOrientacion
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID único de la solicitud
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Detalle de la solicitud encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolicitudOrientacion"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /api/v1/orientacion/solicitudes/{id}/atender:
+    patch:
+      tags:
+        - Solicitudes
+      summary: Atender una solicitud de orientación (UNAYOE)
+      description: >
+        Solo roles `PERSONAL_UNAYOE` y `ADMINISTRADOR`. Registra `atendido_por`
+        desde el claim `userId` del JWT, valida/corrige la clasificación sugerida y
+        cambia el estado a `atendida`. Si la solicitud ya estaba atendida responde `409`.
+      operationId: atenderSolicitudOrientacion
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID único de la solicitud
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SolicitudAtenderRequest"
+            example:
+              respuesta_escrita: "Hemos agendado seguimiento confidencial con tu orientadora UNAYOE."
+              tema_confirmado: ansiedad_estres
+              prioridad_confirmada: alta
+      responses:
+        "200":
+          description: Solicitud atendida y actualizada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolicitudOrientacion"
+        "400":
+          description: Errores de validación
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "409":
+          description: La solicitud ya fue atendida previamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /api/v1/orientacion/solicitudes/metricas/conteo-temas:
+    get:
+      tags:
+        - Métricas
+      summary: Conteo agregado de solicitudes por tema
+      description: >
+        Solo roles `PERSONAL_UNAYOE` y `ADMINISTRADOR`. Agrupa las solicitudes por
+        tema efectivo (`COALESCE(tema_confirmado, tema_sugerido)`).
+      operationId: obtenerConteoTemasOrientacion
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Lista de conteos agrupados por tema
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ConteoTemaItem"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/ServerError"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    UnauthorizedError:
+      description: Token ausente, inválido o expirado
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorMessage"
+    ForbiddenError:
+      description: El rol autenticado no tiene permisos para esta operación
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorMessage"
+    NotFoundError:
+      description: Solicitud no encontrada
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorMessage"
+    DomainError:
+      description: Error en parámetros de consulta o regla de dominio
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorMessage"
+    ServerError:
+      description: Error interno del servidor (sin detalles sensibles expuestos)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorMessage"
+  schemas:
+    TemaOrientacion:
+      type: string
+      enum: [academico, ansiedad_estres, economico, familiar, personal]
+    PrioridadOrientacion:
+      type: string
+      enum: [alta, media, baja]
+    EstadoOrientacion:
+      type: string
+      enum: [pendiente, atendida]
+    HealthStatus:
+      type: object
+      properties:
+        service:
+          type: string
+          example: orientacion
+        status:
+          type: string
+          enum: [OK, ERROR]
+        database:
+          type: string
+          enum: [OK, UNAVAILABLE]
+        classifierModel:
+          type: string
+          enum: [trained-tfidf-logreg, keyword-fallback]
+    SolicitudCreateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - mensaje
+      properties:
+        mensaje:
+          type: string
+          minLength: 1
+          maxLength: 1500
+          description: Mensaje confidencial redactado por el estudiante
+        comparte_evaluacion_riesgo:
+          type: boolean
+          default: false
+          description: Indica si el estudiante autoriza compartir su última evaluación de riesgo
+        evaluacion_riesgo_id:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: Obligatorio (>0) cuando comparte_evaluacion_riesgo es true; prohibido cuando es false
+    SolicitudAtenderRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - respuesta_escrita
+      properties:
+        respuesta_escrita:
+          type: string
+          minLength: 1
+          maxLength: 3000
+          description: Respuesta oficial redactada por el orientador de UNAYOE
+        tema_confirmado:
+          allOf:
+            - $ref: "#/components/schemas/TemaOrientacion"
+          nullable: true
+        prioridad_confirmada:
+          allOf:
+            - $ref: "#/components/schemas/PrioridadOrientacion"
+          nullable: true
+    AlertaUrgencia:
+      type: object
+      required:
+        - coincidencias
+        - lineas_ayuda
+      properties:
+        coincidencias:
+          type: array
+          items:
+            type: string
+          description: Patrones de urgencia detectados por el servicio de dominio
+        lineas_ayuda:
+          type: array
+          items:
+            type: string
+          description: Líneas oficiales de ayuda inmediata (Línea 113 MINSA, SAMU 106, PNP 105 y/o ORIENTACION_HELP_LINES)
+    SolicitudOrientacion:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        estudiante_id:
+          type: integer
+          example: 101
+        mensaje:
+          type: string
+        comparte_evaluacion_riesgo:
+          type: boolean
+        evaluacion_riesgo_id:
+          type: integer
+          nullable: true
+        tema_sugerido:
+          allOf:
+            - $ref: "#/components/schemas/TemaOrientacion"
+          nullable: true
+        prioridad_sugerida:
+          allOf:
+            - $ref: "#/components/schemas/PrioridadOrientacion"
+          nullable: true
+        urgencia_detectada:
+          type: boolean
+        estado:
+          $ref: "#/components/schemas/EstadoOrientacion"
+        tema_confirmado:
+          allOf:
+            - $ref: "#/components/schemas/TemaOrientacion"
+          nullable: true
+        prioridad_confirmada:
+          allOf:
+            - $ref: "#/components/schemas/PrioridadOrientacion"
+          nullable: true
+        respuesta_escrita:
+          type: string
+          nullable: true
+        atendido_por:
+          type: integer
+          nullable: true
+          example: 77
+        fecha_creacion:
+          type: string
+          format: date-time
+          example: "2026-11-12T15:30:00Z"
+        fecha_atencion:
+          type: string
+          format: date-time
+          nullable: true
+    SolicitudOrientacionCreatedResponse:
+      allOf:
+        - $ref: "#/components/schemas/SolicitudOrientacion"
+        - type: object
+          properties:
+            alertas_urgencia:
+              $ref: "#/components/schemas/AlertaUrgencia"
+    ConteoTemaItem:
+      type: object
+      required:
+        - tema
+        - cantidad
+      properties:
+        tema:
+          $ref: "#/components/schemas/TemaOrientacion"
+        cantidad:
+          type: integer
+          example: 14
+    ValidationError:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Errores de validación
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+    ErrorMessage:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Error de autenticación o regla de negocio
