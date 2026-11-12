@@ -1,0 +1,178 @@
+import { config } from '../config';
+import type { SolicitudOrientacion, StaffRole, StaffSession } from '../types/orientacion';
+
+const STAFF_ROLES: ReadonlySet<string> = new Set<StaffRole>([
+  'PERSONAL_UNAYOE',
+  'ADMINISTRADOR',
+]);
+
+const getOrientacionPath = (): string =>
+  (import.meta.env.VITE_APIM_ORIENTACION_PATH || '/o/api/v1/orientacion/solicitudes').replace(/\/$/, '');
+
+const getLoginPath = (): string =>
+  import.meta.env.VITE_APIM_LOGIN_PATH || `${config.usersPath}/login`;
+
+function assertGatewayReady(path: string): void {
+  if (!config.key) {
+    throw new Error(
+      'El acceso al gateway APIM no está configurado. Solicita al responsable habilitar la clave.'
+    );
+  }
+  const base = new URL(config.baseUrl);
+  const isLocalDev =
+    base.hostname === 'localhost' || base.hostname === '127.0.0.1';
+  const isValidApim =
+    base.protocol === 'https:' && base.hostname.endsWith('.azure-api.net');
+  if ((!isValidApim && !isLocalDev) || !path.startsWith('/') || path.startsWith('//')) {
+    throw new Error('La configuración de Azure API Management no es válida.');
+  }
+}
+
+function decodeBase64Url(segment: string): string {
+  const padded = segment.replace(/-/g, '+').replace(/_/g, '/');
+  const mod = padded.length % 4;
+  const normalized = mod === 0 ? padded : padded + '='.repeat(4 - mod);
+  return atob(normalized);
+}
+
+export function parseJwtStaffClaims(token: string): { userId: number; role: StaffRole } {
+  const parts = token.split('.');
+  if (parts.length !== 3) {
+    throw new Error('Token JWT inválido.');
+  }
+  let payload: Record<string, unknown>;
+  try {
+    payload = JSON.parse(decodeBase64Url(parts[1])) as Record<string, unknown>;
+  } catch {
+    throw new Error('No se pudieron leer los datos de sesión.');
+  }
+
+  const userId = payload.userId;
+  const role = payload.role;
+  const exp = payload.exp;
+
+  if (typeof exp === 'number' && exp * 1000 <= Date.now()) {
+    throw new Error('Tu sesión ha expirado. Inicia sesión nuevamente.');
+  }
+  if (typeof userId !== 'number' || !Number.isInteger(userId) || userId <= 0) {
+    throw new Error('El token no contiene un identificador de usuario válido.');
+  }
+  if (typeof role !== 'string' || !STAFF_ROLES.has(role)) {
+    throw new Error(
+      'Acceso restringido únicamente a personal de UNAYOE o administradores.'
+    );
+  }
+  return { userId, role: role as StaffRole };
+}
+
+function mapHttpError(status: number, fallback: string): string {
+  if (status === 400) return 'Los datos enviados no son válidos.';
+  if (status === 401) return 'Tu sesión expiró o las credenciales son incorrectas.';
+  if (status === 403) return 'No tienes permisos de personal UNAYOE para acceder.';
+  if (status === 404) return 'No se encontró la solicitud o ruta indicada.';
+  if (status === 409) return 'La solicitud ya fue atendida previamente.';
+  if (status === 429) return 'Demasiadas peticiones. Intenta nuevamente en un momento.';
+  if (status >= 500) return 'El servicio no está disponible temporalmente.';
+  return fallback;
+}
+
+export async function loginPersonalUnayoe(
+  email: string,
+  password: string
+): Promise<StaffSession> {
+  const path = getLoginPath();
+  assertGatewayReady(path);
+
+  const response = await fetch(`${config.baseUrl}${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Ocp-Apim-Subscription-Key': config.key,
+    },
+    body: JSON.stringify({ email: email.trim(), password }),
+  });
+
+  if (!response.ok) {
+    throw new Error(mapHttpError(response.status, 'Error al iniciar sesión.'));
+  }
+
+  const data = (await response.json()) as { token?: unknown };
+  if (typeof data.token !== 'string' || !data.token) {
+    throw new Error('El servidor de autenticación no devolvió un token válido.');
+  }
+
+  const claims = parseJwtStaffClaims(data.token);
+  return {
+    token: data.token,
+    userId: claims.userId,
+    role: claims.role,
+  };
+}
+
+export async function obtenerSolicitudes(
+  token: string,
+  estado?: string,
+  prioridad?: string
+): Promise<SolicitudOrientacion[]> {
+  if (!token) {
+    throw new Error('Debes iniciar sesión como personal UNAYOE.');
+  }
+  const orientacionPath = getOrientacionPath();
+  assertGatewayReady(orientacionPath);
+
+  const params = new URLSearchParams();
+  if (estado) params.append('estado', estado);
+  if (prioridad) params.append('prioridad', prioridad);
+
+  const query = params.toString() ? `?${params.toString()}` : '';
+  const url = `${config.baseUrl}${orientacionPath}${query}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      'Ocp-Apim-Subscription-Key': config.key,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      mapHttpError(response.status, 'Error al obtener las solicitudes.')
+    );
+  }
+  return response.json();
+}
+
+export async function atenderSolicitud(
+  token: string,
+  id: number,
+  data: {
+    respuesta_escrita: string;
+    tema_confirmado?: string;
+    prioridad_confirmada?: string;
+  }
+): Promise<SolicitudOrientacion> {
+  if (!token) {
+    throw new Error('Debes iniciar sesión como personal UNAYOE.');
+  }
+  const orientacionPath = getOrientacionPath();
+  assertGatewayReady(orientacionPath);
+
+  const response = await fetch(`${config.baseUrl}${orientacionPath}/${id}/atender`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      'Ocp-Apim-Subscription-Key': config.key,
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      mapHttpError(response.status, 'Error al atender la solicitud.')
+    );
+  }
+  return response.json();
+}
