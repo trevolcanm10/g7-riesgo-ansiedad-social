@@ -1,5 +1,8 @@
 # Módulo 4 — Panel Institucional y Analítica
 
+> **Resumen de lo entregado:** [`RESUMEN_MODULO_4.md`](RESUMEN_MODULO_4.md)
+> — qué contiene cada pieza, cómo se verificó y qué queda fuera del módulo.
+
 Guía paso a paso para instalar, ejecutar, verificar y publicar el Módulo 4 de
 la plataforma de prevención del riesgo de ansiedad social (UNMSM / FISI).
 
