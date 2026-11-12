@@ -7,7 +7,7 @@ from flask import Flask, g, jsonify, request
 from werkzeug.exceptions import BadRequest, HTTPException
 
 from src.application.services import AppointmentService, SlotService
-from src.domain.errors import ConflictError, DomainError, ForbiddenError, NotFoundError, ValidationError
+from src.domain.errors import ConflictError, ForbiddenError, NotFoundError, ValidationError
 from src.domain.model import Appointment, Role, Slot
 from src.domain.ports import TokenService
 

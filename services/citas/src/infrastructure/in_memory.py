@@ -49,9 +49,11 @@ class InMemorySlotRepository(SlotRepository):
              and (staff_user_id is None or s.staff_user_id == staff_user_id)),
             key=lambda s: s.start_at)
 
-    def exists(self, staff_user_id, start_at):
-        return any(s.staff_user_id == staff_user_id and s.start_at == start_at
-                   for s in self._items.values())
+    def list_for_staff(self, staff_user_id, after, before):
+        return sorted(
+            (copy.copy(s) for s in self._items.values()
+             if s.staff_user_id == staff_user_id and after < s.start_at < before),
+            key=lambda s: s.start_at)
 
     def reserve(self, slot_id):
         with self._lock:

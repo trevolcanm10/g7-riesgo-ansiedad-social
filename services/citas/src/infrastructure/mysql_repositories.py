@@ -118,11 +118,12 @@ class MySqlSlotRepository(SlotRepository):
             cur.execute(sql + " ORDER BY start_at", params)
             return [_slot(r) for r in cur.fetchall()]
 
-    def exists(self, staff_user_id, start_at):
+    def list_for_staff(self, staff_user_id, after, before):
         with self._db.cursor() as cur:
-            cur.execute("SELECT 1 FROM availability_slots WHERE staff_user_id = %s AND start_at = %s",
-                        (staff_user_id, _to_db(start_at)))
-            return cur.fetchone() is not None
+            cur.execute("SELECT * FROM availability_slots WHERE staff_user_id = %s "
+                        "AND start_at > %s AND start_at < %s ORDER BY start_at",
+                        (staff_user_id, _to_db(after), _to_db(before)))
+            return [_slot(r) for r in cur.fetchall()]
 
     def reserve(self, slot_id):
         # UPDATE condicional: evita doble reserva aunque dos solicitudes lleguen a la vez.

@@ -4,9 +4,9 @@ from typing import Callable
 
 from src.domain.errors import ConflictError, ForbiddenError, NotFoundError, ValidationError
 from src.domain.model import (
-    ACTIVE_STATUSES, ALLOWED_TRANSITIONS, MAX_ACTIVE_APPOINTMENTS, MAX_REASON_LENGTH,
-    MAX_SLOTS_PER_REQUEST, MIN_HOURS_TO_CHANGE, Appointment, AppointmentStatus,
-    Priority, Role, Slot, SlotStatus,
+    ALLOWED_TRANSITIONS, MAX_ACTIVE_APPOINTMENTS, MAX_REASON_LENGTH,
+    MAX_SLOTS_PER_REQUEST, MIN_HOURS_TO_CHANGE, SLOT_MINUTES, Appointment, AppointmentStatus,
+    Priority, Role, Slot,
 )
 from src.domain.ports import AppointmentRepository, NoShowPredictor, SlotRepository
 
@@ -48,13 +48,27 @@ class SlotService:
         unique = sorted(set(start_ats))
         if len(unique) != len(start_ats):
             raise ValidationError("Hay horarios repetidos en la solicitud")
+        duration = timedelta(minutes=SLOT_MINUTES)
         for start in unique:
             if start <= now:
                 raise ValidationError("Los horarios deben estar en el futuro")
             if start.second or start.microsecond:
                 raise ValidationError("Los horarios no deben tener segundos")
-            if self._slots.exists(staff_id, start):
-                raise ConflictError(f"Ya existe un horario en {start.isoformat()}")
+        # Cada horario dura SLOT_MINUTES: dos inicios más cercanos que eso se solapan, y el mismo
+        # funcionario quedaría con dos citas a la vez.
+        if any(b - a < duration for a, b in zip(unique, unique[1:])):
+            raise ValidationError(
+                f"Los horarios no pueden solaparse: cada uno dura {SLOT_MINUTES} minutos")
+        # Una sola consulta con los horarios ya publicados que podrían solaparse con los nuevos.
+        taken = self._slots.list_for_staff(staff_id, unique[0] - duration, unique[-1] + duration)
+        for start in unique:
+            clash = next((s for s in taken if abs(s.start_at - start) < duration), None)
+            if clash is not None:
+                if clash.start_at == start:
+                    raise ConflictError(f"Ya existe un horario en {start.isoformat()}")
+                raise ConflictError(
+                    f"El horario {start.isoformat()} se solapa con otro ya publicado "
+                    f"({clash.start_at.isoformat()})")
         # Todo o nada; si otra solicitud se adelantó con el mismo horario, lanza ConflictError (409).
         return self._slots.add_many([Slot(staff_user_id=staff_id, start_at=s) for s in unique])
 

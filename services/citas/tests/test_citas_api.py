@@ -325,6 +325,34 @@ class CitasApiTest(unittest.TestCase):
         self.assertEqual(dup.status_code, 409)
         self.assertEqual(len(self.c.get("/slots", headers=self.student).get_json()), 1)
 
+    def _post_slots(self, *minutes_ahead, headers=None):
+        starts = [iso(self.now + timedelta(minutes=m)) for m in minutes_ahead]
+        return self.c.post("/slots", json={"startAts": starts}, headers=headers or self.staff)
+
+    def test_publish_rejects_overlapping_starts_in_same_request(self):
+        # 10:00 y 10:15 del mismo personal: cada horario dura 30 min, se solapan.
+        base = 48 * 60
+        r = self._post_slots(base, base + 15)
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("solapar", r.get_json()["message"])
+        self.assertEqual(self.c.get("/slots", headers=self.student).get_json(), [])
+
+    def test_publish_rejects_overlap_with_already_published_slot(self):
+        base = 48 * 60
+        self.assertEqual(self._post_slots(base).status_code, 201)
+        for offset in (-15, 15, 29):
+            r = self._post_slots(base + offset)
+            self.assertEqual(r.status_code, 409, offset)
+            self.assertIn("se solapa", r.get_json()["message"])
+        # Exactamente contiguos no se solapan: se permiten antes y después.
+        self.assertEqual(self._post_slots(base - 30, base + 30).status_code, 201)
+
+    def test_publish_overlap_is_checked_per_staff(self):
+        base = 48 * 60
+        self.assertEqual(self._post_slots(base).status_code, 201)
+        otro = auth(11, "PERSONAL_UNAYOE")
+        self.assertEqual(self._post_slots(base + 15, headers=otro).status_code, 201)
+
     def test_malformed_json(self):
         r = self.c.post("/appointments", data="no es json", content_type="application/json",
                         headers=self.student)

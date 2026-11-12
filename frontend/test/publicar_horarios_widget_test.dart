@@ -54,10 +54,10 @@ AuthViewModel _auth() {
   );
 }
 
-Widget _app(_Repo repo, Widget home) => MultiProvider(
+Widget _app(_Repo repo, Widget home, {AuthViewModel? auth}) => MultiProvider(
   providers: [
     ChangeNotifierProvider(create: (_) => AgendaUnayoeViewModel(repo)),
-    ChangeNotifierProvider<AuthViewModel>(create: (_) => _auth()),
+    ChangeNotifierProvider<AuthViewModel>(create: (_) => auth ?? _auth()),
   ],
   child: MaterialApp(home: home),
 );
@@ -128,8 +128,14 @@ void main() {
   });
 
   group('Agenda UNAYOE: cerrar sesion', () {
+    // AuthViewModel.onSessionReset se invoca al empezar a cerrar la sesion.
+    var cerrada = false;
+    setUp(() => cerrada = false);
+
     testWidgets('pide confirmacion y Volver no cierra la sesion', (tester) async {
-      await tester.pumpWidget(_app(_Repo(), const AgendaUnayoeScreen()));
+      final auth = _auth();
+      auth.onSessionReset = () => cerrada = true;
+      await tester.pumpWidget(_app(_Repo(), const AgendaUnayoeScreen(), auth: auth));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byIcon(Icons.logout));
@@ -140,6 +146,25 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('¿Seguro que quieres cerrar sesión?'), findsNothing);
       expect(find.text('Agenda UNAYOE'), findsOneWidget);
+      expect(cerrada, isFalse);
+    });
+
+    testWidgets('al confirmar se cierra la sesion', (tester) async {
+      final auth = _auth();
+      auth.onSessionReset = () => cerrada = true;
+      await tester.pumpWidget(
+        _app(_Repo(), const AgendaUnayoeScreen(), auth: auth),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.logout));
+      await tester.pumpAndSettle();
+      expect(cerrada, isFalse, reason: 'el diálogo aún no se confirmó');
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Cerrar sesión'));
+      await tester.pumpAndSettle();
+      expect(cerrada, isTrue);
+      expect(find.text('¿Seguro que quieres cerrar sesión?'), findsNothing);
     });
   });
 }

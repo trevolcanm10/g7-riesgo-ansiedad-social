@@ -115,8 +115,20 @@ class MySqlRepositoryTest(unittest.TestCase):
         with self.assertRaises(ConflictError):          # la restricción única se traduce a 409
             self.slots.add(Slot(staff_user_id=10, start_at=self.t0))
         self.slots.add(Slot(staff_user_id=11, start_at=self.t0))   # otro personal: permitido
-        self.assertTrue(self.slots.exists(10, self.t0))
-        self.assertFalse(self.slots.exists(12, self.t0))
+        around = (self.t0 - timedelta(minutes=1), self.t0 + timedelta(minutes=1))
+        self.assertEqual([s.staff_user_id for s in self.slots.list_for_staff(10, *around)], [10])
+        self.assertEqual(self.slots.list_for_staff(12, *around), [])
+
+    def test_list_for_staff_is_exclusive_and_ordered(self):
+        for m in (0, 30, 60):
+            self.slots.add(Slot(staff_user_id=10, start_at=self.t0 + timedelta(minutes=m)))
+        self.slots.add(Slot(staff_user_id=11, start_at=self.t0 + timedelta(minutes=30)))
+        got = self.slots.list_for_staff(10, self.t0, self.t0 + timedelta(minutes=60))
+        self.assertEqual([s.start_at for s in got], [self.t0 + timedelta(minutes=30)])
+        got = self.slots.list_for_staff(10, self.t0 - timedelta(minutes=1),
+                                        self.t0 + timedelta(minutes=61))
+        self.assertEqual([s.start_at for s in got],
+                         [self.t0 + timedelta(minutes=m) for m in (0, 30, 60)])
 
     def test_add_many_is_all_or_nothing(self):
         self.slots.add(Slot(staff_user_id=10, start_at=self.t0 + timedelta(minutes=30)))
@@ -124,7 +136,9 @@ class MySqlRepositoryTest(unittest.TestCase):
                  Slot(staff_user_id=10, start_at=self.t0 + timedelta(minutes=30))]   # el 2.º choca
         with self.assertRaises(ConflictError):
             self.slots.add_many(batch)
-        self.assertFalse(self.slots.exists(10, self.t0), "el 1.º no debe quedar creado")
+        self.assertEqual(
+            self.slots.list_for_staff(10, self.t0 - timedelta(minutes=1), self.t0 + timedelta(minutes=1)),
+            [], "el 1.º no debe quedar creado")
 
     def test_concurrent_publish_gives_conflict_not_500(self):
         outcomes, barrier = [], threading.Barrier(6)

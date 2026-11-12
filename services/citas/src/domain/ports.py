@@ -20,7 +20,8 @@ class SlotRepository(ABC):
     def list_free(self, start: datetime, end: datetime, staff_user_id: int | None) -> list[Slot]: ...
 
     @abstractmethod
-    def exists(self, staff_user_id: int, start_at: datetime) -> bool: ...
+    def list_for_staff(self, staff_user_id: int, after: datetime, before: datetime) -> list[Slot]:
+        """Horarios del personal con inicio estrictamente entre [after] y [before], en cualquier estado."""
 
     @abstractmethod
     def reserve(self, slot_id: int) -> bool:
