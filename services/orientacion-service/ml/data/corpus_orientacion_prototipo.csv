@@ -1,0 +1,251 @@
+mensaje,tema,prioridad
+"No entiendo los ejercicios de algoritmos y el examen parcial es la próxima semana",academico,alta
+"Desaprobé dos cursos este ciclo y tengo miedo de perder la regularidad",academico,alta
+"Necesito ayuda urgente para organizar mi horario porque voy a jalar tres asignaturas",academico,alta
+"El profesor no responde mis correos sobre la corrección de mi nota final",academico,media
+"Tengo problemas con mi grupo de proyecto y no avanzamos con la entrega",academico,media
+"Me cuesta concentrarme en las lecturas de arquitectura de computadoras",academico,media
+"Quisiera orientación sobre cómo llevar la tesis mientras hago prácticas preprofesionales",academico,baja
+"Cómo puedo solicitar tutoría académica para reforzar cálculo diferencial",academico,baja
+"No sé si matricularme en seis cursos o llevar una carga menor este semestre",academico,baja
+"Tengo dudas sobre los requisitos de convalidación de un curso electivo",academico,baja
+"Estoy a punto de reprobar base de datos y necesito estrategias de estudio urgentes",academico,alta
+"Me bloqueé totalmente en la exposición del proyecto integrador y bajé mi promedio",academico,alta
+"Falté a varias prácticas calificadas por cruce de horarios y no sé qué trámite hacer",academico,media
+"Quiero mejorar mi rendimiento en programación orientada a objetos",academico,baja
+"Mi asesor de tesis no revisa mis avances desde hace un mes y la fecha límite se acerca",academico,alta
+"Siento que no aprendo al ritmo de mis compañeros en ingeniería de software",academico,media
+"Necesito información sobre los horarios de asesoría académica de la facultad",academico,baja
+"Perdí una evaluación importante y temo repetir el año académico",academico,alta
+"No logro entender cómo estructurar el informe de investigación del curso",academico,media
+"Quisiera consejos para distribuir mejor mis horas de estudio antes de los finales",academico,baja
+"Me cuesta mucho redactar trabajos universitarios con formato APA",academico,baja
+"Llevo varias semanas atrasado con las tareas de sistemas operativos",academico,media
+"El docente cambió la fecha del examen final y siento que no voy a llegar",academico,alta
+"Quisiera saber cómo funciona la matrícula observada en la facultad",academico,baja
+"Tengo muchas dudas sobre qué electivos elegir para el próximo ciclo",academico,baja
+"Siento que voy a desaprobar todo este semestre por no saber estudiar bien",academico,alta
+"Necesito técnicas de memorización para aprobar anatomía y fisiología",academico,media
+"Me cuesta entender las demostraciones de matemática discreta",academico,media
+"Busco orientación vocacional porque dudo si seguir en esta carrera",academico,media
+"No encuentro material de repaso adecuado para el examen sustitutorio",academico,media
+"Estoy en riesgo académico por tercera repitencia y necesito orientación inmediata",academico,alta
+"Quisiera saber dónde pedir constancia de tercio superior o notas",academico,baja
+"Se me acumularon cuatro laboratorios calificados en la misma semana",academico,media
+"Tengo dificultad para hablar en exposiciones académicas frente al salón",academico,media
+"Me gustaría participar en un grupo de estudio para mejorar mis calificaciones",academico,baja
+"El bajo puntaje en el parcial me desanimó mucho para continuar el curso",academico,media
+"Necesito apoyo para planificar la recuperación de cursos desaprobados",academico,alta
+"Quiero consultar si hay talleres de metodología de estudio en UNAYOE",academico,baja
+"No sé cómo abordar a mi docente para pedir revisión de examen",academico,baja
+"Estoy atrasado en todas las lecturas del seminario y se cierra el acta pronto",academico,alta
+"Me cuesta equilibrar los trabajos grupales con los exámenes individuales",academico,media
+"Quisiera recomendación de libros o guías para preparar mi sustentación",academico,baja
+"Tengo miedo de no alcanzar la nota mínima para aprobar estadística",academico,media
+"Necesito orientación urgente porque debo decidir si retiro un curso hoy",academico,alta
+"Cómo solicito reserva de matrícula por motivos académicos",academico,baja
+"Siento que mis métodos de estudio del colegio ya no funcionan en la universidad",academico,media
+"Mi promedio ponderado bajó demasiado este último ciclo",academico,alta
+"Quisiera orientación sobre intercambio estudiantil y créditos académicos",academico,baja
+"Me cuesta mantener la atención durante clases virtuales de tres horas",academico,media
+"Tengo dificultades para coordinar fechas de entrega con mi equipo de laboratorio",academico,media
+"No puedo pagar la matrícula este ciclo y temo quedarme sin estudiar",economico,alta
+"Mi familia perdió ingresos y ya no alcanza para cubrir mi pensión ni pasajes",economico,alta
+"Necesito orientación urgente sobre becas o exoneración de pago de matrícula",economico,alta
+"Estoy buscando un trabajo de medio tiempo que no cruce con mis clases",economico,media
+"No tengo dinero suficiente para comprar los materiales ni pagar las copias del curso",economico,media
+"Quisiera información sobre el comedor universitario y apoyo socioeconómico",economico,baja
+"Me atrasé en las cuotas de la residencia y no sé a qué oficina acudir",economico,alta
+"Cómo postular a la beca de permanencia o apoyo económico de la universidad",economico,baja
+"Tuve que empezar a trabajar ocho horas diarias y apenas me alcanza el dinero",economico,alta
+"Busco orientación sobre programas de subvención para estudiantes de provincia",economico,baja
+"No puedo costear mi pasaje diario para venir desde lejos a la facultad",economico,media
+"Tengo deudas acumuladas y estoy pensando en dejar la carrera por falta de dinero",economico,alta
+"Quisiera saber qué documentos piden para acreditar situación económica vulnerable",economico,baja
+"Mi laptop se malogró y no tengo recursos para repararla ni comprar otra",economico,media
+"Necesito apoyo para gestionar el fraccionamiento de mis pagos universitarios",economico,media
+"No me alcanza para pagar el alquiler del cuarto este mes y estoy muy preocupado",economico,alta
+"Quisiera consultar si existe algún fondo de emergencia económica para alumnos",economico,baja
+"Mis padres ya no pueden enviarme mensualidad y debo mantenerme solo en Lima",economico,alta
+"Estoy evaluando solicitar préstamo educativo pero no conozco los requisitos",economico,baja
+"El costo del transporte y alimentación me impide asistir todos los días",economico,media
+"Necesito orientación sobre oportunidades de prácticas remuneradas en la facultad",economico,baja
+"Perdí mi empleo de fin de semana y no tengo cómo pagar los exámenes médicos",economico,alta
+"Quisiera saber si puedo acceder a tarifa social para trámites administrativos",economico,baja
+"Me preocupa mucho no tener presupuesto para pagar los derechos de grado",economico,media
+"Estoy trabajando de madrugada para cubrir mis gastos y eso afecta mis notas",economico,alta
+"Cómo solicito evaluación socioeconómica ante bienestar universitario",economico,baja
+"No tengo dinero para pagar el internet en casa y pierdo clases virtuales",economico,media
+"Debo elegir entre comprar comida o sacar las copias de mis prácticas",economico,alta
+"Quisiera saber cuándo abren la convocatoria de bolsa de trabajo estudiantil",economico,baja
+"Mis gastos médicos recientes dejaron sin ahorros a mi familia",economico,alta
+"Busco información sobre becas alimentarias dentro de la universidad",economico,baja
+"No puedo pagar la renovación de mi seguro ni mis medicinas este mes",economico,alta
+"Tengo dificultad para cubrir el costo de la titulación y trámites",economico,media
+"Necesito consejo para administrar mis ingresos mientras estudio",economico,baja
+"Me despidieron de mi trabajo part time y debo pagar el cuarto esta semana",economico,alta
+"Quisiera conocer los requisitos para acceder al servicio de asistencia social",economico,baja
+"El aumento del pasaje redujo demasiado mi presupuesto mensual",economico,media
+"No puedo costear los libros ni licencias requeridas en el laboratorio",economico,media
+"Estoy buscando apoyo financiero urgente para no abandonar el semestre",economico,alta
+"Cómo tramito la exoneración de pago por situación económica difícil",economico,media
+"Me cuesta pagar la alimentación diaria cuando tengo horario partido en el campus",economico,media
+"Quisiera saber qué ayudas económicas ofrece UNMSM para estudiantes foráneos",economico,baja
+"Mis ingresos actuales no cubren ni la mitad de mis gastos básicos",economico,alta
+"Necesito orientación para aplicar a pasantías pagadas de verano",economico,baja
+"Tengo una deuda pendiente en tesorería y bloquea mi matrícula",economico,alta
+"Quisiera saber dónde presentar mi ficha socioeconómica actualizada",economico,baja
+"Me angustia depender económicamente de familiares que también pasan apuros",economico,media
+"No tengo recursos para viajar a ver a mi familia ni pagar gastos locales",economico,media
+"Estoy pasando hambre algunos días por ahorrar para la matrícula",economico,alta
+"Quisiera consultar sobre descuentos en certificaciones o cursos de idiomas",economico,baja
+"Siento el pecho apretado y me falta el aire antes de entrar a cualquier clase",ansiedad_estres,alta
+"Tengo ataques de pánico constantes y no logro dormir hace cuatro días",ansiedad_estres,alta
+"La ansiedad no me deja hablar en público ni responder cuando me llaman lista",ansiedad_estres,media
+"Últimamente lloro sin motivo y siento un nudo en el estómago todo el día",ansiedad_estres,alta
+"Estoy muy estresado con la carga académica y me tiemblan las manos en los exámenes",ansiedad_estres,media
+"Siento que mi corazón late muy rápido cada vez que pienso en exponer",ansiedad_estres,media
+"Tengo insomnio severo por preocupaciones y me despierto con taquicardia",ansiedad_estres,alta
+"Quisiera aprender técnicas de respiración para controlar el nerviosismo",ansiedad_estres,baja
+"Me da mucho miedo equivocarme delante de mis compañeros y prefiero no asistir",ansiedad_estres,media
+"Estoy agotado mentalmente y siento que la presión me está superando",ansiedad_estres,alta
+"Busco orientación sobre cómo manejar el estrés antes de las evaluaciones",ansiedad_estres,baja
+"Siento una angustia constante que me paraliza cuando intento estudiar",ansiedad_estres,alta
+"Me sudan las manos y me mareo cuando tengo que conversar en grupos nuevos",ansiedad_estres,media
+"Últimamente tengo pesadillas frecuentes y despierto muy tenso",ansiedad_estres,media
+"Quisiera talleres de manejo de ansiedad social y relajación en UNAYOE",ansiedad_estres,baja
+"Siento que estoy al borde de una crisis nerviosa por tantas presiones juntas",ansiedad_estres,alta
+"Evito la cafetería y eventos de la facultad porque siento que todos me observan",ansiedad_estres,media
+"Tengo dolores de cabeza frecuentes por tensión muscular y estrés diario",ansiedad_estres,media
+"Me cuesta mucho desconectarme mentalmente incluso los fines de semana",ansiedad_estres,baja
+"Ayer tuve un episodio de hiperventilación en el pasillo antes del parcial",ansiedad_estres,alta
+"Quisiera saber qué hábitos ayudan a reducir el estrés universitario",ansiedad_estres,baja
+"Siento miedo intenso al rechazo cuando debo pedir ayuda a un compañero",ansiedad_estres,media
+"No logro descansar aunque duerma ocho horas porque mi mente no para de pensar",ansiedad_estres,media
+"Necesito hablar con un psicólogo urgente porque la angustia me impide salir de casa",ansiedad_estres,alta
+"Me gustaría recibir pautas sencillas para organizar pausas y bajar la tensión",ansiedad_estres,baja
+"Cada notificación del aula virtual me genera palpitaciones y nervios",ansiedad_estres,media
+"Llevo semanas con ansiedad generalizada y siento que pierdo el control",ansiedad_estres,alta
+"Me cuesta mucho conciliar el sueño pensando en todo lo que puede salir mal",ansiedad_estres,media
+"Quisiera conocer ejercicios de mindfulness recomendados por bienestar",ansiedad_estres,baja
+"El miedo a hablar en clase me hizo abandonar dos exposiciones este mes",ansiedad_estres,alta
+"Siento irritabilidad y cansancio extremo por estrés acumulado del ciclo",ansiedad_estres,media
+"Me cuesta respirar tranquilo cuando estoy en salones muy llenos de gente",ansiedad_estres,media
+"Busco consejería preventiva para no llegar a saturarme en finales",ansiedad_estres,baja
+"Sufro náuseas y malestar estomacal por los nervios antes de cada prueba",ansiedad_estres,media
+"Siento que la tristeza y el estrés me están quitando toda la energía",ansiedad_estres,alta
+"Quisiera saber cómo identificar señales tempranas de agotamiento emocional",ansiedad_estres,baja
+"Me quedo en blanco por los nervios apenas el profesor hace una pregunta",ansiedad_estres,media
+"Tengo pensamientos repetitivos de fracaso que me generan mucha angustia",ansiedad_estres,alta
+"Quiero orientación sobre grupos de apoyo emocional para estudiantes",ansiedad_estres,baja
+"Siento opresión en el pecho todas las mañanas antes de ir a estudiar",ansiedad_estres,alta
+"Me pongo muy nervioso al enviar mensajes o correos a desconocidos",ansiedad_estres,media
+"Quisiera estrategias prácticas para manejar la presión antes de sustentar",ansiedad_estres,baja
+"Siento un miedo paralizante a quedar en ridículo frente al grupo",ansiedad_estres,media
+"Llevo varios días con crisis de llanto y mucha desesperación por el estrés",ansiedad_estres,alta
+"Me cuesta mantener la calma cuando hay demasiadas tareas al mismo tiempo",ansiedad_estres,media
+"Quisiera recomendaciones para mejorar la calidad de mi sueño cuando estoy tenso",ansiedad_estres,baja
+"Me siento desbordado emocionalmente y necesito contención psicológica pronto",ansiedad_estres,alta
+"Siento que mi ansiedad social empeoró este semestre al volver a clases",ansiedad_estres,media
+"Busco información sobre atención psicológica gratuita para alumnos",ansiedad_estres,baja
+"No puedo dejar de temblar cuando pienso en las presentaciones orales",ansiedad_estres,media
+"Hay peleas constantes en mi casa y no tengo un ambiente tranquilo para estudiar",familiar,alta
+"Mis padres se están separando y la situación familiar me afecta muchísimo",familiar,alta
+"Mi papá tuvo un problema grave de salud y debo cuidarlo en casa",familiar,alta
+"Discuto todos los días con mi familia porque no entienden la exigencia de mi carrera",familiar,media
+"Mis familiares me presionan para que deje la universidad y trabaje tiempo completo",familiar,media
+"Extraño mucho a mi familia desde que me mudé de provincia para estudiar",familiar,media
+"Quisiera consejos para mejorar la comunicación con mis padres sobre mis horarios",familiar,baja
+"En mi hogar hay mucha tensión económica y eso genera discusiones diarias",familiar,alta
+"Siento que no tengo apoyo emocional de mi familia cuando estoy mal",familiar,media
+"Un familiar cercano falleció recientemente y me cuesta mucho asimilar el duelo",familiar,alta
+"Mis hermanos menores dependen de mí en las tardes y no tengo tiempo libre",familiar,media
+"Quisiera saber cómo manejar límites sanos con familiares muy exigentes",familiar,baja
+"Hay violencia verbal en mi casa y prefiero quedarme en la facultad hasta tarde",familiar,alta
+"Mis padres comparan mis notas con las de mis primos todo el tiempo",familiar,media
+"Busco orientación sobre cómo explicar a mi familia que necesito apoyo psicológico",familiar,baja
+"La enfermedad crónica de mi madre me tiene muy preocupado y distraído",familiar,alta
+"Mi familia desaprueba mi elección de carrera y el ambiente en casa es hostil",familiar,media
+"No tengo privacidad en mi vivienda porque comparto cuarto con varios familiares",familiar,media
+"Quisiera conversar sobre cómo equilibrar responsabilidades familiares y estudio",familiar,baja
+"Mis padres dejaron de hablarme tras una discusión fuerte la semana pasada",familiar,alta
+"Me cuesta visitar a mis abuelos sin sentir culpa por no estudiar suficiente",familiar,baja
+"Mi hermano tiene problemas graves y toda la carga emocional cae sobre mí",familiar,alta
+"Quisiera orientación para afrontar cambios recientes en mi dinámica familiar",familiar,baja
+"Siento mucha presión en casa por ser el primero en ir a la universidad",familiar,media
+"Las discusiones nocturnas en mi familia me impiden dormir y descansar",familiar,alta
+"Necesito consejo para pedir apoyo a mis padres sin generar otra pelea",familiar,baja
+"Desde que falleció mi abuelo la convivencia en mi hogar se volvió muy difícil",familiar,media
+"Me siento responsable de resolver los problemas de pareja de mis padres",familiar,media
+"Quisiera saber si UNAYOE realiza orientación familiar o solo individual",familiar,baja
+"Tengo miedo de volver a casa los fines de semana por el clima de tensión",familiar,alta
+"Mi familia no cree en la salud mental y minimiza lo que siento",familiar,media
+"Debo viajar seguido a mi ciudad por emergencias médicas de un familiar",familiar,media
+"Busco pautas para dialogar con calma con mis padres sobre mis decisiones",familiar,baja
+"El conflicto entre mis tíos y mis padres dividió a toda la familia",familiar,media
+"Siento tristeza profunda por estar distanciado de mi hogar este año",familiar,media
+"Me asignan demasiadas tareas domésticas en casa y no me dejan estudiar",familiar,media
+"Quisiera orientación porque sufro amenazas o gritos frecuentes en mi entorno familiar",familiar,alta
+"Me cuesta aceptar la nueva pareja de mi padre y eso genera roces",familiar,baja
+"Tengo que cuidar a mi sobrino pequeño mientras intento conectarme a clases",familiar,media
+"Quisiera saber cómo manejar la culpa al priorizar mis estudios frente a favores familiares",familiar,baja
+"Mi madre está pasando por depresión y no sé cómo acompañarla",familiar,alta
+"Cada llamada de mi casa trae malas noticias y me deja sin fuerzas",familiar,alta
+"Busco consejo para organizar acuerdos de convivencia con mis familiares",familiar,baja
+"Mis padres me amenazan con quitarme el apoyo si jalo algún curso",familiar,alta
+"Siento que nadie en mi familia escucha cómo me siento realmente",familiar,media
+"Quisiera hablar sobre la sobreprotección de mis padres que me impide crecer",familiar,baja
+"Tuvimos que mudarnos de urgencia por problemas familiares y perdí clases",familiar,alta
+"Me cuesta integrarme en casa después de pasar todo el día en el campus",familiar,baja
+"Hay mucha desconfianza y control excesivo en mi hogar hacia mis salidas",familiar,media
+"Necesito orientación sobre cómo manejar un duelo familiar reciente durante el ciclo",familiar,alta
+"Me siento muy solo en la universidad y no he logrado hacer amigos desde primer ciclo",personal,media
+"Terminé una relación de pareja larga y me cuesta mucho seguir con mi rutina",personal,alta
+"Siento que perdí la motivación y no tengo claro qué quiero hacer con mi vida",personal,media
+"Tengo problemas de autoestima y siento que no soy suficiente para nada",personal,alta
+"Quisiera mejorar mis habilidades sociales para relacionarme mejor con las personas",personal,baja
+"Me cuesta poner límites a mis amigos y termino haciendo cosas que no quiero",personal,media
+"Últimamente me aíslo de todos y no contesto mensajes ni salgo de mi cuarto",personal,alta
+"Quisiera orientación sobre cómo organizar mi proyecto de vida y metas personales",personal,baja
+"Tuve un conflicto fuerte con mi mejor amigo y me siento muy afectado",personal,media
+"Me siento vacío por dentro aunque aparentemente todo vaya bien en mis estudios",personal,alta
+"Busco consejos para manejar la procrastinación y mejorar mi disciplina personal",personal,baja
+"Siento que nadie me comprende y prefiero guardarme todo lo que pienso",personal,media
+"Estoy pasando por una ruptura amorosa muy dolorosa y lloro todos los días",personal,alta
+"Quisiera aprender a decir no sin sentir que voy a perder amistades",personal,baja
+"Me comparo constantemente con otros jóvenes y siento mucha inseguridad",personal,media
+"Siento un desánimo profundo desde hace meses y nada de lo que hago me ilusiona",personal,alta
+"Quisiera conocer talleres de desarrollo personal y liderazgo en la facultad",personal,baja
+"Tengo miedo de quedarme solo si muestro cómo soy en realidad",personal,media
+"He perdido el interés en mis pasatiempos favoritos y en salir con amigos",personal,alta
+"Busco orientación para adaptarme mejor a la vida independiente en la ciudad",personal,baja
+"Me cuesta confiar en nuevas personas después de experiencias pasadas difíciles",personal,media
+"Siento que mi estado de ánimo cambia bruscamente y afecto a quienes quiero",personal,alta
+"Quisiera trabajar en mi autoconfianza y comunicación asertiva",personal,baja
+"Me siento rechazado por mi círculo cercano y no sé cómo afrontarlo",personal,media
+"Estoy atravesando una etapa de mucha confusión sobre mi identidad y valores",personal,media
+"Necesito hablar con alguien de confianza sobre situaciones personales difíciles",personal,alta
+"Quisiera recomendaciones para construir hábitos saludables en mi día a día",personal,baja
+"Me siento culpable por errores del pasado y no logro perdonarme",personal,media
+"Estoy muy desanimado y siento que no pertenezco a este lugar",personal,alta
+"Busco apoyo para manejar el tiempo libre de manera más positiva",personal,baja
+"Sufro mucho por comentarios hirientes de compañeros en redes sociales",personal,alta
+"Me cuesta expresar mis emociones sin sentirme vulnerable o juzgado",personal,media
+"Quisiera información sobre consejería individual para crecimiento personal",personal,baja
+"Me siento agotado de aparentar que estoy bien frente a todo el mundo",personal,alta
+"Tengo dificultad para tomar decisiones importantes sobre mi futuro cercano",personal,media
+"Quisiera saber qué actividades extracurriculares ayudan a conocer gente nueva",personal,baja
+"Siento que perdí el rumbo personal este año y necesito orientarme",personal,media
+"La soledad en mi cuarto alquilado se ha vuelto muy difícil de llevar",personal,alta
+"Busco herramientas para fortalecer mi resiliencia ante problemas cotidianos",personal,baja
+"Me afecta demasiado la crítica y termino dudando de todo lo que hago",personal,media
+"Siento una tristeza persistente que me dificulta levantarme cada mañana",personal,alta
+"Quisiera conversar sobre cómo mejorar mi relación de pareja de forma sana",personal,baja
+"Me cuesta adaptarme a nuevos entornos y prefiero evitar reuniones sociales",personal,media
+"Siento que cargo demasiadas frustraciones personales sin poder desahogarme",personal,alta
+"Quiero pautas para manejar mejor mis emociones en situaciones conflictivas",personal,baja
+"Me siento excluido de las actividades de mi promoción y me duele mucho",personal,media
+"Estoy dudando de mis capacidades personales y me siento estancado",personal,media
+"Quisiera orientación sobre cómo cuidar mi bienestar integral este semestre",personal,baja
+"He tenido conflictos de convivencia con mis compañeros de cuarto alquilado",personal,media
+"Siento mucha angustia personal por no cumplir las expectativas que me puse",personal,alta

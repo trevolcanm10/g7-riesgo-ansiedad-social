@@ -1,0 +1,161 @@
+{
+  "tecnica": "TF-IDF (1-2 gramas) + Regresión Logística (class_weight=balanced)",
+  "linea_base": "Reglas por palabras clave (ScikitLocalClassifier._fallback_*)",
+  "corpus": {
+    "archivo": "ml/data/corpus_orientacion_prototipo.csv",
+    "origen": "Corpus sintético prototipo redactado por el equipo de desarrollo",
+    "cantidad_mensajes": 250,
+    "tamano_entrenamiento": 200,
+    "tamano_prueba": 50,
+    "random_state": 42,
+    "test_size": 0.2
+  },
+  "clases_tema": [
+    "academico",
+    "ansiedad_estres",
+    "economico",
+    "familiar",
+    "personal"
+  ],
+  "clases_prioridad": [
+    "alta",
+    "baja",
+    "media"
+  ],
+  "prioridad_preferente": "alta",
+  "versiones_entorno": {
+    "python": "3.10.8",
+    "scikit_learn": "1.6.1",
+    "joblib": "1.3.2",
+    "numpy": "1.26.4"
+  },
+  "metricas_prueba": {
+    "tema": {
+      "tfidf_logreg": {
+        "accuracy": 0.54,
+        "macro_f1": 0.5446,
+        "por_clase": {
+          "academico": {
+            "precision": 0.5556,
+            "recall": 0.5,
+            "f1": 0.5263,
+            "soporte": 10
+          },
+          "ansiedad_estres": {
+            "precision": 0.4,
+            "recall": 0.4,
+            "f1": 0.4,
+            "soporte": 10
+          },
+          "economico": {
+            "precision": 0.8889,
+            "recall": 0.8,
+            "f1": 0.8421,
+            "soporte": 10
+          },
+          "familiar": {
+            "precision": 0.5,
+            "recall": 0.5,
+            "f1": 0.5,
+            "soporte": 10
+          },
+          "personal": {
+            "precision": 0.4167,
+            "recall": 0.5,
+            "f1": 0.4545,
+            "soporte": 10
+          }
+        }
+      },
+      "linea_base_palabras_clave": {
+        "accuracy": 0.76,
+        "macro_f1": 0.7585,
+        "por_clase": {
+          "academico": {
+            "precision": 1.0,
+            "recall": 0.4,
+            "f1": 0.5714,
+            "soporte": 10
+          },
+          "ansiedad_estres": {
+            "precision": 1.0,
+            "recall": 0.6,
+            "f1": 0.75,
+            "soporte": 10
+          },
+          "economico": {
+            "precision": 0.8182,
+            "recall": 0.9,
+            "f1": 0.8571,
+            "soporte": 10
+          },
+          "familiar": {
+            "precision": 1.0,
+            "recall": 0.9,
+            "f1": 0.9474,
+            "soporte": 10
+          },
+          "personal": {
+            "precision": 0.5,
+            "recall": 1.0,
+            "f1": 0.6667,
+            "soporte": 10
+          }
+        }
+      }
+    },
+    "prioridad": {
+      "tfidf_logreg": {
+        "accuracy": 0.68,
+        "macro_f1": 0.6725,
+        "por_clase": {
+          "alta": {
+            "precision": 0.7,
+            "recall": 0.4375,
+            "f1": 0.5385,
+            "soporte": 16
+          },
+          "baja": {
+            "precision": 0.7647,
+            "recall": 0.8667,
+            "f1": 0.8125,
+            "soporte": 15
+          },
+          "media": {
+            "precision": 0.6087,
+            "recall": 0.7368,
+            "f1": 0.6667,
+            "soporte": 19
+          }
+        },
+        "recall_prioridad_alta": 0.4375
+      },
+      "linea_base_palabras_clave": {
+        "accuracy": 0.48,
+        "macro_f1": 0.4041,
+        "por_clase": {
+          "alta": {
+            "precision": 1.0,
+            "recall": 0.1875,
+            "f1": 0.3158,
+            "soporte": 16
+          },
+          "baja": {
+            "precision": 0.75,
+            "recall": 0.2,
+            "f1": 0.3158,
+            "soporte": 15
+          },
+          "media": {
+            "precision": 0.4186,
+            "recall": 0.9474,
+            "f1": 0.5806,
+            "soporte": 19
+          }
+        },
+        "recall_prioridad_alta": 0.1875
+      }
+    }
+  },
+  "advertencia": "Prototipo experimental entrenado con corpus sintético; requiere validación y reentrenamiento con mensajes reales etiquetados por especialistas de UNAYOE."
+}
