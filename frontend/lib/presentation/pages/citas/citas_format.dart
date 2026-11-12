@@ -44,7 +44,7 @@ String etiquetaEstado(String estado) {
     case 'ATENDIDA':
       return 'Atendida';
     case 'NO_ASISTIO':
-      return 'No asististe';
+      return 'No asistió';
     case 'CANCELADA':
       return 'Cancelada';
     default:

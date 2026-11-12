@@ -59,6 +59,29 @@ class _AgendaUnayoeScreenState extends State<AgendaUnayoeScreen> {
     _avisar(ok, 'Cita cancelada.');
   }
 
+  /// Pide confirmacion y solo entonces cierra la sesion (SessionGate lleva al login).
+  Future<void> _cerrarSesion() async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cerrar sesión'),
+        content: const Text('¿Seguro que quieres cerrar sesión?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Volver'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Cerrar sesión'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar != true || !mounted) return;
+    await context.read<AuthViewModel>().logout();
+  }
+
   void _avisar(bool ok, String exito) {
     final vm = context.read<AgendaUnayoeViewModel>();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -126,7 +149,7 @@ class _AgendaUnayoeScreenState extends State<AgendaUnayoeScreen> {
           IconButton(
             tooltip: 'Cerrar sesión',
             icon: const Icon(Icons.logout),
-            onPressed: auth.logout,
+            onPressed: auth.isLoading ? null : _cerrarSesion,
           ),
         ],
       ),

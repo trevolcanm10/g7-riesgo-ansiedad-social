@@ -20,6 +20,10 @@ class _PublicarHorariosScreenState extends State<PublicarHorariosScreen> {
   TimeOfDay _hasta = const TimeOfDay(hour: 12, minute: 0);
   final _personal = TextEditingController();
 
+  /// Bloques del rango que el personal desmarco (no los atendera). Se limpia al
+  /// cambiar el dia o el rango, porque la lista de bloques se genera de nuevo.
+  final Set<DateTime> _quitados = {};
+
   @override
   void dispose() {
     _personal.dispose();
@@ -29,7 +33,12 @@ class _PublicarHorariosScreenState extends State<PublicarHorariosScreen> {
   DateTime _combinar(TimeOfDay t) =>
       DateTime(_dia.year, _dia.month, _dia.day, t.hour, t.minute);
 
-  List<DateTime> get _inicios => generarInicios(_combinar(_desde), _combinar(_hasta));
+  /// Todos los bloques que caben en el rango elegido.
+  List<DateTime> get _bloques => generarInicios(_combinar(_desde), _combinar(_hasta));
+
+  /// Los bloques que se publicaran: los del rango menos los desmarcados.
+  List<DateTime> get _inicios =>
+      _bloques.where((t) => !_quitados.contains(t)).toList();
 
   String _t(TimeOfDay t) =>
       '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
@@ -42,7 +51,12 @@ class _PublicarHorariosScreenState extends State<PublicarHorariosScreen> {
       firstDate: hoy,
       lastDate: hoy.add(const Duration(days: 90)),
     );
-    if (r != null) setState(() => _dia = r);
+    if (r != null) {
+      setState(() {
+        _dia = r;
+        _quitados.clear();
+      });
+    }
   }
 
   Future<void> _elegirHora(bool inicio) async {
@@ -50,7 +64,20 @@ class _PublicarHorariosScreenState extends State<PublicarHorariosScreen> {
       context: context,
       initialTime: inicio ? _desde : _hasta,
     );
-    if (r != null) setState(() => inicio ? _desde = r : _hasta = r);
+    if (r != null) {
+      setState(() {
+        if (inicio) {
+          _desde = r;
+        } else {
+          _hasta = r;
+        }
+        _quitados.clear();
+      });
+    }
+  }
+
+  void _alternar(DateTime bloque, bool incluido) {
+    setState(() => incluido ? _quitados.remove(bloque) : _quitados.add(bloque));
   }
 
   Future<void> _publicar(bool esAdmin) async {
@@ -80,6 +107,7 @@ class _PublicarHorariosScreenState extends State<PublicarHorariosScreen> {
     final vm = context.watch<AgendaUnayoeViewModel>();
     final esAdmin = context.watch<AuthViewModel>().esAdministrador;
     final scheme = Theme.of(context).colorScheme;
+    final bloques = _bloques;
     final inicios = _inicios;
     final demasiados = inicios.length > maxHorariosPorPublicacion;
     final valido = inicios.isNotEmpty && !demasiados;
@@ -133,12 +161,34 @@ class _PublicarHorariosScreenState extends State<PublicarHorariosScreen> {
                 ),
               ),
             ],
+            if (bloques.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              const Text(
+                'Desmarca los horarios que no podrás atender (por ejemplo, la hora de almuerzo).',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final b in bloques)
+                    FilterChip(
+                      label: Text(_t(TimeOfDay.fromDateTime(b))),
+                      selected: !_quitados.contains(b),
+                      onSelected: (v) => _alternar(b, v),
+                    ),
+                ],
+              ),
+            ],
             const SizedBox(height: 16),
             Text(
               !valido
                   ? (demasiados
                         ? 'Máximo $maxHorariosPorPublicacion horarios por publicación.'
-                        : 'El rango debe permitir al menos un bloque de $minutosPorCita min.')
+                        : bloques.isEmpty
+                        ? 'El rango debe permitir al menos un bloque de $minutosPorCita min.'
+                        : 'Marca al menos un horario para publicar.')
                   : 'Se publicarán ${inicios.length} horarios.',
               style: TextStyle(color: valido ? scheme.primary : scheme.error),
             ),
