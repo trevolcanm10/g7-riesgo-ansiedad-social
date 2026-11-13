@@ -1,0 +1,18 @@
+{
+  "model_name": "clasificador_carga_semanal",
+  "description": "Modelo de clasificacion de la carga academica semanal.",
+  "version": "1.0",
+  "features": [
+    "horas_totales",
+    "num_actividades",
+    "num_examenes",
+    "num_entregas",
+    "num_urgentes_48h",
+    "num_prioridad_alta",
+    "dias_con_actividades",
+    "max_horas_dia",
+    "concentracion_3dias",
+    "num_sin_duracion"
+  ],
+  "target": ["BAJA", "MODERADA", "ALTA"]
+}
