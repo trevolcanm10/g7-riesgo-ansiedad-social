@@ -29,6 +29,7 @@ class LogisticNoShowPredictor(NoShowPredictor):
         self._a, self._b = art["platt"]["a"], art["platt"]["b"]
         self._cap_prior = art["caps"]["prior_no_shows"]
         self._cap_lead = art["caps"]["lead_days"]
+        self.FLAG_THRESHOLD = float(art.get("flag_threshold", self.FLAG_THRESHOLD))
 
     def _vector(self, features: dict) -> dict:
         # El entrenamiento usa días calendario enteros; aquí se trunca a días enteros.

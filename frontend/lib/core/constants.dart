@@ -211,6 +211,8 @@ class AppConstants {
   static String get citasSlots => '$citasOrigin/slots';
   static String get citas => '$citasOrigin/appointments';
   static String get citasMias => '$citasOrigin/appointments/me';
+  static String get citasRecordatorios =>
+      '$citasOrigin/appointments/me/reminders';
   static String citaCancelar(int id) => '$citasOrigin/appointments/$id/cancel';
   static String citaEstado(int id) => '$citasOrigin/appointments/$id/status';
   static String citaRiesgo(int id) =>

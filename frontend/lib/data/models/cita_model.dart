@@ -25,6 +25,26 @@ class CitaModel {
     personalId: (json['staffUserId'] as num?)?.toInt(),
   );
 
+  static Recordatorio recordatorioFromJson(Map<String, dynamic> json) {
+    final corresponde = json['dueNow'];
+    final puedeCambiar = json['canChange'];
+    if (corresponde is! bool) throw const FormatException('Campo invalido: dueNow');
+    if (puedeCambiar is! bool) {
+      throw const FormatException('Campo invalido: canChange');
+    }
+    final hasta = json['canChangeUntil'];
+    return Recordatorio(
+      citaId: _entero(json, 'appointmentId'),
+      inicio: _fecha(json, 'startAt'),
+      fin: _fecha(json, 'endAt'),
+      estado: _texto(json, 'status'),
+      horasRestantes: _entero(json, 'hoursUntil'),
+      corresponde: corresponde,
+      puedeCambiar: puedeCambiar,
+      puedeCambiarHasta: hasta is String ? DateTime.tryParse(hasta) : null,
+    );
+  }
+
   static RiesgoInasistencia riesgoFromJson(Map<String, dynamic> json) {
     final p = json['noShowProbability'];
     if (p is! num) {

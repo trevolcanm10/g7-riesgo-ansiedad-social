@@ -12,6 +12,7 @@ Contrato: [`openapi/citas.yaml`](../../openapi/citas.yaml). Esquema SQL: [`db/sc
 - Estados: `SOLICITADA → CONFIRMADA → ATENDIDA | NO_ASISTIO`, y `CANCELADA`. Reprogramar mueve la misma cita a otro horario y vuelve a `SOLICITADA`.
 - `priority: ALTA` es **solo informativa** en la v1: no cambia orden ni permisos.
 - No se guardan puntajes ni respuestas del cuestionario.
+- **Recordatorios dentro de la app** (`GET /appointments/me/reminders`, solo estudiante): lista las citas activas que aún no ocurren. El aviso corresponde (`dueNow`) desde **24 h** antes y, si la probabilidad de inasistencia estimada alcanza el umbral del modelo (`flag_threshold`, 0,3153 en `logreg-calibrated-v1`; 0,30 en la línea base), desde **48 h** antes (recordatorio reforzado). El refuerzo solo adelanta el aviso: la respuesta no incluye la probabilidad ni factores y no condiciona la atención. Si el modelo falla, el recordatorio normal se entrega igual.
 
 ## Ejecutar en local (bash)
 
@@ -109,4 +110,5 @@ src/presentation/http.py     rutas Flask y manejo de errores ({"message": ...})
 - Reservar horario y crear la cita no comparten transacción: si falla el segundo paso se libera el horario (compensación). Es suficiente para el MVP.
 - **El límite de 2 citas activas no es atómico.** El servicio cuenta las citas activas y después reserva el horario; si un mismo estudiante envía dos solicitudes simultáneas, ambas pueden pasar la revisión y quedar con 3 citas. La reserva del horario sí es atómica (probado con 8 hilos), por lo que nunca se duplica un horario. Es poco probable con una persona usando la app y es aceptable para el MVP; si hiciera falta, se resuelve con un bloqueo por estudiante o una restricción en la base.
 - Por defecto el predictor de inasistencia es una **línea base por reglas** (`rule-based-baseline-v0`). Con `NO_SHOW_MODEL_PATH` (ruta relativa a esta carpeta; el modelo en uso aparece como `noShowModel` en `/health`) se usa la regresión logística calibrada de `ml/` (ver `ml/README.md`), entrenada con un conjunto público de atención médica, no con estudiantes. En ambos casos solo sirve para decidir recordatorios y nunca debe usarse para negar o retrasar una cita.
-- Pendiente con el equipo: prefijo `/c` en APIM, base MySQL y despliegue de Citas, y conexión con Notificaciones para los recordatorios.
+- Los recordatorios se muestran dentro de la app al abrirla; **no hay envío en segundo plano** (push, correo o SMS). Cuando exista el servicio de Notificaciones podrá consumir `GET /appointments/me/reminders` u otro contrato que se acuerde.
+- Pendiente con el equipo: prefijo `/c` en APIM, base MySQL y despliegue de Citas.

@@ -8,6 +8,8 @@ MAX_ACTIVE_APPOINTMENTS = 2       # citas activas por estudiante
 MIN_HOURS_TO_CHANGE = 12          # anticipación mínima para cancelar/reprogramar (estudiante)
 MAX_SLOTS_PER_REQUEST = 50
 MAX_REASON_LENGTH = 200
+REMINDER_HOURS = 24               # el recordatorio de una cita aparece desde 24 h antes
+REINFORCED_REMINDER_HOURS = 48    # recordatorio reforzado: aparece antes (48 h) para dar margen a reprogramar
 
 
 class Role(str, Enum):

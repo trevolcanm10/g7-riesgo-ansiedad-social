@@ -30,6 +30,13 @@ class CitasRemoteDataSource {
         .toList();
   });
 
+  Future<List<Recordatorio>> misRecordatorios() => _ejecutar(() async {
+    final data = await _api.getList(AppConstants.citasRecordatorios);
+    return data
+        .map((e) => CitaModel.recordatorioFromJson(e as Map<String, dynamic>))
+        .toList();
+  });
+
   Future<Cita> solicitar({
     required int slotId,
     required String prioridad,

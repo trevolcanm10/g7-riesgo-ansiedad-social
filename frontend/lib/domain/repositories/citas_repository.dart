@@ -8,6 +8,9 @@ abstract class CitasRepository {
   /// Citas del estudiante autenticado.
   Future<List<Cita>> misCitas();
 
+  /// Recordatorios de las proximas citas del estudiante autenticado.
+  Future<List<Recordatorio>> misRecordatorios();
+
   Future<Cita> solicitar({
     required int slotId,
     required String prioridad,

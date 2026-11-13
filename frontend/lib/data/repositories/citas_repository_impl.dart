@@ -14,6 +14,9 @@ class CitasRepositoryImpl implements CitasRepository {
   Future<List<Cita>> misCitas() => _remote.misCitas();
 
   @override
+  Future<List<Recordatorio>> misRecordatorios() => _remote.misRecordatorios();
+
+  @override
   Future<Cita> solicitar({
     required int slotId,
     required String prioridad,

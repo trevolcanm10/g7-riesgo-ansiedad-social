@@ -61,6 +61,33 @@ class Cita {
       inicio.difference(ahora) >= const Duration(hours: horasMinimasParaCambiar);
 }
 
+/// Recordatorio de una cita proxima, calculado por el servicio Citas.
+///
+/// [corresponde] indica si ya toca mostrar el aviso (24 h antes; algunas citas
+/// reciben el aviso antes, a las 48 h). La app no conoce el motivo ni ninguna
+/// estimacion de riesgo: solo decide si lo muestra.
+class Recordatorio {
+  final int citaId;
+  final DateTime inicio;
+  final DateTime fin;
+  final String estado;
+  final int horasRestantes;
+  final bool corresponde;
+  final bool puedeCambiar;
+  final DateTime? puedeCambiarHasta;
+
+  const Recordatorio({
+    required this.citaId,
+    required this.inicio,
+    required this.fin,
+    required this.estado,
+    required this.horasRestantes,
+    required this.corresponde,
+    required this.puedeCambiar,
+    this.puedeCambiarHasta,
+  });
+}
+
 /// Estimacion orientativa de inasistencia. Solo sirve para decidir un
 /// recordatorio: nunca para negar ni retrasar una cita.
 class RiesgoInasistencia {

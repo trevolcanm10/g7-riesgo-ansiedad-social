@@ -22,6 +22,10 @@ class LogisticNoShowTest(unittest.TestCase):
     def setUp(self):
         self.model = LogisticNoShowPredictor(ARTIFACT)
 
+    def test_flag_threshold_comes_from_the_artifact(self):
+        self.assertEqual(self.model.FLAG_THRESHOLD, 0.3153)
+        self.assertEqual(RuleBasedNoShowPredictor().FLAG_THRESHOLD, 0.30)
+
     def test_probability_in_range_and_named(self):
         r = self.model.predict(feats())
         self.assertTrue(0 < r["probability"] < 1)
