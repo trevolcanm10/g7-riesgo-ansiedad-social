@@ -72,12 +72,12 @@ paths:
       operationId: getPredictionHealth
       responses:
         '200':
-          description: Servicio listo con los cinco modelos cargados
+          description: Servicio listo con el modelo XGBoost cargado
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthStatus'
-              example: { service: prediction-ml, status: OK, models_loaded: 5 }
+              example: { service: prediction-ml, status: OK, models_loaded: 1 }
         '503':
           description: Servicio no listo o modelos no disponibles
           content:
@@ -142,4 +142,4 @@ components:
       properties:
         service: { type: string, enum: [prediction-ml] }
         status: { type: string, enum: [OK, UNAVAILABLE] }
-        models_loaded: { type: integer, minimum: 0, maximum: 5 }
+        models_loaded: { type: integer, minimum: 0, maximum: 1 }
