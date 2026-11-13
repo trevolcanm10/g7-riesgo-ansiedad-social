@@ -63,12 +63,14 @@ class UrgenciaDomainService:
             re.compile(
                 r"\b(quitarme|quitarse|acabar con|terminar con)\s+(la\s+vida|todo)\b"
                 r"|\b(acabar|terminar)\s+con\s+mi\s+vida\b"
+                r"|\bme\s+(?:voy\s+a|quiero|quisiera|podria|puedo)\s+quitar\s+la\s+vida\b"
             ),
         ),
         (
             "mejor_muerto",
             re.compile(
                 r"\b(estaria|estar|seria)\s+mejor\s+muert[oa]\b"
+                r"|\b(?:quisiera|preferiria|desearia|me\s+gustaria|ojala)\s+estar\s+muert[oa]\b"
                 r"|\bojala\s+(estuviera|amaneciera)\s+muert[oa]\b"
                 r"|\b(todos|todo|la gente|mi familia)\s+(estaria|estarian|seria)\s+mejor\s+sin\s+mi\b"
                 r"|\bmejor\s+sin\s+mi\b"
@@ -108,8 +110,13 @@ class UrgenciaDomainService:
                 r"|\bme\s+(hago|hice)\s+dano\b"
                 r"|\blastimar(me|se)?\b|\bme\s+(lastimo|lastime)\b"
                 r"|\bherir(me|se)?\b|\bme\s+hiero\b"
-                r"|\bcortar(me|se)(\s+las\s+venas)?\b"
-                r"|\bme\s+(corto|corte|cortaba|cortaria)(?!\s+(?:el\s+(?:pelo|cabello)|una|el\s+internet|el\s+agua|la\s+luz))\b"
+                r"|\bcortar(?:me|se)?\s+(?:las\s+venas|los\s+brazos|la\s+piel)\b"
+                r"|\bcortar(me|se)\b"
+                r"|\bme\s+(?:voy\s+a|quiero|quisiera|puedo|podria|suelo)\s+cortar(?!\s+(?:el\s+(?:pelo|cabello)|las\s+unas|la\s+barba))\b"
+                r"|\bme\s+(corto|corte|cortaba|cortaria)(?!\s+(?:el\s+(?:pelo|cabello)|una|las\s+verduras|el\s+internet|el\s+agua|la\s+luz))\b"
+                r"|\bme\s+(?:he|estuve|ando)\s+(?:cortando|cortado|lastimando|lastimado|hiriendo|herido)\b"
+                r"|\b(?:ahorcarme|ahorcarse|colgarme)\b"
+                r"|\b(?:tirarme|lanzarme|arrojarme)\s+(?:de|del|desde|al\s+vacio)\b"
             ),
         ),
         ("no_aguanto_mas", re.compile(r"\bno\s+(aguanto|puedo|soporto)\s+mas\b")),

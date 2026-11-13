@@ -38,6 +38,12 @@ from app.infrastructure.ml.scikit_classifier import ScikitLocalClassifier
         "No tiene sentido vivir",
         "No le veo sentido a la vida",
         "Quisiera no haber nacido",
+        "Me quiero cortar las venas",
+        "Me voy a cortar las venas",
+        "Me quiero quitar la vida",
+        "Me voy a quitar la vida",
+        "Quisiera estar muerto",
+        "Me he cortado las venas",
     ],
 )
 def test_detector_urgencia_detecta_variantes_criticas(mensaje):
@@ -81,6 +87,10 @@ def test_detector_urgencia_no_marca_mensajes_no_criticos(mensaje):
         "No tiene sentido este ejercicio",
         "No le veo sentido a este curso",
         "Quiero matar el tiempo",
+        "Voy a cortar el pelo",
+        "Se cortó el internet",
+        "Tengo que cortar las verduras",
+        "Me quiero cortar el pelo",
     ],
 )
 def test_detector_urgencia_evita_falsos_positivos_no_vitales(mensaje):
