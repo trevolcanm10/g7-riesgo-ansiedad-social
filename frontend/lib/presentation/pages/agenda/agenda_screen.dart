@@ -1,19 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/app_colors.dart';
+import '../../../core/constants.dart';
+import '../../../data/datasources/remote/api_service.dart';
 import '../../../data/repositories/agenda_local_repository.dart';
+import '../../../data/repositories/agenda_remote_repository.dart';
 import '../../../domain/entities/actividad_academica.dart';
+import '../../../domain/repositories/agenda_repository.dart';
 import '../../../domain/services/calcular_carga_semanal.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 
 class AgendaScreen extends StatefulWidget {
-  const AgendaScreen({super.key});
+  final AgendaRepository? repository;
+  const AgendaScreen({super.key, this.repository});
   @override
   State<AgendaScreen> createState() => _AgendaScreenState();
 }
 
 class _AgendaScreenState extends State<AgendaScreen> {
-  late final AgendaLocalRepository _repo;
+  late final AgendaRepository _repo;
   List<ActividadAcademica> _items = [];
   DateTime _selected = DateTime.now();
   bool _loading = true;
@@ -23,10 +28,15 @@ class _AgendaScreenState extends State<AgendaScreen> {
   @override
   void initState() {
     super.initState();
-    _repo = AgendaLocalRepository(context.read<AuthViewModel>().idUsuario!);
+    _repo = widget.repository ??
+        (AppConstants.gateway.enabled
+            ? AgendaRemoteRepository(
+                context.read<ApiService>(),
+                '${AppConstants.gateway.academicAgendaOrigin}/actividades',
+              )
+            : AgendaLocalRepository(context.read<AuthViewModel>().idUsuario!));
     _load();
   }
-
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
     try {
@@ -42,7 +52,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
   Future<bool> _save(List<ActividadAcademica> next) async {
     try {
       await _repo.guardar(next);
-      if (mounted) setState(() { _items = next; _error = null; });
+      final saved = _repo is AgendaRemoteRepository ? await _repo.obtener() : next;
+      if (mounted) setState(() { _items = saved; _error = null; });
       return true;
     } catch (_) {
       if (mounted) setState(() => _error = 'No se pudieron guardar los cambios.');
