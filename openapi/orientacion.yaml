@@ -350,7 +350,10 @@ components:
           type: integer
           minimum: 1
           nullable: true
-          description: Obligatorio (>0) cuando comparte_evaluacion_riesgo es true; prohibido cuando es false
+          description: >
+            Obligatorio (>0) cuando comparte_evaluacion_riesgo es true; prohibido cuando es false.
+            Campo informativo entre contextos delimitados: orientacion-service no consulta
+            risk-evaluation-service para validar propiedad o existencia del ID.
     SolicitudAtenderRequest:
       type: object
       additionalProperties: false
@@ -402,6 +405,7 @@ components:
         evaluacion_riesgo_id:
           type: integer
           nullable: true
+          description: Identificador lógico informativo de evaluación de riesgo compartida (sin verificación entre microservicios ni FK externa)
         tema_sugerido:
           allOf:
             - $ref: "#/components/schemas/TemaSugeridoOrientacion"

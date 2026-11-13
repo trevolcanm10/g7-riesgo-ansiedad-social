@@ -8,7 +8,7 @@ const STAFF_ROLES: ReadonlySet<string> = new Set<StaffRole>([
 
 const DEFAULT_APIM_BASE_URL = 'https://apim-g7-riesgo-ansiedad.azure-api.net';
 
-const getOrientacionBaseUrl = (): string =>
+const getApimBaseUrl = (): string =>
   (import.meta.env.VITE_APIM_BASE_URL || DEFAULT_APIM_BASE_URL).replace(/\/$/, '');
 
 const getOrientacionPath = (): string =>
@@ -36,6 +36,47 @@ function assertGatewayReady(baseUrl: string, path: string): void {
   if ((!isValidApim && !isLocalDev) || !path.startsWith('/') || path.startsWith('//')) {
     throw new Error('La configuración de Azure API Management no es válida.');
   }
+}
+
+function resolveOrientacionTarget(): {
+  baseUrl: string;
+  path: string;
+  includeApimKey: boolean;
+} {
+  const directBase = import.meta.env.VITE_ORIENTACION_BASE_URL?.trim();
+  if (directBase) {
+    const baseUrl = directBase.replace(/\/$/, '');
+    const path = (
+      import.meta.env.VITE_ORIENTACION_PATH || '/api/v1/orientacion/solicitudes'
+    ).replace(/\/$/, '');
+    let parsed: URL;
+    try {
+      parsed = new URL(baseUrl);
+    } catch {
+      throw new Error(
+        'La configuración de VITE_ORIENTACION_BASE_URL no es una URL válida.'
+      );
+    }
+    const isLocalHttp =
+      parsed.protocol === 'http:' &&
+      (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1');
+    const isHttps = parsed.protocol === 'https:';
+    if ((!isHttps && !isLocalHttp) || !path.startsWith('/') || path.startsWith('//')) {
+      throw new Error(
+        'La configuración de VITE_ORIENTACION_BASE_URL o su ruta no es válida.'
+      );
+    }
+    return {
+      baseUrl,
+      path,
+      includeApimKey: parsed.hostname.endsWith('.azure-api.net'),
+    };
+  }
+
+  const baseUrl = getApimBaseUrl();
+  const path = getOrientacionPath();
+  assertGatewayReady(baseUrl, path);
+  return { baseUrl, path, includeApimKey: true };
 }
 
 function decodeBase64Url(segment: string): string {
@@ -90,7 +131,7 @@ export async function loginPersonalUnayoe(
   email: string,
   password: string
 ): Promise<StaffSession> {
-  const baseUrl = getOrientacionBaseUrl();
+  const baseUrl = getApimBaseUrl();
   const path = getLoginPath();
   assertGatewayReady(baseUrl, path);
 
@@ -137,9 +178,7 @@ export async function obtenerSolicitudes(
   if (!token) {
     throw new Error('Debes iniciar sesión como personal UNAYOE.');
   }
-  const baseUrl = getOrientacionBaseUrl();
-  const orientacionPath = getOrientacionPath();
-  assertGatewayReady(baseUrl, orientacionPath);
+  const { baseUrl, path: orientacionPath, includeApimKey } = resolveOrientacionTarget();
 
   const params = new URLSearchParams();
   if (estado) params.append('estado', estado);
@@ -148,13 +187,17 @@ export async function obtenerSolicitudes(
   const query = params.toString() ? `?${params.toString()}` : '';
   const url = `${baseUrl}${orientacionPath}${query}`;
 
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  };
+  if (includeApimKey && config.key) {
+    headers['Ocp-Apim-Subscription-Key'] = config.key;
+  }
+
   const response = await fetch(url, {
     method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      'Ocp-Apim-Subscription-Key': config.key,
-    },
+    headers,
   });
 
   if (!response.ok) {
@@ -177,17 +220,19 @@ export async function atenderSolicitud(
   if (!token) {
     throw new Error('Debes iniciar sesión como personal UNAYOE.');
   }
-  const baseUrl = getOrientacionBaseUrl();
-  const orientacionPath = getOrientacionPath();
-  assertGatewayReady(baseUrl, orientacionPath);
+  const { baseUrl, path: orientacionPath, includeApimKey } = resolveOrientacionTarget();
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  };
+  if (includeApimKey && config.key) {
+    headers['Ocp-Apim-Subscription-Key'] = config.key;
+  }
 
   const response = await fetch(`${baseUrl}${orientacionPath}/${id}/atender`, {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      'Ocp-Apim-Subscription-Key': config.key,
-    },
+    headers,
     body: JSON.stringify(data),
   });
 

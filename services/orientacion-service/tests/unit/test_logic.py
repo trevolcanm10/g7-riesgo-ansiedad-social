@@ -25,6 +25,10 @@ from app.infrastructure.ml.scikit_classifier import ScikitLocalClassifier
         "Pienso en terminar con todo",
         "No aguanto más",
         "No aguanto más este curso de cálculo, quiero morir",
+        "Ya no puedo seguir con mi vida",
+        "Sería mejor que yo no existiera",
+        "Tengo ganas de no existir",
+        "Quisiera dejar de existir",
     ],
 )
 def test_detector_urgencia_detecta_variantes_criticas(mensaje):

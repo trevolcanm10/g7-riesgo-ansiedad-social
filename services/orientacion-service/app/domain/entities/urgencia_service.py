@@ -41,6 +41,13 @@ class UrgenciaDomainService:
             re.compile(
                 r"\b(ya\s+)?no\s+quiero\s+(seguir\s+)?vivi(r|endo)\b"
                 r"|\bpreferiria\s+no\s+(vivir|existir)\b"
+                r"|\b(?:ya\s+)?no\s+(?:puedo|quiero)\s+(?:seguir|continuar)\s+con\s+(?:mi|esta)\s+vida\b"
+            ),
+        ),
+        (
+            "no_existir",
+            re.compile(
+                r"\b(?:no\s+exist(?:ir\w*|iera\w*|iese\w*)|dejar\s+de\s+existir)\b"
             ),
         ),
         (

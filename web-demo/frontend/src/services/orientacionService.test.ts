@@ -125,4 +125,27 @@ describe('orientacionService (seguridad y contrato JWT)', () => {
       atenderSolicitud('jwt-staff-token', 1, { respuesta_escrita: 'Repetida' })
     ).rejects.toThrow('atendida previamente');
   });
+
+  it('VITE_ORIENTACION_BASE_URL permite probar directo contra Render sin enviar clave APIM ni relajar APIM por defecto', async () => {
+    vi.stubEnv('VITE_APIM_BASE_URL', 'https://untrusted.example.com');
+    const { obtenerSolicitudes: getViaInvalidApim } = await import('./orientacionService');
+    await expect(getViaInvalidApim('jwt-staff-token')).rejects.toThrow(
+      'Azure API Management'
+    );
+
+    vi.resetModules();
+    vi.stubEnv('VITE_APIM_SUBSCRIPTION_KEY', 'test-only-not-a-real-key');
+    vi.stubEnv('VITE_ORIENTACION_BASE_URL', 'https://orientacion-m2.onrender.com');
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }));
+
+    const { obtenerSolicitudes: getDirectRender } = await import('./orientacionService');
+    await getDirectRender('jwt-staff-token', 'pendiente');
+
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toBe(
+      'https://orientacion-m2.onrender.com/api/v1/orientacion/solicitudes?estado=pendiente'
+    );
+    expect(options.headers.Authorization).toBe('Bearer jwt-staff-token');
+    expect(options.headers['Ocp-Apim-Subscription-Key']).toBeUndefined();
+  });
 });
