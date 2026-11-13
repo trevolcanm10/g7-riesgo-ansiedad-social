@@ -75,11 +75,23 @@ class UrgenciaDomainService:
             ),
         ),
         (
+            "matarse",
+            re.compile(
+                r"\b(?:matarme|matarse)\b"
+                r"|\bme\s+(?:voy\s+a|quiero|quisiera|podria|puedo|deberia)\s+matar\b"
+                r"|\bme\s+mataria\b"
+            ),
+        ),
+        (
             "sin_sentido_vital",
             re.compile(
                 r"\bno\s+(?:le\s+)?encuentro\s+sentido\s+a\s+(?:seguir(?:\s+viviendo)?|vivir|la\s+vida)\b"
                 r"|\b(?:la\s+vida|seguir\s+viviendo)\s+(?:ya\s+)?no\s+tiene\s+sentido\b"
                 r"|\bnada\s+tiene\s+sentido\b"
+                r"|\bno\s+(?:vale|valia)\s+la\s+pena\s+(?:vivir|seguir|la\s+vida)\b"
+                r"|\bno\s+tiene\s+sentido\s+(?:vivir|seguir\s+viviendo)\b"
+                r"|\bno\s+(?:le\s+)?veo\s+sentido\s+(?:a|en)\s+(?:seguir|vivir|la\s+vida)\b"
+                r"|\bno\s+haber\s+nacido\b"
             ),
         ),
         (

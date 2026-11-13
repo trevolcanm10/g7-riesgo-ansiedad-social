@@ -29,6 +29,15 @@ from app.infrastructure.ml.scikit_classifier import ScikitLocalClassifier
         "Sería mejor que yo no existiera",
         "Tengo ganas de no existir",
         "Quisiera dejar de existir",
+        "Me quiero matar",
+        "Quiero matarme",
+        "Me voy a matar",
+        "Voy a matarme",
+        "Pienso en matarme",
+        "No vale la pena vivir",
+        "No tiene sentido vivir",
+        "No le veo sentido a la vida",
+        "Quisiera no haber nacido",
     ],
 )
 def test_detector_urgencia_detecta_variantes_criticas(mensaje):
@@ -65,6 +74,13 @@ def test_detector_urgencia_no_marca_mensajes_no_criticos(mensaje):
         "No aguanto más este curso de cálculo",
         "No soporto más los exámenes finales",
         "Me corté el cabello ayer y estoy bien",
+        "Me mata el calor de esta aula",
+        "Mataron mi proyecto de tesis",
+        "El profe me mata con tareas",
+        "No vale la pena el esfuerzo",
+        "No tiene sentido este ejercicio",
+        "No le veo sentido a este curso",
+        "Quiero matar el tiempo",
     ],
 )
 def test_detector_urgencia_evita_falsos_positivos_no_vitales(mensaje):
