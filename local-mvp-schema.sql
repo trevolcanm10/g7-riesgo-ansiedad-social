@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS riesgo_social_evaluations.risk_evaluations (
   risk_level ENUM('BAJO', 'MEDIO', 'ALTO') NOT NULL,
   explanation TEXT NOT NULL,
   ai_report JSON NOT NULL,
+  shap_explanation JSON NULL,
   created_at DATETIME NOT NULL,
   INDEX (user_id, created_at),
   CONSTRAINT fk_risk_recommendation FOREIGN KEY (risk_recommendation_id)

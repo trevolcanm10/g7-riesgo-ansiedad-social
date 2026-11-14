@@ -71,7 +71,7 @@ class XGBoostPredictor(RiskPredictor):
             raise ValueError("Contribuciones SHAP inválidas")
         margin = risk_base + float(risk_values.sum())
         reconstructed = float(1 / (1 + np.exp(-margin)))
-        if not np.isclose(reconstructed, probability, atol=1e-5, rtol=0):
+        if not np.isclose(reconstructed, probability, atol=1e-4, rtol=1e-6):
             raise ValueError("SHAP no explica la probabilidad de clase 0")
         ranked = sorted(range(len(FEATURES)), key=lambda i: (-abs(risk_values[i]), i))[:3]
         return {

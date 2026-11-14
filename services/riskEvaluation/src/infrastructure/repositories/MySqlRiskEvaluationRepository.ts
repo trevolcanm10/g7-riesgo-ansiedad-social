@@ -4,11 +4,14 @@ import {
   RiskEvaluation,
   RiskLevel,
   RiskRecommendation,
+  ShapExplanation,
 } from "../../domain/entities/RiskEvaluation.js";
 import { RiskEvaluationRepository } from "../../domain/repositories/RiskEvaluationRepository.js";
 import { ResultSetHeader, RowDataPacket } from "mysql2";
+import { decodeLegacyRecommendation } from "./decodeLegacyRecommendation.js";
 
 interface RiskEvaluationRow extends RowDataPacket {
+  shap_explanation: ShapExplanation | string | null;
   id: number;
   user_id: number;
   risk_recommendation_id: number;
@@ -69,10 +72,11 @@ export class MySqlRiskEvaluationRepository implements RiskEvaluationRepository {
           risk_level,
           explanation,
           ai_report,
+          shap_explanation,
           created_at
         ) VALUES (
           ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         )
       `,
       [
@@ -97,6 +101,9 @@ export class MySqlRiskEvaluationRepository implements RiskEvaluationRepository {
         riskEvaluation.getRiskLevel(),
         riskEvaluation.getExplanation(),
         JSON.stringify(riskEvaluation.getAiReport()),
+        riskEvaluation.getShapExplanation() === undefined
+          ? null
+          : JSON.stringify(riskEvaluation.getShapExplanation()),
         riskEvaluation.getCreatedAt(),
       ],
     );
@@ -154,13 +161,20 @@ export class MySqlRiskEvaluationRepository implements RiskEvaluationRepository {
       id: row.recommendation_id,
       category: row.recommendation_category,
       title: row.recommendation_title,
-      description: row.recommendation_description,
+      description: decodeLegacyRecommendation(row.recommendation_description),
     };
 
     const aiReport =
       typeof row.ai_report === "string"
         ? (JSON.parse(row.ai_report) as AIReport)
         : row.ai_report;
+
+    const shapExplanation =
+      row.shap_explanation === null || row.shap_explanation === undefined
+        ? undefined
+        : typeof row.shap_explanation === "string"
+          ? (JSON.parse(row.shap_explanation) as ShapExplanation)
+          : row.shap_explanation;
 
     return new RiskEvaluation({
       id: row.id,
@@ -185,6 +199,7 @@ export class MySqlRiskEvaluationRepository implements RiskEvaluationRepository {
       explanation: row.explanation,
       recommendations: [recommendation],
       aiReport,
+      shapExplanation,
       createdAt: row.created_at,
     });
   }

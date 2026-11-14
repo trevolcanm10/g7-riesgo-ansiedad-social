@@ -20,7 +20,7 @@ class PredictRiskUseCase:
             if explain is not None:
                 explanation = explain(indicators, probability)
         except Exception:
-            logging.getLogger(__name__).warning("Explicación SHAP no disponible")
+            logging.getLogger(__name__).warning("Explicacion SHAP no disponible")
         return {
             "nivel_riesgo": level,
             "probabilidad_ansiedad": probability,

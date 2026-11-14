@@ -35,6 +35,7 @@ export class RiskEvaluationController {
         explanation: riskEvaluation.getExplanation(),
         recommendations: riskEvaluation.getRecommendations(),
         aiReport: riskEvaluation.getAiReport(),
+        shapExplanation: riskEvaluation.getShapExplanation() ?? null,
         createdAt: riskEvaluation.getCreatedAt(),
       })),
     );
@@ -65,7 +66,7 @@ export class RiskEvaluationController {
       explanation: riskEvaluation.getExplanation(),
       recommendations: riskEvaluation.getRecommendations(),
       aiReport: riskEvaluation.getAiReport(),
-      shapExplanation: riskEvaluation.getShapExplanation(),
+      shapExplanation: riskEvaluation.getShapExplanation() ?? null,
       createdAt: riskEvaluation.getCreatedAt(),
     });
   }
