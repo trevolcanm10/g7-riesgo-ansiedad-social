@@ -5,6 +5,33 @@ import '../../../presentation/viewmodels/evaluacion_viewmodel.dart';
 import '../../../presentation/viewmodels/auth_viewmodel.dart';
 import '../../../domain/entities/evaluacion.dart';
 
+String formatStudentDashboardDate(DateTime date) {
+  const weekdays = [
+    'Lunes',
+    'Martes',
+    'Miércoles',
+    'Jueves',
+    'Viernes',
+    'Sábado',
+    'Domingo',
+  ];
+  const months = [
+    'enero',
+    'febrero',
+    'marzo',
+    'abril',
+    'mayo',
+    'junio',
+    'julio',
+    'agosto',
+    'septiembre',
+    'octubre',
+    'noviembre',
+    'diciembre',
+  ];
+  return '${weekdays[date.weekday - 1]}, ${date.day} de ${months[date.month - 1]}';
+}
+
 /// Dashboard principal con vista de bienestar mental dinámica en español
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -20,6 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       // Cargar historial real de evaluaciones del usuario al entrar al dashboard
       context.read<EvaluacionViewModel>().obtenerHistorial();
     });
@@ -42,11 +70,11 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final authVM = context.watch<AuthViewModel>();
     final evaluacionVM = context.watch<EvaluacionViewModel>();
-
-    final nombreUsuario = authVM.nombre ?? 'Estudiante';
+    final nombreUsuario = authVM.nombre?.trim().isNotEmpty == true
+        ? authVM.nombre!.trim().split(RegExp(r'\s+')).first
+        : 'Estudiante';
     final historial = evaluacionVM.historial;
     final tieneHistorial = historial.isNotEmpty;
-
     final colors = AppColors.of(context);
 
     return Scaffold(
@@ -55,61 +83,53 @@ class _HomeScreenState extends State<HomeScreen> {
         bottom: false,
         child: Column(
           children: [
-            // ==========================================
-            // CONTENIDO PRINCIPAL
-            // ==========================================
             Expanded(
-              child: evaluacionVM.isLoading && historial.isEmpty
-                  ? Center(
-                      child: CircularProgressIndicator(
-                        color: colors.primary,
-                      ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: () => evaluacionVM.obtenerHistorial(),
-                      color: colors.primary,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildHeader(nombreUsuario),
-                            const SizedBox(height: 20),
-
-                            if (!tieneHistorial) ...[
-                              // ==========================================
-                              // PANTALLA DE BIENVENIDA (USUARIO NUEVO)
-                              // ==========================================
-                              _buildWelcomeCard(),
-                              const SizedBox(height: 20),
-                              _buildStartEvaluationButton(esNuevo: true),
-                              const SizedBox(height: 20),
-                              _buildInfoSection(),
-                            ] else ...[
-                              // ==========================================
-                              // DASHBOARD DINÁMICO CON HISTORIAL REAL
-                              // ==========================================
-                              _buildRiskCard(historial.first),
-                              const SizedBox(height: 16),
-                              _buildTrendChart(historial),
-                              const SizedBox(height: 16),
-                              _buildSecondaryMetrics(historial.first),
-                              const SizedBox(height: 16),
-                              _buildStartEvaluationButton(esNuevo: false),
-                              const SizedBox(height: 16),
-                              _buildQuickTip(historial.first),
-                            ],
-                            const SizedBox(height: 16),
+              child: RefreshIndicator(
+                onRefresh: evaluacionVM.obtenerHistorial,
+                color: colors.primary,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 36),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 760),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildHeader(nombreUsuario),
+                          const SizedBox(height: 28),
+                          _buildWelcomeCard(tieneHistorial: tieneHistorial),
+                          const SizedBox(height: 16),
+                          _buildQuickAccess(colors),
+                          const SizedBox(height: 34),
+                          _buildInfoSection(colors),
+                          if (evaluacionVM.isLoading && !tieneHistorial) ...[
+                            const SizedBox(height: 24),
+                            Center(
+                              child: CircularProgressIndicator(
+                                color: colors.primary,
+                              ),
+                            ),
                           ],
-                        ),
+                          if (tieneHistorial) ...[
+                            const SizedBox(height: 32),
+                            _buildRiskCard(historial.first),
+                            const SizedBox(height: 16),
+                            _buildTrendChart(historial),
+                            const SizedBox(height: 16),
+                            _buildSecondaryMetrics(historial.first),
+                            const SizedBox(height: 16),
+                            _buildStartEvaluationButton(esNuevo: false),
+                            const SizedBox(height: 16),
+                            _buildQuickTip(historial.first),
+                          ],
+                        ],
                       ),
                     ),
+                  ),
+                ),
+              ),
             ),
-
-            // ==========================================
-            // BARRA DE NAVEGACIÓN INFERIOR FIJA
-            // ==========================================
             _buildBottomNav(),
           ],
         ),
@@ -121,86 +141,200 @@ class _HomeScreenState extends State<HomeScreen> {
   // HEADER
   // ==========================================
   Widget _buildHeader(String nombre) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final colors = AppColors.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Text(
-          '¡Hola, $nombre! 👋',
-          style: const TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1E293B),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                formatStudentDashboardDate(DateTime.now()),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: colors.textTertiary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '\u00a1Hola, $nombre!',
+                style: TextStyle(
+                  fontSize: 30,
+                  height: 1.12,
+                  fontWeight: FontWeight.w700,
+                  color: colors.textPrimary,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 4),
-        const Text(
-          'Este es el estado de tu salud y bienestar mental.',
-          style: TextStyle(
-            fontSize: 14,
-            color: Color(0xFF94A3B8),
+        const SizedBox(width: 12),
+        Container(
+          width: 54,
+          height: 54,
+          decoration: BoxDecoration(
+            color: colors.primaryLight,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Icon(
+            Icons.psychology_outlined,
+            color: colors.primary,
+            size: 30,
           ),
         ),
       ],
     );
   }
 
-  // ==========================================
-  // TARJETA DE BIENVENIDA (ESTADO VACÍO)
-  // ==========================================
-  Widget _buildWelcomeCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF6366F1).withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              shape: BoxShape.circle,
+  Widget _buildWelcomeCard({required bool tieneHistorial}) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 350;
+        return Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF716BF4), Color(0xFF514EDC)],
             ),
-            child: const Icon(
-              Icons.spa_rounded,
-              size: 28,
-              color: Colors.white,
-            ),
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x305654DA),
+                blurRadius: 24,
+                offset: Offset(0, 14),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          const Text(
-            '¡Te damos la bienvenida!',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            children: [
+              Positioned(
+                right: -45,
+                top: -75,
+                child: Container(
+                  width: 190,
+                  height: 190,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0x18FFFFFF),
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 12,
+                top: 68,
+                child: Container(
+                  width: 112,
+                  height: 112,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0x16FFFFFF),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  compact ? 20 : 24,
+                  34,
+                  compact ? 20 : 24,
+                  24,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: const Color(0x24FFFFFF),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Icon(
+                          Icons.auto_awesome_rounded,
+                          color: Colors.white,
+                          size: 30,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'TU ESPACIO SEGURO',
+                      style: TextStyle(
+                        color: Color(0xFFE7E7FF),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 2.3,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Bienestar que te acompa\u00f1a',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: compact ? 27 : 31,
+                        height: 1.08,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Descubre c\u00f3mo te sientes y recibe orientaci\u00f3n hecha para ti.',
+                      style: TextStyle(
+                        color: Color(0xFFEDEBFF),
+                        fontSize: 15,
+                        height: 1.45,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: () =>
+                            Navigator.pushNamed(context, '/evaluacion'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF514CE8),
+                          minimumSize: const Size.fromHeight(54),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                tieneHistorial
+                                    ? 'Iniciar nueva evaluaci\u00f3n'
+                                    : 'Iniciar mi primera evaluaci\u00f3n',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Icon(Icons.arrow_forward_rounded, size: 21),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Tu salud mental es una prioridad. Realiza tu primera evaluación interactiva para estimar tu riesgo de ansiedad a través de Inteligencia Artificial y obtener recomendaciones preventivas de forma instantánea.',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.white70,
-              height: 1.5,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -250,10 +384,7 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(
         color: bgCardColor,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: borderColor.withOpacity(0.5),
-          width: 1.5,
-        ),
+        border: Border.all(color: borderColor.withOpacity(0.5), width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -322,11 +453,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: baseColor.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Icon(
-                  riskIcon,
-                  size: 32,
-                  color: baseColor,
-                ),
+                child: Icon(riskIcon, size: 32, color: baseColor),
               ),
             ],
           ),
@@ -343,10 +470,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 12),
           Text(
             _formatearFecha(ultimaEval.fechaRealizacion),
-            style: const TextStyle(
-              fontSize: 12,
-              color: Color(0xFF94A3B8),
-            ),
+            style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
           ),
         ],
       ),
@@ -361,11 +485,15 @@ class _HomeScreenState extends State<HomeScreen> {
     final evaluacionesOrdenadas = historialCompleto.reversed.toList();
     List<Evaluacion> ultimasEval = evaluacionesOrdenadas;
     if (evaluacionesOrdenadas.length > 7) {
-      ultimasEval = evaluacionesOrdenadas.sublist(evaluacionesOrdenadas.length - 7);
+      ultimasEval = evaluacionesOrdenadas.sublist(
+        evaluacionesOrdenadas.length - 7,
+      );
     }
 
     final List<double> dataPoints = ultimasEval
-        .map((e) => (e.resultado?.probabilidadAnsiedad as num?)?.toDouble() ?? 0.0)
+        .map(
+          (e) => (e.resultado?.probabilidadAnsiedad as num?)?.toDouble() ?? 0.0,
+        )
         .toList();
 
     final List<String> labels = ultimasEval.map((e) {
@@ -406,17 +534,17 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 4),
           const Text(
             'Tus niveles de probabilidad de riesgo registrados en el tiempo',
-            style: TextStyle(
-              fontSize: 13,
-              color: Color(0xFF94A3B8),
-            ),
+            style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
           ),
           const SizedBox(height: 20),
           SizedBox(
             height: 160,
             child: CustomPaint(
               size: const Size(double.infinity, 160),
-              painter: _TrendChartPainter(dataPoints: dataPoints, labels: labels),
+              painter: _TrendChartPainter(
+                dataPoints: dataPoints,
+                labels: labels,
+              ),
             ),
           ),
         ],
@@ -506,10 +634,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 2),
                     const Text(
                       'Promedio diario',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF94A3B8),
-                      ),
+                      style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
                     ),
                   ],
                 ),
@@ -545,11 +670,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             color: stressBg,
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Icon(
-                            Icons.bolt,
-                            size: 20,
-                            color: stressColor,
-                          ),
+                          child: Icon(Icons.bolt, size: 20, color: stressColor),
                         ),
                         const Text(
                           'Estrés',
@@ -572,10 +693,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 2),
                     const Text(
                       'Carga de estudio',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF94A3B8),
-                      ),
+                      style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
                     ),
                   ],
                 ),
@@ -631,16 +749,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 2),
                     const Text(
                       'Frecuencia semanal de deporte',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF94A3B8),
-                      ),
+                      style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
                     ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(12),
@@ -683,11 +801,10 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              esNuevo ? 'Iniciar mi primera evaluación' : 'Iniciar Nueva Evaluación',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              esNuevo
+                  ? 'Iniciar mi primera evaluación'
+                  : 'Iniciar Nueva Evaluación',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(width: 6),
             const Icon(Icons.chevron_right, size: 22),
@@ -701,13 +818,17 @@ class _HomeScreenState extends State<HomeScreen> {
   // CONSEJO RÁPIDO (DASHBOARD ACTIVADO)
   // ==========================================
   Widget _buildQuickTip(Evaluacion ultimaEval) {
-    String tipText = 'Mantener rutinas fijas de descanso ayuda notablemente a estabilizar tus niveles de ansiedad.';
+    String tipText =
+        'Mantener rutinas fijas de descanso ayuda notablemente a estabilizar tus niveles de ansiedad.';
     if (ultimaEval.sleepHours < 6.0) {
-      tipText = 'Notamos que duermes menos de 6 horas. Un sueño insuficiente aumenta la vulnerabilidad al estrés.';
+      tipText =
+          'Notamos que duermes menos de 6 horas. Un sueño insuficiente aumenta la vulnerabilidad al estrés.';
     } else if (ultimaEval.exerciseFreq < 2) {
-      tipText = 'Agregar una sesión corta de caminata o estiramiento de 15 minutos puede ayudarte a disminuir la tensión.';
+      tipText =
+          'Agregar una sesión corta de caminata o estiramiento de 15 minutos puede ayudarte a disminuir la tensión.';
     } else if (ultimaEval.academicStress > 7) {
-      tipText = 'El estrés por estudios se nota elevado. Realiza pausas activas de 5 minutos por cada 45 minutos de estudio.';
+      tipText =
+          'El estrés por estudios se nota elevado. Realiza pausas activas de 5 minutos por cada 45 minutos de estudio.';
     }
 
     return Container(
@@ -767,75 +888,245 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ==========================================
-  // SECCIÓN INFORMATIVA PARA NUEVO USUARIO
-  // ==========================================
-  Widget _buildInfoSection() {
+  Widget _buildQuickAccess(AppColors colors) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 8.0),
-          child: Text(
-            '¿Cómo funciona?',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E293B),
-            ),
-          ),
-        ),
-        _buildInfoTile(
-          icon: Icons.shield_outlined,
-          title: 'Totalmente Privado',
-          description: 'Tus respuestas son confidenciales y se procesan de manera local y encriptada.',
+        _buildAccessCard(
+          colors: colors,
+          icon: Icons.sentiment_satisfied_alt_outlined,
+          eyebrow: 'CHECK-IN DIARIO',
+          title: '¿Cómo te sientes hoy?',
+          description: 'Próximamente',
         ),
         const SizedBox(height: 12),
-        _buildInfoTile(
-          icon: Icons.auto_awesome_outlined,
-          title: 'Algoritmo Multimodelo',
-          description: 'Combinamos predicciones de 6 modelos de Machine Learning para garantizar un resultado preciso.',
+        _buildAccessCard(
+          colors: colors,
+          icon: Icons.verified_user_outlined,
+          eyebrow: 'APOYO UNIVERSITARIO',
+          title: 'Orientación UNAYOE',
+          description: 'Próximamente',
+          tinted: true,
+        ),
+        const SizedBox(height: 12),
+        _buildAccessCard(
+          colors: colors,
+          icon: Icons.event_available_outlined,
+          eyebrow: 'ORGANIZACIÓN ACADÉMICA',
+          title: 'Agenda Académica',
+          description: 'Revisa entregas, exámenes y proyectos',
+          onTap: () => Navigator.pushNamed(context, '/agenda'),
         ),
       ],
     );
   }
 
-  Widget _buildInfoTile({
+  Widget _buildAccessCard({
+    required AppColors colors,
     required IconData icon,
+    required String eyebrow,
     required String title,
     required String description,
+    VoidCallback? onTap,
+    bool tinted = false,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
+    final card = Container(
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        color: tinted ? const Color(0xFFF0F5FF) : colors.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFE2E7F3)),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: const Color(0xFF6366F1), size: 24),
-          const SizedBox(width: 12),
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: tinted ? colors.primary : colors.primaryLight,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(
+              icon,
+              color: tinted ? Colors.white : colors.primary,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
+                  eyebrow,
+                  style: TextStyle(
+                    color: colors.primary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.1,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
                   title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E293B),
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  description,
+                  style: TextStyle(
+                    color: colors.textSecondary,
+                    fontSize: 12,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (onTap != null)
+            Icon(Icons.chevron_right_rounded, color: colors.textTertiary),
+        ],
+      ),
+    );
+    return onTap == null
+        ? card
+        : InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(22),
+            child: card,
+          );
+  }
+
+  Widget _buildInfoSection(AppColors colors) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'UN PASO A LA VEZ',
+          style: TextStyle(
+            color: colors.primary,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 2,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          '¿Cómo funciona?',
+          style: TextStyle(
+            color: colors.textPrimary,
+            fontSize: 26,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 18),
+        _buildStepCard(
+          colors,
+          Icons.psychology_outlined,
+          'PASO 01',
+          'Conócete mejor',
+          'Responde evaluaciones breves diseñadas por especialistas.',
+        ),
+        const SizedBox(height: 12),
+        _buildStepCard(
+          colors,
+          Icons.bar_chart_rounded,
+          'PASO 02',
+          'Comprende tus resultados',
+          'Recibe información clara y recomendaciones personalizadas.',
+        ),
+        const SizedBox(height: 12),
+        _buildStepCard(
+          colors,
+          Icons.event_available_outlined,
+          'PASO 03',
+          'Avanza a tu ritmo',
+          'Revisa tu progreso cuando quieras.',
+        ),
+        const SizedBox(height: 18),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE8F7F2),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.check_rounded, color: Color(0xFF2D806F)),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Recuerda: no estás solo. Estamos aquí para acompañarte.',
+                  style: TextStyle(color: Color(0xFF267665), fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStepCard(
+    AppColors colors,
+    IconData icon,
+    String eyebrow,
+    String title,
+    String description,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFE2E7F3)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: colors.primaryLight,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(icon, color: colors.primary, size: 27),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  eyebrow,
+                  style: TextStyle(
+                    color: colors.primary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.1,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   description,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF64748B),
-                    height: 1.4,
+                  style: TextStyle(
+                    color: colors.textSecondary,
+                    fontSize: 12,
+                    height: 1.35,
                   ),
                 ),
               ],
@@ -866,31 +1157,38 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildNavItem(
-                index: 0,
-                icon: Icons.home_rounded,
-                label: 'Inicio',
-                isActive: _currentNavIndex == 0,
+              Expanded(
+                child: _buildNavItem(
+                  index: 0,
+                  icon: Icons.home_rounded,
+                  label: 'Inicio',
+                  isActive: _currentNavIndex == 0,
+                ),
               ),
-              _buildNavItem(
-                index: 1,
-                icon: Icons.calendar_month_outlined,
-                label: 'Agenda',
-                isActive: _currentNavIndex == 1,
+              Expanded(
+                child: _buildNavItem(
+                  index: 1,
+                  icon: Icons.calendar_month_outlined,
+                  label: 'Agenda',
+                  isActive: _currentNavIndex == 1,
+                ),
               ),
-              _buildNavItem(
-                index: 2,
-                icon: Icons.show_chart_rounded,
-                label: 'Historial',
-                isActive: _currentNavIndex == 2,
+              Expanded(
+                child: _buildNavItem(
+                  index: 2,
+                  icon: Icons.show_chart_rounded,
+                  label: 'Historial',
+                  isActive: _currentNavIndex == 2,
+                ),
               ),
-              _buildNavItem(
-                index: 3,
-                icon: Icons.person_outline_rounded,
-                label: 'Perfil',
-                isActive: _currentNavIndex == 3,
+              Expanded(
+                child: _buildNavItem(
+                  index: 3,
+                  icon: Icons.person_outline_rounded,
+                  label: 'Perfil',
+                  isActive: _currentNavIndex == 3,
+                ),
               ),
             ],
           ),
@@ -926,7 +1224,8 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
         decoration: isActive
             ? BoxDecoration(
                 color: const Color(0xFFEEF2FF),
@@ -939,7 +1238,9 @@ class _HomeScreenState extends State<HomeScreen> {
             Icon(
               icon,
               size: 24,
-              color: isActive ? const Color(0xFF6366F1) : const Color(0xFF94A3B8),
+              color: isActive
+                  ? const Color(0xFF6366F1)
+                  : const Color(0xFF94A3B8),
             ),
             const SizedBox(height: 4),
             Text(
@@ -947,7 +1248,9 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-                color: isActive ? const Color(0xFF6366F1) : const Color(0xFF94A3B8),
+                color: isActive
+                    ? const Color(0xFF6366F1)
+                    : const Color(0xFF94A3B8),
               ),
             ),
           ],
@@ -994,25 +1297,16 @@ class _TrendChartPainter extends CustomPainter {
       for (int j = 0; j < dashCount; j += 2) {
         final startX = paddingLeft + (chartWidth / dashCount) * j;
         final endX = paddingLeft + (chartWidth / dashCount) * (j + 1);
-        canvas.drawLine(
-          Offset(startX, y),
-          Offset(endX, y),
-          gridPaint,
-        );
+        canvas.drawLine(Offset(startX, y), Offset(endX, y), gridPaint);
       }
     }
 
     // Dibujar etiquetas eje Y
-    final yLabelPainter = TextPainter(
-      textDirection: TextDirection.ltr,
-    );
+    final yLabelPainter = TextPainter(textDirection: TextDirection.ltr);
     for (int i = 0; i < yLabels.length; i++) {
       yLabelPainter.text = TextSpan(
         text: yLabels[i],
-        style: const TextStyle(
-          fontSize: 9,
-          color: Color(0xFF94A3B8),
-        ),
+        style: const TextStyle(fontSize: 9, color: Color(0xFF94A3B8)),
       );
       yLabelPainter.layout();
       final y = paddingTop + (chartHeight / 4) * i - 6;
@@ -1082,16 +1376,11 @@ class _TrendChartPainter extends CustomPainter {
     }
 
     // Dibujar etiquetas de X
-    final xLabelPainter = TextPainter(
-      textDirection: TextDirection.ltr,
-    );
+    final xLabelPainter = TextPainter(textDirection: TextDirection.ltr);
     for (int i = 0; i < labels.length; i++) {
       xLabelPainter.text = TextSpan(
         text: labels[i],
-        style: const TextStyle(
-          fontSize: 9,
-          color: Color(0xFF94A3B8),
-        ),
+        style: const TextStyle(fontSize: 9, color: Color(0xFF94A3B8)),
       );
       xLabelPainter.layout();
       final double xFactor = count > 1 ? i / (count - 1) : 0.5;
