@@ -52,8 +52,32 @@ class _AuthRepo implements AuthRepository {
 }
 
 class _EvaluationRepo implements EvaluacionRepository {
+  _EvaluationRepo({this.withHistory = false});
+  final bool withHistory;
   @override
-  Future<List<Evaluacion>> obtenerHistorial() async => [];
+  Future<List<Evaluacion>> obtenerHistorial() async => withHistory
+      ? [
+          Evaluacion(
+            idEvaluacion: 1,
+            idUsuario: 42,
+            phq9Score: 0,
+            gad7Score: 0,
+            sleepHours: 8,
+            exerciseFreq: 3,
+            socialActivity: 1,
+            onlineStress: 0,
+            gpa: 15,
+            familySupport: 1,
+            screenTime: 2,
+            academicStress: 0,
+            dietQuality: 1,
+            selfEfficacy: 1,
+            peerRelationship: 1,
+            financialStress: 0,
+            sleepQuality: 1,
+          ),
+        ]
+      : [];
   @override
   Future<
     ({
@@ -65,7 +89,11 @@ class _EvaluationRepo implements EvaluacionRepository {
   evaluarRiesgo(Map<String, num> variables) => throw UnimplementedError();
 }
 
-Future<void> _pumpDashboard(WidgetTester tester, Size size) async {
+Future<void> _pumpDashboard(
+  WidgetTester tester,
+  Size size, {
+  bool withHistory = false,
+}) async {
   await tester.binding.setSurfaceSize(size);
   addTearDown(() => tester.binding.setSurfaceSize(null));
   final authRepo = _AuthRepo();
@@ -75,7 +103,7 @@ Future<void> _pumpDashboard(WidgetTester tester, Size size) async {
     LogoutUseCase(authRepo),
   );
   expect(await auth.login('lucia@example.test', 'unused'), isTrue);
-  final evaluations = _EvaluationRepo();
+  final evaluations = _EvaluationRepo(withHistory: withHistory);
   final evaluation = EvaluacionViewModel(
     EvaluarRiesgoUseCase(evaluations),
     ObtenerHistorialUseCase(evaluations),
@@ -104,8 +132,10 @@ Future<void> _pumpDashboard(WidgetTester tester, Size size) async {
 
 void main() {
   test('dashboard date uses the actual calendar day in Spanish', () {
-    expect(formatStudentDashboardDate(DateTime(2026, 5, 26)),
-        'Martes, 26 de mayo');
+    expect(
+      formatStudentDashboardDate(DateTime(2026, 5, 26)),
+      'Martes, 26 de mayo',
+    );
   });
 
   testWidgets('mobile uses authenticated name, current date and real routes', (
@@ -132,6 +162,17 @@ void main() {
     await tester.tap(find.text('Agenda Académica'));
     await tester.pumpAndSettle();
     expect(find.text('Módulo Agenda'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('history keeps one Figma dashboard and one evaluation action', (
+    tester,
+  ) async {
+    await _pumpDashboard(tester, const Size(375, 667), withHistory: true);
+    expect(find.text('TU ESPACIO SEGURO'), findsOneWidget);
+    expect(find.text('Iniciar nueva evaluación'), findsOneWidget);
+    expect(find.text('Iniciar Nueva Evaluación'), findsNothing);
+    expect(find.text('Historial'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
