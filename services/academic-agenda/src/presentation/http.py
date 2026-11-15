@@ -17,6 +17,10 @@ from src.presentation.validation import (
 )
 
 
+# CORS configuration for Flutter Web
+CORS_ORIGINS = ['http://localhost:8081', 'http://localhost:5003']
+
+
 def create_http_app(
     create_uc: CreateActivityUseCase,
     list_uc: ListActivitiesUseCase,
@@ -204,5 +208,18 @@ def create_http_app(
             return jsonify(error="Error", mensaje=exc.description), exc.code
         app.logger.error("Error interno: %s", exc)
         return jsonify(error="Error", mensaje="Error interno del servidor"), 500
+
+    @app.after_request
+    def add_cors_headers(response):
+        origin = request.headers.get('Origin', '')
+        if origin in CORS_ORIGINS or origin == '':
+            response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PATCH, DELETE, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+        if request.method == 'OPTIONS':
+            response.status_code = 200
+            response.data = b''
+        return response
 
     return app

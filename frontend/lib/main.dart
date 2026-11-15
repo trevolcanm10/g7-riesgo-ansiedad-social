@@ -20,6 +20,7 @@ import 'data/datasources/remote/evaluacion_remote_datasource.dart';
 import 'data/datasources/remote/medico_remote_datasource.dart';
 import 'data/datasources/local/escuela_local_datasource.dart';
 import 'data/repositories/escuela_repository_impl.dart';
+import 'data/repositories/agenda_remote_repository.dart';
 
 // Domain UseCases
 import 'domain/usecases/login_usecase.dart';
@@ -200,8 +201,14 @@ class _AnsiedadAppState extends State<AnsiedadApp> {
                 const SessionProtected(child: HistorialScreen()),
             '/perfil': (context) =>
                 const SessionProtected(child: PerfilScreen()),
-            '/agenda': (context) =>
-                const SessionProtected(child: AgendaScreen()),
+            '/agenda': (context) => SessionProtected(
+              child: AgendaScreen(
+                repository: AgendaRemoteRepository(
+                  context.read<ApiService>(),
+                  '${AppConstants.academicAgendaBaseUrl}/actividades',
+                ),
+              ),
+            ),
           },
         );
       },
