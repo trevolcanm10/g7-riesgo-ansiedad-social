@@ -39,6 +39,15 @@ class HistorialScreen extends StatefulWidget {
 }
 
 class _HistorialScreenState extends State<HistorialScreen> {
+  static const _shapNames = <String, String>{
+    'SleepHours': 'Horas de sueño',
+    'PHQ9': 'Síntomas depresivos (PHQ-9)',
+    'GAD7': 'Síntomas de ansiedad (GAD-7)',
+    'SocialActivity': 'Actividad social',
+    'OnlineStress': 'Estrés en línea',
+    'FinancialStress': 'Estrés financiero',
+    'ExerciseFreq': 'Frecuencia de ejercicio',
+  };
   bool _following = false;
   String _riskFilter = 'Todas';
   int? _selectedPointId;
@@ -125,7 +134,11 @@ class _HistorialScreenState extends State<HistorialScreen> {
                                 : const Color(0xFF6366F1),
                           ),
                           const SizedBox(width: 8),
-                          Expanded(child: Text(factor.nombre)),
+                          Expanded(
+                            child: Text(
+                              _shapNames[factor.nombre] ?? factor.nombre,
+                            ),
+                          ),
                           Text(
                             factor.direccion,
                             style: const TextStyle(fontSize: 12),
@@ -134,13 +147,20 @@ class _HistorialScreenState extends State<HistorialScreen> {
                       ),
                     ),
                   )
+                else if (result.shapExplanation == null)
+                  const Text(
+                    'Esta evaluación es anterior al guardado de SHAP; en esa fecha no se conservaba la explicación.',
+                  )
                 else
-                  const Text('Explicación no disponible para esta evaluación.'),
-                if (result.shapExplanation?.disponible == true)
+                  const Text(
+                    'No se pudo generar una explicación SHAP para esta evaluación.',
+                  ),
+                if (result.shapExplanation?.disponible == true &&
+                    result.shapExplanation!.factores.isNotEmpty)
                   const Padding(
                     padding: EdgeInsets.only(top: 8),
                     child: Text(
-                      'Factores en escala log-odds; no son porcentajes ni un diagnóstico.',
+                      'Contribuciones estimadas en escala log-odds; no son causas clínicas, porcentajes ni un diagnóstico.',
                       style: TextStyle(fontSize: 12),
                     ),
                   ),
@@ -197,7 +217,11 @@ class _HistorialScreenState extends State<HistorialScreen> {
                     result.reporteIA!.temasLectura,
                   ),
                   const SizedBox(height: 8),
-                  Text('Prioridad: ${result.reporteIA!.prioridadIntervencion}'),
+                  Text(
+                    result.reporteIA!.prioridadIntervencion == 'NO DISPONIBLE'
+                        ? 'Orientación general'
+                        : 'Prioridad: ${result.reporteIA!.prioridadIntervencion}',
+                  ),
                   Text(result.reporteIA!.mensajeMotivacional),
                 ],
               ],

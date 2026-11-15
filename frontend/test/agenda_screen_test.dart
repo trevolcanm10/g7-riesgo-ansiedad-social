@@ -37,6 +37,7 @@ class FakeSessionStore implements SessionStore {
   Future<void> write(StoredSession value) async {
     session = value;
   }
+
   @override
   Future<void> delete() async {
     session = null;
@@ -71,9 +72,24 @@ Future<void> _pump(
   await tester.pumpWidget(
     ChangeNotifierProvider(
       create: (_) => AuthViewModel(
-        LoginUseCase(AuthRepositoryImpl(AuthRemoteDataSource(ApiService()), FakeSessionStore())),
-        RegisterUseCase(AuthRepositoryImpl(AuthRemoteDataSource(ApiService()), FakeSessionStore())),
-        LogoutUseCase(AuthRepositoryImpl(AuthRemoteDataSource(ApiService()), FakeSessionStore())),
+        LoginUseCase(
+          AuthRepositoryImpl(
+            AuthRemoteDataSource(ApiService()),
+            FakeSessionStore(),
+          ),
+        ),
+        RegisterUseCase(
+          AuthRepositoryImpl(
+            AuthRemoteDataSource(ApiService()),
+            FakeSessionStore(),
+          ),
+        ),
+        LogoutUseCase(
+          AuthRepositoryImpl(
+            AuthRemoteDataSource(ApiService()),
+            FakeSessionStore(),
+          ),
+        ),
       ),
       child: MaterialApp(
         theme: ThemeData(extensions: const [AppColors.light]),
@@ -94,9 +110,26 @@ void main() {
       expect(find.text('Agenda Académica'), findsOneWidget);
       expect(find.text('Entrega actual'), findsOneWidget);
       expect(find.text('Nueva actividad'), findsOneWidget);
+      final weekly = find.textContaining('Carga semanal');
+      expect(weekly, findsOneWidget);
+      final currentWeek = tester.widget<Text>(weekly).data;
+      expect(
+        tester.getTopLeft(weekly).dy,
+        greaterThan(tester.getTopLeft(find.text('Calendario')).dy),
+      );
+      expect(
+        tester.getTopLeft(weekly).dy,
+        lessThan(tester.getTopLeft(find.byTooltip('Mes siguiente')).dy),
+      );
       await tester.tap(find.byTooltip('Mes siguiente'));
       await tester.pumpAndSettle();
+      expect(weekly, findsOneWidget);
+      expect(tester.widget<Text>(weekly).data, isNot(currentWeek));
       expect(find.text('Entrega actual'), findsNothing);
+      await tester.tap(find.text('Próximas'));
+      await tester.pumpAndSettle();
+      expect(weekly, findsOneWidget);
+      expect(tester.widget<Text>(weekly).data, currentWeek);
       expect(tester.takeException(), isNull);
     },
   );
@@ -120,6 +153,8 @@ void main() {
       final first = tester.getTopLeft(find.text('Primera entrega')).dy;
       final second = tester.getTopLeft(find.text('Segunda entrega')).dy;
       expect(first, lessThan(second));
+      await tester.drag(find.byType(ListView), const Offset(0, -280));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Primera entrega'));
       await tester.pumpAndSettle();
       expect(find.text('Completar'), findsOneWidget);

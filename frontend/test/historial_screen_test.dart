@@ -1,6 +1,7 @@
 import 'package:ansiedad_ml_app/core/app_colors.dart';
 import 'package:ansiedad_ml_app/domain/entities/evaluacion.dart';
 import 'package:ansiedad_ml_app/domain/entities/recomendacion.dart';
+import 'package:ansiedad_ml_app/domain/entities/reporte_ia.dart';
 import 'package:ansiedad_ml_app/domain/entities/resultado_ml.dart';
 import 'package:ansiedad_ml_app/domain/entities/shap_explanation.dart';
 import 'package:ansiedad_ml_app/domain/repositories/evaluacion_repository.dart';
@@ -40,6 +41,9 @@ Evaluacion _evaluation(
   String date,
   double probability, {
   String level = 'BAJO',
+  bool oldRecord = false,
+  bool shapFailed = false,
+  ReporteIA? report,
 }) => Evaluacion(
   idEvaluacion: id,
   idUsuario: 1,
@@ -73,16 +77,132 @@ Evaluacion _evaluation(
         descripcion: 'Descansa entre actividades.',
       ),
     ],
-    shapExplanation: const ShapExplanation(
-      disponible: true,
-      factores: [
-        ShapFactor(nombre: 'SleepHours', valor: .3, direccion: 'disminuye'),
-      ],
-    ),
+    reporteIA: report,
+    shapExplanation: oldRecord
+        ? null
+        : shapFailed
+        ? const ShapExplanation(disponible: false, factores: [])
+        : const ShapExplanation(
+            disponible: true,
+            factores: [
+              ShapFactor(
+                nombre: 'SleepHours',
+                valor: .3,
+                direccion: 'disminuye',
+              ),
+              ShapFactor(nombre: 'PHQ9', valor: .2, direccion: 'aumenta'),
+              ShapFactor(nombre: 'GAD7', valor: .1, direccion: 'aumenta'),
+              ShapFactor(
+                nombre: 'SocialActivity',
+                valor: .1,
+                direccion: 'disminuye',
+              ),
+              ShapFactor(
+                nombre: 'OnlineStress',
+                valor: .1,
+                direccion: 'aumenta',
+              ),
+              ShapFactor(
+                nombre: 'FinancialStress',
+                valor: .1,
+                direccion: 'aumenta',
+              ),
+              ShapFactor(
+                nombre: 'ExerciseFreq',
+                valor: .1,
+                direccion: 'disminuye',
+              ),
+            ],
+          ),
   ),
 );
 
+Future<void> _openSingleDetail(WidgetTester tester, Evaluacion record) async {
+  final repo = _Repo([record]);
+  final vm = EvaluacionViewModel(
+    EvaluarRiesgoUseCase(repo),
+    ObtenerHistorialUseCase(repo),
+  );
+  await tester.pumpWidget(
+    ChangeNotifierProvider.value(
+      value: vm,
+      child: MaterialApp(
+        theme: ThemeData(extensions: const [AppColors.light]),
+        home: const HistorialScreen(),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Riesgo Bajo'));
+  await tester.pumpAndSettle();
+}
+
 void main() {
+  testWidgets('historical detail translates SHAP and preserves AI report', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final report = ReporteIA(
+      resumen: 'Resumen real',
+      fortalezas: const [],
+      factoresPreocupantes: const [],
+      recomendaciones: const [],
+      plan7Dias: const [],
+      temasVideos: const [],
+      temasLectura: const [],
+      prioridadIntervencion: 'NO DISPONIBLE',
+      mensajeMotivacional: 'Mensaje real',
+    );
+    await _openSingleDetail(
+      tester,
+      _evaluation(1, '2026-11-13', .24, report: report),
+    );
+    for (final name in [
+      'Horas de sueño',
+      'Síntomas depresivos (PHQ-9)',
+      'Síntomas de ansiedad (GAD-7)',
+      'Actividad social',
+      'Estrés en línea',
+      'Estrés financiero',
+      'Frecuencia de ejercicio',
+    ]) {
+      expect(find.text(name), findsOneWidget);
+    }
+    expect(find.text('aumenta'), findsNWidgets(4));
+    expect(find.text('disminuye'), findsNWidgets(3));
+    expect(find.textContaining('no son causas clínicas'), findsOneWidget);
+    expect(find.text('Orientación general'), findsOneWidget);
+    expect(find.textContaining('Prioridad: NO DISPONIBLE'), findsNothing);
+    expect(find.text('Resumen real'), findsOneWidget);
+    expect(find.text('Pausa saludable'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('old null SHAP and failed explanation have distinct messages', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _openSingleDetail(
+      tester,
+      _evaluation(1, '2025-01-01', .24, oldRecord: true),
+    );
+    expect(
+      find.textContaining('en esa fecha no se conservaba'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('No se pudo generar'), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await _openSingleDetail(
+      tester,
+      _evaluation(2, '2026-11-13', .24, shapFailed: true),
+    );
+    expect(find.textContaining('No se pudo generar'), findsOneWidget);
+    expect(find.textContaining('en esa fecha no se conservaba'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('one history screen shows real evaluations and tracking', (
     tester,
   ) async {
@@ -132,7 +252,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Ver detalle'));
     await tester.pumpAndSettle();
-    expect(find.text('SleepHours'), findsOneWidget);
+    expect(find.text('Horas de sueño'), findsOneWidget);
     expect(find.text('Pausa saludable'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

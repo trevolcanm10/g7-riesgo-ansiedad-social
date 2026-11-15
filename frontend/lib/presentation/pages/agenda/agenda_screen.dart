@@ -375,8 +375,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
     'diciembre',
   ][month - 1];
 
-  Widget _weeklyLoad(AppColors colors) {
-    final carga = calcularCargaSemanal(_items, _selected);
+  Widget _weeklyLoad(AppColors colors, DateTime weekDate) {
+    final carga = calcularCargaSemanal(_items, weekDate);
     final label = switch (carga.nivel) {
       NivelCargaAcademica.baja => 'BAJA',
       NivelCargaAcademica.moderada => 'MODERADA',
@@ -680,6 +680,13 @@ class _AgendaScreenState extends State<AgendaScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
+                    if (!_loading && _error == null) ...[
+                      _weeklyLoad(
+                        colors,
+                        _listView ? DateTime.now() : _selected,
+                      ),
+                      const SizedBox(height: 24),
+                    ],
                     if (!_listView) ...[
                       _calendar(colors),
                       const SizedBox(height: 24),
@@ -778,10 +785,6 @@ class _AgendaScreenState extends State<AgendaScreen> {
                         ),
                       ),
                     ),
-                    if (!_loading && _error == null) ...[
-                      const SizedBox(height: 22),
-                      _weeklyLoad(colors),
-                    ],
                   ],
                 ),
               ),
