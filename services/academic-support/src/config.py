@@ -28,7 +28,7 @@ class Settings:
     @classmethod
     def from_environment(cls) -> "Settings":
         try:
-            port = int(os.getenv("PORT", "5003"))
+            port = int(os.getenv("PORT", "5004"))
             db_port = int(os.getenv("DB_PORT", "3306"))
         except ValueError as exc:
             raise RuntimeError("PORT y DB_PORT deben ser números enteros") from exc

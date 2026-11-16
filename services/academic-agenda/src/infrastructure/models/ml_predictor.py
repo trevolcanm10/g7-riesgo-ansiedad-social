@@ -111,13 +111,14 @@ class MlWeeklyPredictor(WeeklyClassifier):
         try:
             frame = self._frame(indicators)
             proba = np.asarray(self._model.predict_proba(frame), dtype=float)
-            if proba.ndim != 2 or proba.shape[1] != len(self._target):
+            if proba.ndim != 2 or proba.shape[1] != len(self._model.classes_):
                 raise ValueError("Probabilidades inválidas")
             if not np.isfinite(proba).all():
                 raise ValueError("Probabilidades inválidas")
+            class_to_idx = {str(cls).upper(): i for i, cls in enumerate(self._model.classes_)}
             return {
-                str(level).upper(): float(p)
-                for level, p in zip(self._target, proba[0])
+                str(level).upper(): float(proba[0][class_to_idx[str(level).upper()]])
+                for level in self._target
             }
         except Exception as exc:
             raise PredictionError(f"Falló la inferencia predict_proba: {exc}") from exc
