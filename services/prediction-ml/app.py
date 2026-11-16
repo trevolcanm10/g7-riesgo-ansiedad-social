@@ -10,16 +10,16 @@ load_dotenv(Path(__file__).resolve().parent / '.env')
 
 from src.application.predict_risk import PredictRiskUseCase
 from src.domain.risk import ModelsUnavailableError
-from src.infrastructure.ensemble_predictor import EnsemblePredictor
+from src.infrastructure.xgboost_predictor import XGBoostPredictor
 from src.infrastructure.gemini_report_generator import GeminiReportGenerator
 from src.presentation.http import create_http_app
 
 
 def create_app():
     try:
-        predictor = EnsemblePredictor()
+        predictor = XGBoostPredictor()
     except ModelsUnavailableError:
-        logging.getLogger(__name__).exception("No se pudo iniciar el ensamble")
+        logging.getLogger(__name__).exception("No se pudo iniciar XGBoost")
         return create_http_app(None, 0)
     return create_http_app(PredictRiskUseCase(predictor, GeminiReportGenerator()), predictor.models_loaded)
 

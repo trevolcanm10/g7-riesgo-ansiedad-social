@@ -59,8 +59,8 @@ class PredictionTests(unittest.TestCase):
 
     def test_http_valid_and_invalid(self):
         fake = FakePredictor()
-        client = create_http_app(PredictRiskUseCase(fake, FallbackReportGenerator()), 5).test_client()
-        self.assertEqual(client.get("/health").json["models_loaded"], 5)
+        client = create_http_app(PredictRiskUseCase(fake, FallbackReportGenerator()), 1).test_client()
+        self.assertEqual(client.get("/health").json["models_loaded"], 1)
         response = client.post("/predict", json=PAYLOAD)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json["nivel_riesgo"], "ALTO")

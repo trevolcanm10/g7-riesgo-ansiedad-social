@@ -58,7 +58,7 @@ class XGBoostPredictorTests(unittest.TestCase):
         self.assertLessEqual(probability, 1)
         client = create_http_app(
             PredictRiskUseCase(predictor, FallbackReportGenerator()),
-            5,
+            predictor.models_loaded,
         ).test_client()
         self.assertEqual(client.get("/health").status_code, 200)
         response = client.post("/predict", json=PAYLOAD)
@@ -84,7 +84,7 @@ class XGBoostPredictorTests(unittest.TestCase):
         predictor = XGBoostPredictor()
         with patch.object(predictor, "explain_risk", side_effect=RuntimeError("SHAP failed")):
             client = create_http_app(
-                PredictRiskUseCase(predictor, FallbackReportGenerator()), 5,
+                PredictRiskUseCase(predictor, FallbackReportGenerator()), 1,
             ).test_client()
             response = client.post("/predict", json=PAYLOAD)
         self.assertEqual(response.status_code, 200)

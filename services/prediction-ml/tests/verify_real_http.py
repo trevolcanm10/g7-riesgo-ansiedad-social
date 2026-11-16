@@ -44,7 +44,7 @@ if __name__ == "__main__":
                 time.sleep(.5)
         else:
             raise RuntimeError("El servicio no inició a tiempo")
-        assert health == (200, {"service": "prediction-ml", "status": "OK", "models_loaded": 5}), health
+        assert health == (200, {"service": "prediction-ml", "status": "OK", "models_loaded": 1}), health
         payload = json.loads((root / "example.json").read_text())
         valid = request_json("/predict", payload)
         assert valid[0] == 200, valid

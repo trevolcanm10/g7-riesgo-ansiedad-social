@@ -99,7 +99,7 @@ El servidor de Flask se utiliza para pruebas locales, con debug desactivado.
 
 ## HTTP
 
-- `GET http://localhost:5001/health`: 200 con `service`, `status`, `models_loaded`; 503 si no se cargaron los cinco modelos.
+- `GET http://localhost:5001/health`: 200 con `service`, `status`, `models_loaded`; 503 si no se cargó XGBoost.
 - `POST http://localhost:5001/predict`: Content-Type `application/json`; usar `example.json`.
 - Las 15 variables son obligatorias, numéricas, finitas y dentro de los rangos de `src/presentation/validation.py`. Booleanos y cadenas numéricas se rechazan. Campos adicionales se ignoran.
 - Entrada inválida: 400 con `error` y `mensaje`. Modelos no disponibles: 503. Error de inferencia: 500. No se exponen detalles internos en la respuesta.
@@ -113,20 +113,20 @@ curl -H 'Content-Type: application/json' --data-binary @example.json http://loca
 
 ## Arquitectura
 
-`app.py` es la raíz de composición. Conecta `EnsemblePredictor` con `PredictRiskUseCase` y el adaptador de entrada Flask.
+`app.py` es la raíz de composición. Conecta el adaptador de salida `XGBoostPredictor` con `PredictRiskUseCase` y el adaptador de entrada Flask.
 
 - Domain: puerto `RiskPredictor`, errores y reglas de categorización; solo biblioteca estándar.
 - Application: caso de uso dependiente del puerto, sin bibliotecas ML.
-- Infrastructure: `EnsemblePredictor` carga los cinco modelos (CatBoost, KNN, LightGBM, RandomForest y XGBoost) y promedia sus probabilidades. `XGBoostPredictor` aporta factores SHAP del componente XGBoost; estos factores no explican la probabilidad promedio del ensamble.
+- Infrastructure: `XGBoostPredictor` carga únicamente `xgboost_weighted_model.pkl`, verifica metadatos (clases {0,1}, 7 features, orden contractual, `predict_proba`) y provee explicación SHAP de esa misma predicción (TreeExplainer, top 3 factores, escala log-odds de clase 0). Los otros artefactos pueden permanecer almacenados, pero no se cargan ni intervienen en la inferencia.
 - Presentation: validación del contrato JSON y traducción HTTP.
 
 SRP separa estas responsabilidades. DIP hace depender el caso de uso de una abstracción. OCP permite reemplazar el predictor al componer la aplicación sin cambiar el caso de uso.
 
-Se construye un DataFrame en orden PHQ9, GAD7, OnlineStress, FinancialStress, ExerciseFreq, SocialActivity, SleepHours. El ensamble promedia la probabilidad de clase 0 (riesgo) de cinco modelos. BAJO < 0.35; MEDIO entre 0.35 y 0.70 inclusive; ALTO > 0.70. SHAP muestra los 3 factores de mayor impacto absoluto del componente XGBoost, no del promedio. No hay entrenamiento ni integración con usuarios.
+Se construye un DataFrame en orden PHQ9, GAD7, OnlineStress, FinancialStress, ExerciseFreq, SocialActivity, SleepHours. XGBoost localiza clase 0 (riesgo) en `classes_` y devuelve su probabilidad. BAJO < 0.35; MEDIO entre 0.35 y 0.70 inclusive; ALTO > 0.70. SHAP explica la probabilidad de clase 0 con los 3 factores de mayor impacto absoluto. No hay entrenamiento ni integración con usuarios.
 
 ## Metadatos y compatibilidad
 
-`models_loaded` reporta 5 cuando el ensamble está completo. El Python local resolvió scikit-learn 1.8.0, distinto del 1.6.1 fijado en requirements.txt y utilizado al serializar los modelos; emitió InconsistentVersionWarning. Antes de desplegar, reproducir el entorno fijado y validar los artefactos.
+`models_loaded` reporta 1 (único artefacto XGBoost). El Python local puede resolver una versión de scikit-learn distinta de la 1.6.1 fijada en requirements.txt y usada al serializar los modelos; en ese caso emite InconsistentVersionWarning. Antes de desplegar, reproducir el entorno fijado y validar el artefacto.
 
 El modelo contiene clases 0 y 1 y conserva los siete nombres de feature en el orden requerido. Se utiliza scikit-learn 1.6.1. XGBoost 3.3.0 emite un warning al cargar el pickle generado por una versión anterior: la compatibilidad entre versiones de snapshots pickle no está garantizada. No se oculta el warning y no se modifican los artefactos. Las versiones originales de las otras bibliotecas no fueron suministradas.
 

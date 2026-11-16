@@ -11,7 +11,7 @@ def create_http_app(use_case: PredictRiskUseCase | None, models_loaded: int) -> 
 
     @app.get("/health")
     def health():
-        ready = use_case is not None and models_loaded == 5
+        ready = use_case is not None and models_loaded == 1
         return jsonify(service="prediction-ml", status="OK" if ready else "UNAVAILABLE",
                        models_loaded=models_loaded), 200 if ready else 503
 
