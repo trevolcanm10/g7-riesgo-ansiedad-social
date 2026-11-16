@@ -10,7 +10,6 @@ import { pool } from "./config/database.js";
 import { GetUsers } from "./application/useCases/GetUsers.js";
 import { LoginUser } from "./application/useCases/LoginUser.js";
 import { GetUserById } from "./application/useCases/GetUserById.js";
-import { GetUserByCode } from "./application/useCases/GetUserByCode.js";
 import { JwtTokenServices } from "./infrastructure/services/JwtTokenService.js";
 import { createAuthMiddleware } from "./presentation/middlewares/authMiddleware.js";
 import { UpdateUser } from "./application/useCases/UpdateUser.js";
@@ -25,7 +24,6 @@ const tokenService = new JwtTokenServices();
 
 const getUsers = new GetUsers(userRepository);
 const getUserById = new GetUserById(userRepository);
-const getUserByCode = new GetUserByCode(userRepository);
 const createUser = new CreateUser(userRepository, passwordHasher);
 const loginUser = new LoginUser(userRepository, passwordHasher, tokenService);
 const updateUser = new UpdateUser(userRepository);
@@ -33,7 +31,6 @@ const updateUser = new UpdateUser(userRepository);
 const userController = new UserController(
   getUsers,
   getUserById,
-  getUserByCode,
   createUser,
   loginUser,
   updateUser,
