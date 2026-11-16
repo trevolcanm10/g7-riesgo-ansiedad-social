@@ -30,7 +30,7 @@ class ReportTests(unittest.TestCase):
             client = create_http_app(PredictRiskUseCase(predictor, generator), 5).test_client()
             response = client.post('/predict', json=PAYLOAD)
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(set(response.json), {'probabilidad_ansiedad', 'nivel_riesgo', 'explicacion', 'reporte_ia'})
+            self.assertEqual(set(response.json), {'probabilidad_ansiedad', 'nivel_riesgo', 'explicacion', 'reporte_ia', 'explicacion_shap'})
             self.assertEqual(response.json['probabilidad_ansiedad'], probability)
             self.assertEqual(response.json['nivel_riesgo'], level)
             self.assertIn(EXPLANATIONS[level], response.json['explicacion'])

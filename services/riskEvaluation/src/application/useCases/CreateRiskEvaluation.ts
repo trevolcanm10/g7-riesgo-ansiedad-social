@@ -76,6 +76,7 @@ export class CreateRiskEvaluation {
       explanation: prediction.explanation,
       recommendations: [recommendation],
       aiReport: prediction.aiReport,
+      shapExplanation: prediction.shapExplanation,
       createdAt: new Date(),
     });
 

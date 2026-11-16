@@ -17,6 +17,21 @@ import { httpLoggingMiddleware } from "./presentation/middlewares/httpLogginMidd
 
 const app = express();
 
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    if (req.method === "OPTIONS") {
+      res.sendStatus(204);
+      return;
+    }
+  }
+  next();
+});
+
 app.use(httpLoggingMiddleware);
 app.use(express.json());
 

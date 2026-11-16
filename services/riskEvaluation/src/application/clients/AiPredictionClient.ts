@@ -1,4 +1,4 @@
-import { AIReport, RiskLevel } from "../../domain/entities/RiskEvaluation.js";
+import { AIReport, RiskLevel, ShapExplanation } from "../../domain/entities/RiskEvaluation.js";
 
 export interface AiPredictionInput {
   phq9Score: number;
@@ -23,6 +23,7 @@ export interface AiPredictionResult {
   riskLevel: RiskLevel;
   explanation: string;
   aiReport: AIReport;
+  shapExplanation?: ShapExplanation;
 }
 
 export interface AiPredictionClient {

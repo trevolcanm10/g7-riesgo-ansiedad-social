@@ -51,29 +51,33 @@ class EvaluacionModel {
     this.resultado,
   });
 
-  /// Crea un DTO desde JSON (respuesta de la API)
+  /// Crea un DTO desde JSON (respuesta de la API).
+  ///
+  /// El backend devuelve camelCase a raiz (id, userId, createdAt,
+  /// anxietyProbability, riskLevel, ...) con los campos de resultado
+  /// a raiz, no bajo una clave 'resultado'.
   factory EvaluacionModel.fromJson(Map<String, dynamic> json) {
     return EvaluacionModel(
-      idEvaluacion: json['id_evaluacion'] ?? 0,
-      idUsuario: json['id_usuario'] ?? 0,
-      fechaRealizacion: json['fecha_realizacion'],
-      phq9Score: (json['phq9_score'] ?? 0).toDouble(),
-      gad7Score: (json['gad7_score'] ?? 0).toDouble(),
-      sleepHours: (json['sleep_hours'] ?? 0).toDouble(),
-      exerciseFreq: (json['exercise_freq'] ?? 0).toDouble(),
-      socialActivity: (json['social_activity'] ?? 0).toDouble(),
-      onlineStress: (json['online_stress'] ?? 0).toDouble(),
+      idEvaluacion: json['id'] ?? 0,
+      idUsuario: json['userId'] ?? 0,
+      fechaRealizacion: json['createdAt'],
+      phq9Score: (json['phq9Score'] ?? 0).toDouble(),
+      gad7Score: (json['gad7Score'] ?? 0).toDouble(),
+      sleepHours: (json['sleepHours'] ?? 0).toDouble(),
+      exerciseFreq: (json['exerciseFreq'] ?? 0).toDouble(),
+      socialActivity: (json['socialActivity'] ?? 0).toDouble(),
+      onlineStress: (json['onlineStress'] ?? 0).toDouble(),
       gpa: (json['gpa'] ?? 0).toDouble(),
-      familySupport: (json['family_support'] ?? 0).toDouble(),
-      screenTime: (json['screen_time'] ?? 0).toDouble(),
-      academicStress: (json['academic_stress'] ?? 0).toDouble(),
-      dietQuality: (json['diet_quality'] ?? 0).toDouble(),
-      selfEfficacy: (json['self_efficacy'] ?? 0).toDouble(),
-      peerRelationship: (json['peer_relationship'] ?? 0).toDouble(),
-      financialStress: (json['financial_stress'] ?? 0).toDouble(),
-      sleepQuality: (json['sleep_quality'] ?? 0).toDouble(),
-      resultado: json['resultado'] != null
-          ? ResultadoMlModel.fromJson(json['resultado'])
+      familySupport: (json['familySupport'] ?? 0).toDouble(),
+      screenTime: (json['screenTime'] ?? 0).toDouble(),
+      academicStress: (json['academicStress'] ?? 0).toDouble(),
+      dietQuality: (json['dietQuality'] ?? 0).toDouble(),
+      selfEfficacy: (json['selfEfficacy'] ?? 0).toDouble(),
+      peerRelationship: (json['peerRelationship'] ?? 0).toDouble(),
+      financialStress: (json['financialStress'] ?? 0).toDouble(),
+      sleepQuality: (json['sleepQuality'] ?? 0).toDouble(),
+      resultado: json['anxietyProbability'] != null
+          ? ResultadoMlModel.fromRiskEvaluation(json)
           : null,
     );
   }

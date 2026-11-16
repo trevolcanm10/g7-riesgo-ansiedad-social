@@ -236,6 +236,7 @@ components:
         - explanation
         - recommendations
         - aiReport
+        - shapExplanation
         - createdAt
       properties:
         id:
@@ -258,6 +259,8 @@ components:
             $ref: "#/components/schemas/RiskRecommendation"
         aiReport:
           $ref: "#/components/schemas/AIReport"
+        shapExplanation:
+          $ref: "#/components/schemas/ShapExplanation"
         createdAt:
           type: string
           format: date-time
@@ -267,6 +270,34 @@ components:
         - BAJO
         - MEDIO
         - ALTO
+    ShapExplanation:
+      type: object
+      nullable: true
+      description: Explicación orientativa SHAP; nula en evaluaciones anteriores o sin explicación disponible.
+      required:
+        - estado
+        - escala
+        - factores
+      properties:
+        estado:
+          type: string
+          enum: [disponible, no_disponible]
+        escala:
+          type: string
+          enum: [log_odds_riesgo_clase_0]
+        factores:
+          type: array
+          items:
+            type: object
+            required: [nombre, valor, direccion]
+            properties:
+              nombre:
+                type: string
+              valor:
+                type: number
+              direccion:
+                type: string
+                enum: [aumenta, disminuye, neutra]
     RiskRecommendation:
       type: object
       required:

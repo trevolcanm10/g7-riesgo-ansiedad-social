@@ -77,3 +77,14 @@ class EnsemblePredictor(RiskPredictor):
             return float(np.mean(probabilities))
         except Exception as exc:
             raise PredictionError("Falló la inferencia del ensamble") from exc
+
+    def explain_risk(self, indicators: Mapping[str, float], _probability: float) -> dict:
+        """Explain the XGBoost component without attributing it to the ensemble."""
+        from src.infrastructure.xgboost_predictor import XGBoostPredictor
+
+        component = XGBoostPredictor()
+        explanation = component.explain_risk(
+            indicators, component.predict_probability(indicators)
+        )
+        explanation["modelo"] = "XGBoost (componente del ensamble)"
+        return explanation
