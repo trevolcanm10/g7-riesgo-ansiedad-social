@@ -3,6 +3,7 @@ import logging
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from mysql.connector import Error as MySQLError
 
 load_dotenv(Path(__file__).resolve().parent / ".env", override=False)
 
@@ -23,18 +24,33 @@ from src.presentation.http import create_http_app
 
 
 def create_app():
-    db_enabled = os.environ.get("DB_ENABLED", "true").strip().lower() == "true"
+    db_enabled = os.environ.get("DB_ENABLED", "true").strip().lower() != "false"
+    repository = None
     if db_enabled:
-        db = MySQLDatabase(
-            host=os.environ.get("DB_HOST", "localhost"),
-            port=int(os.environ.get("DB_PORT", "3306")),
-            user=os.environ.get("DB_USER", "agenda_app"),
-            password=os.environ.get("DB_PASSWORD", ""),
-            database=os.environ.get("DB_NAME", "riesgo_social_agenda"),
-        )
-        repository = MySqlActivityRepository(db)
-    else:
-        repository = None
+        production = os.environ.get("FLASK_ENV", "").lower() == "production"
+        ssl_enabled = os.environ.get(
+            "DB_SSL", "true" if production else "false"
+        ).strip().lower() == "true"
+        try:
+            if production and not ssl_enabled:
+                raise ValueError("TLS requerido en producción")
+            if production and any(not os.environ.get(name) for name in
+                                  ("DB_HOST", "DB_USER", "DB_PASSWORD", "DB_NAME")):
+                raise ValueError("Configuración de BD incompleta")
+            db = MySQLDatabase(
+                host=os.environ.get("DB_HOST", "localhost"),
+                port=int(os.environ.get("DB_PORT", "3306")),
+                user=os.environ.get("DB_USER", "agenda_app"),
+                password=os.environ.get("DB_PASSWORD", ""),
+                database=os.environ.get("DB_NAME", "riesgo_social_agenda"),
+                ssl_enabled=ssl_enabled,
+                ssl_ca=os.environ.get("DB_SSL_CA") or None,
+            )
+            repository = MySqlActivityRepository(db)
+        except (MySQLError, OSError, ValueError):
+            logging.getLogger(__name__).error(
+                "Agenda BD no disponible; el CRUD responderá 503"
+            )
 
     jwt_secret = os.environ.get("JWT_SECRET", "")
     token_service = JwtTokenService(secret=jwt_secret)

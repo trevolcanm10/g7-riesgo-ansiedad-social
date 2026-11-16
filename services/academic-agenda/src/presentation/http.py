@@ -2,6 +2,7 @@ import os
 
 from flask import Flask, jsonify, request
 from werkzeug.exceptions import BadRequest, HTTPException
+from mysql.connector import Error as MySQLError
 
 from src.application.use_cases.create_activity import CreateActivityUseCase
 from src.application.use_cases.list_activities import ListActivitiesUseCase
@@ -75,21 +76,6 @@ def create_http_app(
             status="OK",
             ml_predictor_available=models_available,
         ), 200
-
-    @app.post("/auth/login")
-    def login():
-        if os.environ.get("FLASK_ENV", "").lower() == "production":
-            return jsonify(error="Error", mensaje="Ruta no disponible"), 404
-        try:
-            body = request.get_json(force=True)
-        except Exception:
-            return jsonify(error="Error", mensaje="JSON inválido"), 400
-        user_id = body.get("user_id")
-        role = body.get("role", "ESTUDIANTE")
-        if not user_id:
-            return jsonify(error="Error", mensaje="user_id requerido"), 400
-        token = token_service.generate_access_token(int(user_id), str(role))
-        return jsonify(accessToken=token), 200
 
     @app.post("/actividades")
     def create_activity():
@@ -222,6 +208,9 @@ def create_http_app(
     def handle_error(exc):
         if isinstance(exc, HTTPException):
             return jsonify(error="Error", mensaje=exc.description), exc.code
+        if isinstance(exc, MySQLError):
+            app.logger.error("Agenda BD no disponible durante la operación")
+            return jsonify(error="Error", mensaje="Base de datos no disponible"), 503
         app.logger.error("Error interno: %s", exc)
         return jsonify(error="Error", mensaje="Error interno del servidor"), 500
 

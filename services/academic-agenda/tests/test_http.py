@@ -6,7 +6,6 @@ from src.presentation.http import create_http_app
 
 def make_app(classify_available=True):
     token_service = MagicMock()
-    token_service.generate_access_token.return_value = "fake-token"
     token_service.verify_access_token.return_value = {"user_id": 1, "role": "ESTUDIANTE"}
 
     repo = MagicMock()
@@ -42,20 +41,11 @@ def test_health():
     assert data["status"] == "OK"
 
 
-def test_login():
+def test_login_endpoint_is_absent():
     app = make_app()
     client = app.test_client()
     resp = client.post("/auth/login", json={"user_id": 42, "role": "ESTUDIANTE"})
-    assert resp.status_code == 200
-    data = resp.get_json()
-    assert data["accessToken"] == "fake-token"
-
-
-def test_login_missing_user_id():
-    app = make_app()
-    client = app.test_client()
-    resp = client.post("/auth/login", json={"role": "ESTUDIANTE"})
-    assert resp.status_code == 400
+    assert resp.status_code == 404
 
 
 def test_create_activity_requires_auth():
@@ -74,7 +64,6 @@ def test_create_activity_success():
     # Simular auth válido
     token_service = MagicMock()
     token_service.verify_access_token.return_value = {"user_id": 1}
-    token_service.generate_access_token.return_value = "t"
     repo = MagicMock()
     repo.create.return_value = MagicMock(id=1, user_id=1, title="T", course="C",
         activity_type="tarea", activity_date=None, estimated_hours=1.0,
