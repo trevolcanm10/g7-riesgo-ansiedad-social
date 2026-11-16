@@ -2,7 +2,6 @@
 import logging
 import os
 from pathlib import Path
-
 from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parent / ".env", override=False)
@@ -24,14 +23,18 @@ from src.presentation.http import create_http_app
 
 
 def create_app():
-    db = MySQLDatabase(
-        host=os.environ.get("DB_HOST", "localhost"),
-        port=int(os.environ.get("DB_PORT", "3306")),
-        user=os.environ.get("DB_USER", "agenda_app"),
-        password=os.environ.get("DB_PASSWORD", ""),
-        database=os.environ.get("DB_NAME", "riesgo_social_agenda"),
-    )
-    repository = MySqlActivityRepository(db)
+    db_enabled = os.environ.get("DB_ENABLED", "true").strip().lower() == "true"
+    if db_enabled:
+        db = MySQLDatabase(
+            host=os.environ.get("DB_HOST", "localhost"),
+            port=int(os.environ.get("DB_PORT", "3306")),
+            user=os.environ.get("DB_USER", "agenda_app"),
+            password=os.environ.get("DB_PASSWORD", ""),
+            database=os.environ.get("DB_NAME", "riesgo_social_agenda"),
+        )
+        repository = MySqlActivityRepository(db)
+    else:
+        repository = None
 
     jwt_secret = os.environ.get("JWT_SECRET", "")
     token_service = JwtTokenService(secret=jwt_secret)
@@ -43,13 +46,14 @@ def create_app():
             "Predictor ML no disponible: %s", predictor.load_error
         )
 
-    create_uc = CreateActivityUseCase(repository)
-    list_uc = ListActivitiesUseCase(repository)
-    get_uc = GetActivityUseCase(repository)
-    update_uc = UpdateActivityUseCase(repository)
-    delete_uc = DeleteActivityUseCase(repository)
-    classify_uc = ClassifyWeekUseCase(predictor)
-    alerts_uc = GetPreventiveAlertsUseCase(classify_uc)
+    create_uc = CreateActivityUseCase(repository) if repository else None
+    list_uc = ListActivitiesUseCase(repository) if repository else None
+    get_uc = GetActivityUseCase(repository) if repository else None
+    update_uc = UpdateActivityUseCase(repository) if repository else None
+    delete_uc = DeleteActivityUseCase(repository) if repository else None
+    classify_uc = ClassifyWeekUseCase(predictor) if models_available else None
+    alerts_uc = GetPreventiveAlertsUseCase(classify_uc) if classify_uc else None
+    db_disabled = repository is None
 
     return create_http_app(
         create_uc=create_uc,
@@ -61,6 +65,7 @@ def create_app():
         alerts_uc=alerts_uc,
         models_available=models_available,
         token_service=token_service,
+        db_disabled=db_disabled,
     )
 
 

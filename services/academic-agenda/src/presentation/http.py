@@ -1,3 +1,5 @@
+import os
+
 from flask import Flask, jsonify, request
 from werkzeug.exceptions import BadRequest, HTTPException
 
@@ -17,10 +19,6 @@ from src.presentation.validation import (
 )
 
 
-# CORS configuration for Flutter Web
-CORS_ORIGINS = ['http://localhost:8081', 'http://localhost:5003']
-
-
 def create_http_app(
     create_uc: CreateActivityUseCase,
     list_uc: ListActivitiesUseCase,
@@ -31,8 +29,14 @@ def create_http_app(
     alerts_uc: GetPreventiveAlertsUseCase,
     models_available: bool,
     token_service,
+    db_disabled: bool = False,
 ) -> Flask:
     app = Flask(__name__)
+    cors_origins = {
+        origin.strip() for origin in os.environ.get(
+            "CORS_ORIGINS", "http://localhost:8081,http://localhost:5003"
+        ).split(",") if origin.strip()
+    }
 
     def require_auth():
         auth = request.headers.get("Authorization", "")
@@ -74,6 +78,8 @@ def create_http_app(
 
     @app.post("/auth/login")
     def login():
+        if os.environ.get("FLASK_ENV", "").lower() == "production":
+            return jsonify(error="Error", mensaje="Ruta no disponible"), 404
         try:
             body = request.get_json(force=True)
         except Exception:
@@ -90,6 +96,8 @@ def create_http_app(
         payload = require_auth()
         if not payload:
             return jsonify(error="Error", mensaje="Autenticación requerida"), 401
+        if db_disabled:
+            return jsonify(error="Error", mensaje="Base de datos no disponible"), 503
         try:
             data = validate_activity_payload(request.get_json(), partial=False)
         except (ValueError, BadRequest) as exc:
@@ -115,6 +123,8 @@ def create_http_app(
         payload = require_auth()
         if not payload:
             return jsonify(error="Error", mensaje="Autenticación requerida"), 401
+        if db_disabled:
+            return jsonify(error="Error", mensaje="Base de datos no disponible"), 503
         activities = list_uc.execute(int(payload["user_id"]))
         return jsonify([activity_to_dict(a) for a in activities]), 200
 
@@ -123,6 +133,8 @@ def create_http_app(
         payload = require_auth()
         if not payload:
             return jsonify(error="Error", mensaje="Autenticación requerida"), 401
+        if db_disabled:
+            return jsonify(error="Error", mensaje="Base de datos no disponible"), 503
         try:
             activity = get_uc.execute(activity_id, int(payload["user_id"]))
         except ActivityNotFoundError as exc:
@@ -134,6 +146,8 @@ def create_http_app(
         payload = require_auth()
         if not payload:
             return jsonify(error="Error", mensaje="Autenticación requerida"), 401
+        if db_disabled:
+            return jsonify(error="Error", mensaje="Base de datos no disponible"), 503
         try:
             data = validate_activity_payload(request.get_json(), partial=True)
         except (ValueError, BadRequest) as exc:
@@ -153,6 +167,8 @@ def create_http_app(
         payload = require_auth()
         if not payload:
             return jsonify(error="Error", mensaje="Autenticación requerida"), 401
+        if db_disabled:
+            return jsonify(error="Error", mensaje="Base de datos no disponible"), 503
         try:
             deleted = delete_uc.execute(activity_id, int(payload["user_id"]))
         except ActivityNotFoundError as exc:
@@ -212,7 +228,7 @@ def create_http_app(
     @app.after_request
     def add_cors_headers(response):
         origin = request.headers.get('Origin', '')
-        if origin in CORS_ORIGINS or origin == '':
+        if origin in cors_origins:
             response.headers['Access-Control-Allow-Origin'] = origin
             response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PATCH, DELETE, OPTIONS'
             response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'

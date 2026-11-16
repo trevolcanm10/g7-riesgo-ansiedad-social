@@ -16,7 +16,7 @@ Microservicio Flask para gestión de actividades académicas y clasificación se
 | Método | Ruta | Descripción | Auth |
 |--------|------|-------------|------|
 | GET | `/health` | Estado del servicio y disponibilidad ML | No |
-| POST | `/auth/login` | Genera token JWT (user_id, role) | No |
+| POST | `/auth/login` | Token de pruebas, deshabilitado en producción | No |
 | POST | `/actividades` | Crea una actividad académica | Sí (Bearer) |
 | GET | `/actividades` | Lista actividades del usuario | Sí (Bearer) |
 | GET | `/actividades/:id` | Obtiene una actividad por ID | Sí (Bearer) |
@@ -39,6 +39,13 @@ predictor no está disponible. No se entrena ni se inventa ningún modelo.
 
 Copia `.env.example` a `.env` y completa con valores reales. Nunca versionar
 `.env`.
+
+Para Render, usa el Dockerfile con directorio raíz `services/academic-agenda`.
+El contenedor inicia Gunicorn con un worker y escucha en `PORT` (5003 por
+defecto). Configura `DB_ENABLED=false` y el mismo `JWT_SECRET` que Users.
+`CORS_ORIGINS` acepta orígenes separados por coma. Sin base de datos,
+`/health`, clasificación y alertas siguen disponibles; el CRUD autenticado
+responde 503. Para MySQL local, configura `DB_ENABLED=true` y `DB_*` en `.env`.
 
 ## Pruebas
 
