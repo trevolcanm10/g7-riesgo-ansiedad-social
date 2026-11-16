@@ -135,6 +135,44 @@ class ResultadoMlModel {
     );
   }
 
+  /// Historial puede contener registros anteriores sin el reporte completo.
+  /// Solo crea un resultado cuando la probabilidad y el nivel son validos.
+  static ResultadoMlModel? fromRiskEvaluationHistory(Map<String, dynamic> json) {
+    final raw = json['anxietyProbability'];
+    final num? probability = raw is num
+        ? raw
+        : raw is String
+        ? num.tryParse(raw)
+        : null;
+    final level = json['riskLevel'];
+    final id = json['id'];
+    final userId = json['userId'];
+    if (probability == null || !probability.isFinite ||
+        probability < 0 || probability > 1 ||
+        level is! String || !_niveles.contains(level) ||
+        id is! int || id <= 0 || userId is! int || userId <= 0) {
+      return null;
+    }
+    final recommendations = json['recommendations'];
+    final report = json['aiReport'];
+    return ResultadoMlModel(
+      idResultado: id,
+      idEvaluacion: id,
+      idUsuario: userId,
+      probabilidadAnsiedad: probability.toDouble(),
+      nivelRiesgo: level,
+      fechaPrediccion: json['createdAt'] as String?,
+      recomendaciones: recommendations is List
+          ? recommendations.whereType<Map<String, dynamic>>()
+              .map(RecomendacionModel.fromRiskEvaluation).toList()
+          : const [],
+      reporteIA: report is Map<String, dynamic>
+          ? ReporteIAModel.fromRiskEvaluation(report)
+          : null,
+      shapExplanation: _parseShap(json['shapExplanation']),
+    );
+  }
+
   /// Convierte el DTO a entidad de dominio
   ResultadoMl toEntity() {
     return ResultadoMl(

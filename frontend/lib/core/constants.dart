@@ -9,6 +9,12 @@ import 'api_gateway_config.dart';
 /// Reemplaza la antigua clase `ApiConfig` siguiendo el principio
 /// de que la capa core no debe depender de detalles de implementación.
 class AppConstants {
+  static const String _devProxyBaseUrl = String.fromEnvironment(
+    'DEV_PROXY_BASE_URL',
+  );
+  static String get _webDevProxy => !kReleaseMode && kIsWeb
+      ? _devProxyBaseUrl.trim().replaceAll(RegExp(r'/+$'), '')
+      : '';
   static const gateway = ApiGatewayConfig(
     baseUrl: String.fromEnvironment('APIM_BASE_URL'),
     subscriptionKey: String.fromEnvironment('APIM_SUBSCRIPTION_KEY'),
@@ -103,6 +109,7 @@ class AppConstants {
     'USERS_BASE_URL',
   );
   static String get login {
+    if (_webDevProxy.isNotEmpty) return '$_webDevProxy/u/users/login';
     if (gateway.enabled) return gateway.login;
     final base = _usersLoginBaseUrl.isEmpty ? _baseUrl : _usersLoginBaseUrl;
     return '${base.replaceAll(RegExp(r'/+$'), '')}/users/login';
@@ -117,6 +124,7 @@ class AppConstants {
   );
 
   static String get academicAgendaBaseUrl {
+    if (_webDevProxy.isNotEmpty) return '$_webDevProxy/agenda';
     if (gateway.enabled) return gateway.academicAgendaOrigin;
     final configured = _academicAgendaConfiguredUrl.trim().replaceAll(
       RegExp(r'/+$'),
@@ -140,8 +148,11 @@ class AppConstants {
   /// Registro de usuarios en el microservicio Users (POST /users).
   /// La URL base nunca termina en barra (ver [setBaseUrl]), por lo que
   /// el prefijo /users no se duplica.
-  static String get registroUsers =>
-      gateway.enabled ? gateway.registration : '$usersOrigin/users';
+  static String get registroUsers => _webDevProxy.isNotEmpty
+      ? '$_webDevProxy/u/users'
+      : gateway.enabled
+      ? gateway.registration
+      : '$usersOrigin/users';
 
   // ==========================================
   // ENDPOINTS DE EVALUACIONES (microservicio RiskEvaluation)
@@ -189,6 +200,7 @@ class AppConstants {
   /// que sin configuracion explicita se lanza un error en lugar de construir
   /// una URL incorrecta reutilizando el host de Users.
   static String get riskEvaluationOrigin {
+    if (_webDevProxy.isNotEmpty) return '$_webDevProxy/re';
     if (gateway.enabled) return '${gateway.origin}/re';
     final configurada = _riskEvaluationBaseUrl.replaceAll(RegExp(r'/+$'), '');
     if (configurada.isNotEmpty) return configurada;
@@ -203,11 +215,15 @@ class AppConstants {
   }
 
   /// Envia la evaluacion a RiskEvaluation: JSON camelCase con JWT.
-  static String get evaluar => gateway.enabled
-      ? gateway.evaluation
-      : '$riskEvaluationOrigin/risk-evaluations/';
+  static String get evaluar => _webDevProxy.isNotEmpty
+      ? '$_webDevProxy/re/risk-evaluations'
+      : gateway.enabled
+          ? gateway.evaluation
+          : '$riskEvaluationOrigin/risk-evaluations/';
   static String get historialEvaluaciones =>
-      '$_baseUrl/api/v1/evaluaciones/historial';
+      _webDevProxy.isNotEmpty
+          ? '$_webDevProxy/re/risk-evaluations/me/history'
+          : '$_baseUrl/api/v1/evaluaciones/historial';
 
   // ==========================================
   // ENDPOINTS DE CITAS (microservicio Citas, prefijo /c en APIM)
@@ -219,6 +235,7 @@ class AppConstants {
   /// Citas local aunque el resto vaya por APIM); si no, con APIM usa `<APIM>/c`;
   /// si tampoco, el host local de la plataforma (puerto 3004).
   static String get citasOrigin {
+    if (_webDevProxy.isNotEmpty) return '$_webDevProxy/c';
     final configurada = _citasBaseUrl.replaceAll(RegExp(r'/+$'), '');
     if (configurada.isNotEmpty) return configurada;
     if (gateway.enabled) return gateway.citasOrigin;

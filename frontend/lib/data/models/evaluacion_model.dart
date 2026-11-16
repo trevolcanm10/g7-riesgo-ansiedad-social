@@ -76,9 +76,7 @@ class EvaluacionModel {
       peerRelationship: (json['peerRelationship'] ?? 0).toDouble(),
       financialStress: (json['financialStress'] ?? 0).toDouble(),
       sleepQuality: (json['sleepQuality'] ?? 0).toDouble(),
-      resultado: json['anxietyProbability'] != null
-          ? ResultadoMlModel.fromRiskEvaluation(json)
-          : null,
+      resultado: ResultadoMlModel.fromRiskEvaluationHistory(json),
     );
   }
 
