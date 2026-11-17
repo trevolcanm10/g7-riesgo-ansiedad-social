@@ -12,7 +12,8 @@ def test_production_without_db_keeps_health_ml_jwt_and_controlled_crud(monkeypat
     monkeypatch.setenv("CORS_ORIGINS", "https://student.example")
     client = create_app().test_client()
     health = client.get("/health")
-    assert health.status_code == 200
+    assert health.status_code == 503
+    assert health.get_json()["database"] == "UNAVAILABLE"
     assert health.get_json()["ml_predictor_available"] is True
     assert client.post("/auth/login", json={"user_id": 1}).status_code == 404
 

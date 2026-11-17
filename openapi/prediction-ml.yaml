@@ -72,12 +72,12 @@ paths:
       operationId: getPredictionHealth
       responses:
         '200':
-          description: Servicio listo con los cinco modelos cargados
+          description: Servicio listo con XGBoost cargado
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthStatus'
-              example: { service: prediction-ml, status: OK, models_loaded: 5 }
+              example: { service: prediction-ml, status: OK, models_loaded: 1 }
         '503':
           description: Servicio no listo o modelos no disponibles
           content:
@@ -109,13 +109,33 @@ components:
         sleep_quality: { type: number, minimum: 0, maximum: 10 }
     PredictionResponse:
       type: object
-      required: [nivel_riesgo, probabilidad_ansiedad, explicacion, reporte_ia]
+      required: [nivel_riesgo, probabilidad_ansiedad, explicacion, reporte_ia, explicacion_shap]
       properties:
         nivel_riesgo: { type: string, enum: [BAJO, MEDIO, ALTO] }
         probabilidad_ansiedad: { type: number, minimum: 0, maximum: 1 }
         explicacion: { type: string }
         reporte_ia:
           $ref: '#/components/schemas/AIReport'
+        explicacion_shap:
+          $ref: '#/components/schemas/ShapExplanation'
+    ShapExplanation:
+      type: object
+      description: Contribuciones del XGBoost en log-odds de riesgo (clase 0), no porcentajes ni diagnóstico.
+      required: [estado, escala, factores]
+      properties:
+        estado: { type: string, enum: [disponible, no_disponible] }
+        escala: { type: string, enum: [log_odds_riesgo_clase_0] }
+        factores:
+          type: array
+          maxItems: 3
+          description: Tres factores cuando estado es disponible; lista vacía si no está disponible.
+          items:
+            type: object
+            required: [nombre, valor, direccion]
+            properties:
+              nombre: { type: string }
+              valor: { type: number, description: Contribución en log-odds; no es un porcentaje. }
+              direccion: { type: string, enum: [aumenta, disminuye, neutra] }
     AIReport:
       type: object
       additionalProperties: false
@@ -142,4 +162,4 @@ components:
       properties:
         service: { type: string, enum: [prediction-ml] }
         status: { type: string, enum: [OK, UNAVAILABLE] }
-        models_loaded: { type: integer, minimum: 0, maximum: 5 }
+        models_loaded: { type: integer, minimum: 0, maximum: 1 }

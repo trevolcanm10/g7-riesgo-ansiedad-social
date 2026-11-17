@@ -18,6 +18,9 @@ class FakeModel:
     n_features_in_ = 7
     feature_names_in_ = np.array(FEATURES)
 
+    def load_model(self, path):
+        self.loaded_path = path
+
     def predict_proba(self, frame):
         assert list(frame.columns) == list(FEATURES)
         assert frame.iloc[0].tolist() == [8, 6, 6, 5, 3, 6, 7.5]
@@ -26,27 +29,28 @@ class FakeModel:
 
 class XGBoostPredictorTests(unittest.TestCase):
     def test_uses_only_xgboost_and_class_zero_probability(self):
-        with patch("src.infrastructure.xgboost_predictor.joblib.load", return_value=FakeModel()) as load:
+        with patch("src.infrastructure.xgboost_predictor.XGBClassifier", return_value=FakeModel()) as constructor:
             predictor = XGBoostPredictor()
-        self.assertEqual(load.call_count, 1)
-        self.assertEqual(load.call_args.args[0].name, MODEL_FILE)
+        self.assertEqual(constructor.call_count, 1)
+        self.assertEqual(constructor.return_value.loaded_path.name, MODEL_FILE)
         self.assertEqual(predictor.models_loaded, 1)
         self.assertAlmostEqual(predictor.predict_probability(PAYLOAD), 0.8)
 
     def test_rejects_incompatible_model_or_missing_file(self):
         model = FakeModel()
         model.feature_names_in_ = np.array(list(reversed(FEATURES)))
-        with patch("src.infrastructure.xgboost_predictor.joblib.load", return_value=model):
+        with patch("src.infrastructure.xgboost_predictor.XGBClassifier", return_value=model):
             with self.assertRaises(ModelsUnavailableError):
                 XGBoostPredictor()
-        with patch("src.infrastructure.xgboost_predictor.joblib.load", side_effect=OSError("missing")):
+        model.load_model = lambda _: (_ for _ in ()).throw(OSError("missing"))
+        with patch("src.infrastructure.xgboost_predictor.XGBClassifier", return_value=model):
             with self.assertRaises(ModelsUnavailableError):
                 XGBoostPredictor()
 
     def test_rejects_invalid_probability(self):
         model = FakeModel()
         model.predict_proba = lambda frame: [[float("nan"), 0.5]]
-        with patch("src.infrastructure.xgboost_predictor.joblib.load", return_value=model):
+        with patch("src.infrastructure.xgboost_predictor.XGBClassifier", return_value=model):
             predictor = XGBoostPredictor()
         with self.assertRaises(PredictionError):
             predictor.predict_probability(PAYLOAD)
@@ -83,11 +87,13 @@ class XGBoostPredictorTests(unittest.TestCase):
     def test_shap_failure_keeps_prediction_and_http_contract(self):
         predictor = XGBoostPredictor()
         with patch.object(predictor, "explain_risk", side_effect=RuntimeError("SHAP failed")):
+            use_case = PredictRiskUseCase(predictor, FallbackReportGenerator())
             client = create_http_app(
-                PredictRiskUseCase(predictor, FallbackReportGenerator()), 1,
+                use_case, 1,
             ).test_client()
             response = client.post("/predict", json=PAYLOAD)
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(use_case.shap_failures, 1)
         self.assertEqual(response.json["explicacion_shap"], {
             "estado": "no_disponible", "escala": "log_odds_riesgo_clase_0", "factores": [],
         })

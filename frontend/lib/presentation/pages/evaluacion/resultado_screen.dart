@@ -64,7 +64,7 @@ class ResultadoScreen extends StatelessWidget {
                   const Align(
                     alignment: Alignment.centerLeft,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      padding: EdgeInsets.symmetric(vertical: 8.0),
                       child: Text(
                         'Recomendaciones Base',
                         style: TextStyle(
@@ -259,7 +259,7 @@ class ResultadoScreen extends StatelessWidget {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: Colors.amber.withOpacity(0.3), width: 1),
+          side: BorderSide(color: Colors.amber.withValues(alpha: 0.3), width: 1),
         ),
         child: ListTile(
           leading: const CircleAvatar(
@@ -303,7 +303,7 @@ class ResultadoScreen extends StatelessWidget {
                   esYouTube
                       ? Icons.play_arrow_rounded
                       : Icons.check_circle_outline,
-                  color: colorTema.withOpacity(0.6),
+                  color: colorTema.withValues(alpha: 0.6),
                   size: 16,
                 ),
                 const SizedBox(width: 8),
@@ -389,7 +389,7 @@ class _TarjetasAnimadasIAState extends State<TarjetasAnimadasIA> {
           margin: const EdgeInsets.only(bottom: 14),
           // 1. Efecto Micro-Escala: Se agranda levemente al pasar el cursor o pulsar
           transform: _isHovered
-              ? (Matrix4.identity()..scale(1.02, 1.02))
+              ? Matrix4.diagonal3Values(1.02, 1.02, 1)
               : Matrix4.identity(),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -398,13 +398,13 @@ class _TarjetasAnimadasIAState extends State<TarjetasAnimadasIA> {
             border: Border.all(
               color: _isHovered
                   ? widget.colorTema.shade400
-                  : widget.colorTema.withOpacity(0.25),
+                  : widget.colorTema.withValues(alpha: 0.25),
               width: _isHovered ? 2.0 : 1.5,
             ),
             // 3. Efecto de Sombra con Profundidad Dinámica (Elevación Neumórfica)
             boxShadow: [
               BoxShadow(
-                color: widget.colorTema.withOpacity(_isHovered ? 0.12 : 0.04),
+                color: widget.colorTema.withValues(alpha: _isHovered ? 0.12 : 0.04),
                 blurRadius: _isHovered ? 16 : 8,
                 spreadRadius: _isHovered ? 2 : 0,
                 offset: _isHovered ? const Offset(0, 8) : const Offset(0, 4),

@@ -192,28 +192,42 @@ void main() {
   });
   group('lectura de la respuesta 201', () {
     test('conserva SHAP de clase 0 y admite explicación no disponible', () {
-      final response = respuestaValida()..['shapExplanation'] = {
-        'estado': 'disponible',
-        'escala': 'log_odds_riesgo_clase_0',
-        'factores': [
-          {'nombre': 'PHQ9', 'valor': 0.7, 'direccion': 'aumenta'},
-          {'nombre': 'SleepHours', 'valor': -0.3, 'direccion': 'disminuye'},
-          {'nombre': 'GAD7', 'valor': 0.2, 'direccion': 'aumenta'},
-        ],
-      };
+      final response = respuestaValida()
+        ..['shapExplanation'] = {
+          'estado': 'disponible',
+          'escala': 'log_odds_riesgo_clase_0',
+          'factores': [
+            {'nombre': 'PHQ9', 'valor': 0.7, 'direccion': 'aumenta'},
+            {'nombre': 'SleepHours', 'valor': -0.3, 'direccion': 'disminuye'},
+            {'nombre': 'GAD7', 'valor': 0.2, 'direccion': 'aumenta'},
+          ],
+        };
       final result = ResultadoMlModel.fromRiskEvaluation(response).toEntity();
       expect(result.shapExplanation!.disponible, isTrue);
-      expect(result.shapExplanation!.factores.map((f) => f.nombre), ['PHQ9', 'SleepHours', 'GAD7']);
+      expect(result.shapExplanation!.factores.map((f) => f.nombre), [
+        'PHQ9',
+        'SleepHours',
+        'GAD7',
+      ]);
       expect(result.shapExplanation!.factores[1].direccion, 'disminuye');
       expect(result.shapExplanation!.factores[1].valor, -0.3);
 
       response['shapExplanation'] = {
-        'estado': 'no_disponible', 'escala': 'log_odds_riesgo_clase_0', 'factores': [],
+        'estado': 'no_disponible',
+        'escala': 'log_odds_riesgo_clase_0',
+        'factores': [],
       };
-      final unavailable = ResultadoMlModel.fromRiskEvaluation(response).toEntity();
+      final unavailable = ResultadoMlModel.fromRiskEvaluation(
+        response,
+      ).toEntity();
       expect(unavailable.probabilidadAnsiedad, 0.42);
       expect(unavailable.shapExplanation!.disponible, isFalse);
-      expect(ResultadoMlModel.fromRiskEvaluation(respuestaValida()).toEntity().shapExplanation, isNull);
+      expect(
+        ResultadoMlModel.fromRiskEvaluation(
+          respuestaValida(),
+        ).toEntity().shapExplanation,
+        isNull,
+      );
     });
     Future<
       ({double prob, String nivel, String? exp, int recs, ReporteIA? reporte})
@@ -376,6 +390,18 @@ void main() {
         if (status == 403) expect(result.error, isNot(contains('expiro')));
       });
     }
+    test('un 503 reintenta una vez y conserva el resultado real', () async {
+      var calls = 0;
+      final result = await enviarEvaluacion((_) {
+        calls++;
+        return respuestaJson(
+          calls == 1 ? {'message': 'Service unavailable'} : respuestaValida(),
+          calls == 1 ? 503 : 201,
+        );
+      });
+      expect(calls, 2);
+      expect(result.ok, isTrue);
+    });
     for (final fault in [
       TimeoutException('test'),
       http.ClientException('test'),
@@ -478,38 +504,44 @@ void main() {
         );
       }
     });
-    test('historial llama a GET /risk-evaluations/me/history con JWT', () async {
-      final enviadas = <Uri>[];
-      final headersCapturados = <Map<String, String>>[];
-      await http.runWithClient(
-        () async {
-          final api = ApiService()..setToken('token-de-prueba');
-          final repo = EvaluacionRepositoryImpl(
-            EvaluacionRemoteDataSource(api),
-          );
-          await repo.obtenerHistorial();
-        },
-        () => MockClient((request) async {
-          enviadas.add(request.url);
-          headersCapturados.add(request.headers);
-          return http.Response(jsonEncode([]), 200,
-              headers: {'content-type': 'application/json'});
-        }),
-      );
-      expect(enviadas, isNotEmpty);
-      expect(
-        enviadas.last.toString(),
-        contains('/risk-evaluations/me/history'),
-      );
-      expect(
-        enviadas.last.toString(),
-        isNot(contains('/api/v1/evaluaciones/historial')),
-      );
-      expect(
-        headersCapturados.last['authorization'],
-        equals('Bearer token-de-prueba'),
-      );
-    });
+    test(
+      'historial llama a GET /risk-evaluations/me/history con JWT',
+      () async {
+        final enviadas = <Uri>[];
+        final headersCapturados = <Map<String, String>>[];
+        await http.runWithClient(
+          () async {
+            final api = ApiService()..setToken('token-de-prueba');
+            final repo = EvaluacionRepositoryImpl(
+              EvaluacionRemoteDataSource(api),
+            );
+            await repo.obtenerHistorial();
+          },
+          () => MockClient((request) async {
+            enviadas.add(request.url);
+            headersCapturados.add(request.headers);
+            return http.Response(
+              jsonEncode([]),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          }),
+        );
+        expect(enviadas, isNotEmpty);
+        expect(
+          enviadas.last.toString(),
+          contains('/risk-evaluations/me/history'),
+        );
+        expect(
+          enviadas.last.toString(),
+          isNot(contains('/api/v1/evaluaciones/historial')),
+        );
+        expect(
+          headersCapturados.last['authorization'],
+          equals('Bearer token-de-prueba'),
+        );
+      },
+    );
   });
 
   group('EvaluacionModel.fromJson (camelCase del backend)', () {
@@ -521,7 +553,12 @@ void main() {
       'riskLevel': 'ALTO',
       'explanation': 'Riesgo elevado.',
       'recommendations': [
-        {'id': 3, 'category': 'ALTO', 'title': 'Riesgo alto', 'description': 'Acude al servicio.'}
+        {
+          'id': 3,
+          'category': 'ALTO',
+          'title': 'Riesgo alto',
+          'description': 'Acude al servicio.',
+        },
       ],
       'aiReport': {
         'summary': 'Resumen.',
@@ -544,33 +581,51 @@ void main() {
       expect(lista, isEmpty);
     });
 
-    test('una evaluacion mapea id, usuario, fecha, probabilidad, nivel y fecha', () {
-      final modelo = EvaluacionModel.fromJson(historialValido);
-      expect(modelo.idEvaluacion, 10);
-      expect(modelo.idUsuario, 42);
-      expect(modelo.fechaRealizacion, '2026-11-12T21:30:38.000Z');
-      expect(modelo.resultado, isNotNull);
-      expect(modelo.resultado!.nivelRiesgo, 'ALTO');
-      expect(modelo.resultado!.probabilidadAnsiedad, 0.85);
-      expect(modelo.resultado!.fechaPrediccion, '2026-11-12T21:30:38.000Z');
-    });
+    test(
+      'una evaluacion mapea id, usuario, fecha, probabilidad, nivel y fecha',
+      () {
+        final modelo = EvaluacionModel.fromJson(historialValido);
+        expect(modelo.idEvaluacion, 10);
+        expect(modelo.idUsuario, 42);
+        expect(modelo.fechaRealizacion, '2026-11-12T21:30:38.000Z');
+        expect(modelo.resultado, isNotNull);
+        expect(modelo.resultado!.nivelRiesgo, 'ALTO');
+        expect(modelo.resultado!.probabilidadAnsiedad, 0.85);
+        expect(modelo.resultado!.fechaPrediccion, '2026-11-12T21:30:38.000Z');
+      },
+    );
 
     test('varias evaluaciones se parsean de forma independiente', () {
       final datos = [
         historialValido,
-        {...historialValido, 'id': 11, 'riskLevel': 'BAJO', 'anxietyProbability': 0.2},
-        {...historialValido, 'id': 12, 'riskLevel': 'MEDIO', 'anxietyProbability': 0.5},
+        {
+          ...historialValido,
+          'id': 11,
+          'riskLevel': 'BAJO',
+          'anxietyProbability': 0.2,
+        },
+        {
+          ...historialValido,
+          'id': 12,
+          'riskLevel': 'MEDIO',
+          'anxietyProbability': 0.5,
+        },
       ];
       final lista = datos
           .map((json) => EvaluacionModel.fromJson(json))
           .toList();
       expect(lista.length, 3);
       expect(lista.map((e) => e.idEvaluacion), [10, 11, 12]);
-      expect(lista.map((e) => e.resultado!.nivelRiesgo), ['ALTO', 'BAJO', 'MEDIO']);
-      expect(
-        lista.map((e) => e.resultado!.probabilidadAnsiedad),
-        [0.85, 0.2, 0.5],
-      );
+      expect(lista.map((e) => e.resultado!.nivelRiesgo), [
+        'ALTO',
+        'BAJO',
+        'MEDIO',
+      ]);
+      expect(lista.map((e) => e.resultado!.probabilidadAnsiedad), [
+        0.85,
+        0.2,
+        0.5,
+      ]);
     });
 
     test('sin campos de resultado deja resultado nulo sin fallar', () {

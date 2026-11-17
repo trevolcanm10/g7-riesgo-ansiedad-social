@@ -9,6 +9,7 @@ class PredictRiskUseCase:
     def __init__(self, predictor: RiskPredictor, report_generator: ReportGenerator):
         self.predictor = predictor
         self.report_generator = report_generator
+        self.shap_failures = 0
 
     def execute(self, indicators: Mapping[str, float]) -> dict:
         probability = self.predictor.predict_probability(indicators)
@@ -19,8 +20,12 @@ class PredictRiskUseCase:
             explain = getattr(self.predictor, "explain_risk", None)
             if explain is not None:
                 explanation = explain(indicators, probability)
-        except Exception:
-            logging.getLogger(__name__).warning("Explicacion SHAP no disponible")
+        except Exception as exc:
+            self.shap_failures += 1
+            logging.getLogger(__name__).warning(
+                "Explicacion SHAP no disponible: tipo=%s, fallos=%d",
+                type(exc).__name__, self.shap_failures,
+            )
         return {
             "nivel_riesgo": level,
             "probabilidad_ansiedad": probability,

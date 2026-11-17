@@ -1,0 +1,25 @@
+{
+  "seed": 20261117,
+  "source": "synthetic_calendars_only",
+  "sample_count": 1800,
+  "test_count": 450,
+  "label_rule": "BAJA if hours+1.5*urgent+0.7*high<10; MODERADA if <20; else ALTA",
+  "baseline_rule": "BAJA if activity_count<5; MODERADA if <10; else ALTA",
+  "levels": [
+    "BAJA",
+    "MODERADA",
+    "ALTA"
+  ],
+  "model_f1_macro": 0.9748343898979508,
+  "baseline_f1_macro": 0.6075242771211274,
+  "model_f1_per_class": {
+    "BAJA": 0.967741935483871,
+    "MODERADA": 0.9749430523917996,
+    "ALTA": 0.9818181818181818
+  },
+  "baseline_f1_per_class": {
+    "BAJA": 0.7069767441860465,
+    "MODERADA": 0.6798418972332015,
+    "ALTA": 0.43575418994413406
+  }
+}

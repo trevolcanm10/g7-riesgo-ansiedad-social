@@ -1,9 +1,9 @@
 from pathlib import Path
 from typing import Mapping
 
-import joblib
 import numpy as np
 import pandas as pd
+from xgboost import XGBClassifier
 
 from src.domain.risk import ModelsUnavailableError, PredictionError, RiskPredictor
 
@@ -15,14 +15,15 @@ INDICATORS = (
     "phq9_score", "gad7_score", "online_stress", "financial_stress",
     "exercise_freq", "social_activity", "sleep_hours",
 )
-MODEL_FILE = "xgboost_weighted_model.pkl"
+MODEL_FILE = "xgboost_risk.ubj"
 
 
 class XGBoostPredictor(RiskPredictor):
     def __init__(self, models_dir: Path | None = None):
         directory = models_dir if models_dir is not None else Path(__file__).parent / "models"
         try:
-            model = joblib.load(directory / MODEL_FILE)
+            model = XGBClassifier()
+            model.load_model(directory / MODEL_FILE)
             classes = list(model.classes_)
             if len(classes) != 2 or set(classes) != {0, 1}:
                 raise ValueError("Clases incompatibles")

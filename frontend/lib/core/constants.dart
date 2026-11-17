@@ -223,7 +223,9 @@ class AppConstants {
   static String get historialEvaluaciones =>
       _webDevProxy.isNotEmpty
           ? '$_webDevProxy/re/risk-evaluations/me/history'
-          : '$_baseUrl/api/v1/evaluaciones/historial';
+          : gateway.enabled
+              ? '${gateway.evaluation}/me/history'
+              : '$riskEvaluationOrigin/risk-evaluations/me/history';
 
   // ==========================================
   // ENDPOINTS DE CITAS (microservicio Citas, prefijo /c en APIM)

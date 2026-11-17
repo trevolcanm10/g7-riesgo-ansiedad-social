@@ -82,6 +82,7 @@ def create_app():
         models_available=models_available,
         token_service=token_service,
         db_disabled=db_disabled,
+        db_ping=db.ping if repository is not None else None,
     )
 
 

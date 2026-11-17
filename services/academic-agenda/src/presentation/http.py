@@ -1,4 +1,5 @@
 import os
+from typing import Callable
 
 from flask import Flask, jsonify, request
 from werkzeug.exceptions import BadRequest, HTTPException
@@ -31,11 +32,12 @@ def create_http_app(
     models_available: bool,
     token_service,
     db_disabled: bool = False,
+    db_ping: Callable[[], bool] | None = None,
 ) -> Flask:
     app = Flask(__name__)
     cors_origins = {
         origin.strip() for origin in os.environ.get(
-            "CORS_ORIGINS", "http://localhost:8081,http://localhost:5003"
+            "CORS_ORIGINS", ""
         ).split(",") if origin.strip()
     }
 
@@ -71,11 +73,13 @@ def create_http_app(
 
     @app.get("/health")
     def health():
+        database_ok = not db_disabled and (db_ping is None or db_ping())
         return jsonify(
             service="academic-agenda",
-            status="OK",
+            status="OK" if database_ok else "ERROR",
+            database="OK" if database_ok else "UNAVAILABLE",
             ml_predictor_available=models_available,
-        ), 200
+        ), 200 if database_ok else 503
 
     @app.post("/actividades")
     def create_activity():
@@ -221,7 +225,6 @@ def create_http_app(
             response.headers['Access-Control-Allow-Origin'] = origin
             response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PATCH, DELETE, OPTIONS'
             response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
-            response.headers['Access-Control-Allow-Credentials'] = 'true'
         if request.method == 'OPTIONS':
             response.status_code = 200
             response.data = b''

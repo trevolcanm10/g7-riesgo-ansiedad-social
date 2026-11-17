@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:provider/provider.dart';
 import '../../../core/app_colors.dart';
 import '../../../data/repositories/agenda_remote_repository.dart';
+import '../../../data/datasources/remote/api_service.dart';
 import '../../../domain/entities/actividad_academica.dart';
 import '../../../domain/repositories/agenda_repository.dart';
 import '../../../domain/services/calcular_carga_semanal.dart';
-import '../../../presentation/viewmodels/auth_viewmodel.dart';
 
 class AgendaScreen extends StatefulWidget {
   final AgendaRepository repository;
@@ -26,22 +25,11 @@ class _AgendaScreenState extends State<AgendaScreen> {
   AgendaPreventiveAlerts? _alerts;
   DateTime? _insightWeek;
   int _insightRequest = 0;
-  late final AuthViewModel _auth;
 
   @override
   void initState() {
     super.initState();
     _repo = widget.repository;
-    _auth = context.read<AuthViewModel>();
-    _loadAfterAuth();
-  }
-
-  Future<void> _loadAfterAuth() async {
-    final startTime = DateTime.now();
-    while (_auth.token == null && !_auth.isLoading) {
-      if (DateTime.now().difference(startTime).inSeconds > 2) break;
-      await Future.delayed(const Duration(milliseconds: 100));
-    }
     _load();
   }
 
@@ -58,7 +46,13 @@ class _AgendaScreenState extends State<AgendaScreen> {
       }
     } catch (e, stackTrace) {
       if (kDebugMode) debugPrint('ERROR loading agenda: $e\n$stackTrace');
-      if (mounted) setState(() => _error = 'No se pudo cargar la agenda.');
+      if (mounted) {
+        setState(
+          () => _error = e is ApiException && e.statusCode == 503
+              ? 'El servicio de agenda no está disponible (503). Reintenta en unos momentos.'
+              : 'No se pudo cargar la agenda.',
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -78,9 +72,13 @@ class _AgendaScreenState extends State<AgendaScreen> {
         _refreshInsights();
       }
       return true;
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
-        setState(() => _error = 'No se pudieron guardar los cambios.');
+        setState(
+          () => _error = error is ApiException && error.statusCode == 503
+              ? 'El servicio de agenda no está disponible (503). Conservamos tu borrador para reintentar.'
+              : 'No se pudieron guardar los cambios.',
+        );
       }
       return false;
     }
@@ -122,20 +120,32 @@ class _AgendaScreenState extends State<AgendaScreen> {
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
   Future<void> _form([ActividadAcademica? item]) async {
-    final result = await showDialog<ActividadAcademica>(
-      context: context,
-      builder: (_) => _ActivityForm(initial: item, selected: _selected),
-    );
-    if (result == null) return;
-    final next = [..._items.where((a) => a.id != result.id), result];
-    if (await _save(next) && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            item == null ? 'Actividad creada' : 'Actividad actualizada',
-          ),
+    var draft = item;
+    String? formError;
+    while (mounted) {
+      final result = await showDialog<ActividadAcademica>(
+        context: context,
+        builder: (_) => _ActivityForm(
+          initial: draft,
+          selected: _selected,
+          isNew: item == null,
+          errorText: formError,
         ),
       );
+      if (result == null || !mounted) return;
+      final next = [..._items.where((a) => a.id != result.id), result];
+      if (await _save(next) && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              item == null ? 'Actividad creada' : 'Actividad actualizada',
+            ),
+          ),
+        );
+        return;
+      }
+      draft = result;
+      formError = _error;
     }
   }
 
@@ -923,7 +933,14 @@ class _AgendaScreenState extends State<AgendaScreen> {
 class _ActivityForm extends StatefulWidget {
   final ActividadAcademica? initial;
   final DateTime selected;
-  const _ActivityForm({required this.initial, required this.selected});
+  final bool isNew;
+  final String? errorText;
+  const _ActivityForm({
+    required this.initial,
+    required this.selected,
+    required this.isNew,
+    this.errorText,
+  });
   @override
   State<_ActivityForm> createState() => _ActivityFormState();
 }
@@ -963,9 +980,7 @@ class _ActivityFormState extends State<_ActivityForm> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: Text(
-      widget.initial == null ? 'Nueva actividad' : 'Editar actividad',
-    ),
+    title: Text(widget.isNew ? 'Nueva actividad' : 'Editar actividad'),
     content: SizedBox(
       width: 420,
       child: SingleChildScrollView(
@@ -974,6 +989,14 @@ class _ActivityFormState extends State<_ActivityForm> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (widget.errorText != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    widget.errorText!,
+                    style: TextStyle(color: AppColors.of(context).danger),
+                  ),
+                ),
               TextFormField(
                 controller: _title,
                 decoration: const InputDecoration(labelText: 'Título *'),

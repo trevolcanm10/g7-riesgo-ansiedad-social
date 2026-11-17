@@ -1075,7 +1075,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         ],
       ),
     );
-    if (confirm != true) return;
+    if (confirm != true || !mounted) return;
 
     try {
       final apiService = context.read<ApiService>();

@@ -29,6 +29,28 @@ class _Repository implements AgendaRepository {
   Future<void> guardar(List<ActividadAcademica> next) async => items = next;
 }
 
+class _UnavailableRepository extends _Repository {
+  _UnavailableRepository() : super([]);
+
+  @override
+  Future<void> guardar(List<ActividadAcademica> next) async {
+    throw ApiException(statusCode: 503, mensaje: 'Base no disponible');
+  }
+}
+
+class _InitiallyUnavailableRepository extends _Repository {
+  _InitiallyUnavailableRepository() : super([]);
+
+  @override
+  Future<List<ActividadAcademica>> obtener() async {
+    reads++;
+    if (reads == 1) {
+      throw ApiException(statusCode: 503, mensaje: 'Base no disponible');
+    }
+    return items;
+  }
+}
+
 class _InsightRepository extends AgendaRemoteRepository {
   _InsightRepository(this.items)
     : super(ApiService(), 'http://localhost/agenda/actividades');
@@ -138,6 +160,15 @@ Future<void> _pump(
 }
 
 void main() {
+  testWidgets('un 503 de lectura muestra reintento y recupera la agenda', (tester) async {
+    final repo = _InitiallyUnavailableRepository();
+    await _pump(tester, repo, size: const Size(800, 1600));
+    expect(find.textContaining('servicio de agenda no está disponible (503)'), findsOneWidget);
+    await tester.tap(find.text('Reintentar'));
+    await tester.pumpAndSettle();
+    expect(repo.reads, 2);
+    expect(find.text('Aún no tienes actividades.'), findsOneWidget);
+  });
   testWidgets(
     'muestra clasificación y avisos remotos con indicadores semanales',
     (tester) async {
@@ -234,5 +265,28 @@ void main() {
     expect(find.text('Aún no tienes actividades.'), findsOneWidget);
     expect(find.text('Nueva actividad'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('un 503 conserva el borrador y permite reintentar', (
+    tester,
+  ) async {
+    await _pump(tester, _UnavailableRepository(), size: const Size(800, 1600));
+    await tester.tap(find.text('Nueva actividad'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Título *'),
+      'Trabajo final',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Curso/asignatura *'),
+      'Curso',
+    );
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('servicio de agenda'), findsWidgets);
+    expect(find.text('Trabajo final'), findsOneWidget);
+    expect(find.text('Guardar'), findsOneWidget);
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
   });
 }

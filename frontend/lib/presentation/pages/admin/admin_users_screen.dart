@@ -82,7 +82,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         ],
       ),
     );
-    if (confirm != true) return;
+    if (confirm != true || !mounted) return;
 
     try {
       final apiService = context.read<ApiService>();

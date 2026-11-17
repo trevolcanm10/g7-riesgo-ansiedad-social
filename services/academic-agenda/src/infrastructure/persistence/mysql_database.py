@@ -45,3 +45,14 @@ class MySQLDatabase:
 
     def get_connection(self):
         return self.pool.get_connection()
+
+    def ping(self) -> bool:
+        try:
+            connection = self.get_connection()
+            try:
+                connection.ping(reconnect=False)
+                return True
+            finally:
+                connection.close()
+        except mysql.connector.Error:
+            return False

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -46,6 +47,22 @@ class FormRepository implements EvaluacionRepository {
   }
 }
 
+class PendingFormRepository extends FormRepository {
+  final gate = Completer<void>();
+  @override
+  Future<
+    ({
+      ResultadoMl resultado,
+      List<Recomendacion> recomendaciones,
+      String? explicacion,
+    })
+  >
+  evaluarRiesgo(Map<String, num> variables) async {
+    await gate.future;
+    return super.evaluarRiesgo(variables);
+  }
+}
+
 Future<void> next(WidgetTester tester) async {
   await tester.tap(find.text('Siguiente'));
   await tester.pumpAndSettle();
@@ -67,6 +84,34 @@ Future<void> answer(
 }
 
 void main() {
+  testWidgets('avisa durante el arranque en frío de Evaluación', (
+    tester,
+  ) async {
+    final repo = PendingFormRepository()..failNext = false;
+    final vm = EvaluacionViewModel(
+      EvaluarRiesgoUseCase(repo),
+      ObtenerHistorialUseCase(repo),
+    );
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: vm,
+        child: MaterialApp(
+          theme: ThemeData(extensions: const [AppColors.light]),
+          home: const EvaluacionScreen(),
+        ),
+      ),
+    );
+    final pending = vm.evaluarRiesgo({});
+    await tester.pump();
+    expect(
+      find.textContaining('Estamos preparando el servicio'),
+      findsOneWidget,
+    );
+    repo.gate.complete();
+    await pending;
+    await tester.pumpWidget(const SizedBox());
+    vm.dispose();
+  });
   testWidgets(
     'requiere todos los items, conserva respuestas y envia solo totales y GPA',
     (tester) async {

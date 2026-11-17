@@ -6,7 +6,11 @@ Python 3.12. Dependencias fijadas a las versiones verificadas localmente.
 ## Reporte Gemini y respaldo
 
 `POST /predict` devuelve exactamente `probabilidad_ansiedad`, `nivel_riesgo`,
-`explicacion` y `reporte_ia`. La inferencia, las siete features y los umbrales
+`explicacion`, `reporte_ia` y `explicacion_shap`. Este último campo contiene
+`estado` (`disponible` o `no_disponible`), escala
+`log_odds_riesgo_clase_0` y hasta tres factores con `nombre`, `valor` y
+`direccion`; las contribuciones no son porcentajes ni diagnósticos. La
+inferencia, las siete features y los umbrales
 no cambian. La explicación reutiliza los textos por nivel del proyecto original,
 añadiendo que no es diagnóstico clínico. Gemini nunca calcula el riesgo.
 
@@ -117,7 +121,7 @@ curl -H 'Content-Type: application/json' --data-binary @example.json http://loca
 
 - Domain: puerto `RiskPredictor`, errores y reglas de categorización; solo biblioteca estándar.
 - Application: caso de uso dependiente del puerto, sin bibliotecas ML.
-- Infrastructure: `XGBoostPredictor` carga únicamente `xgboost_weighted_model.pkl`, verifica metadatos (clases {0,1}, 7 features, orden contractual, `predict_proba`) y provee explicación SHAP de esa misma predicción (TreeExplainer, top 3 factores, escala log-odds de clase 0). Los otros artefactos pueden permanecer almacenados, pero no se cargan ni intervienen en la inferencia.
+- Infrastructure: `XGBoostPredictor` carga únicamente `xgboost_risk.ubj` con `load_model`, verifica metadatos (clases {0,1}, 7 features, orden contractual, `predict_proba`) y provee explicación SHAP de esa misma predicción (TreeExplainer, top 3 factores, escala log-odds de clase 0).
 - Presentation: validación del contrato JSON y traducción HTTP.
 
 SRP separa estas responsabilidades. DIP hace depender el caso de uso de una abstracción. OCP permite reemplazar el predictor al componer la aplicación sin cambiar el caso de uso.
@@ -126,12 +130,12 @@ Se construye un DataFrame en orden PHQ9, GAD7, OnlineStress, FinancialStress, Ex
 
 ## Metadatos y compatibilidad
 
-`models_loaded` reporta 1 (único artefacto XGBoost). El Python local puede resolver una versión de scikit-learn distinta de la 1.6.1 fijada en requirements.txt y usada al serializar los modelos; en ese caso emite InconsistentVersionWarning. Antes de desplegar, reproducir el entorno fijado y validar el artefacto.
+`models_loaded` reporta 1 (único artefacto XGBoost). El artefacto UBJ conserva los siete nombres de variables y se carga con XGBoost 3.3.0 sin deserializar un pickle.
 
-El modelo contiene clases 0 y 1 y conserva los siete nombres de feature en el orden requerido. Se utiliza scikit-learn 1.6.1. XGBoost 3.3.0 emite un warning al cargar el pickle generado por una versión anterior: la compatibilidad entre versiones de snapshots pickle no está garantizada. No se oculta el warning y no se modifican los artefactos. Las versiones originales de las otras bibliotecas no fueron suministradas.
+La conversión desde el artefacto anterior se verificó con el mismo `example.json`: las probabilidades antes y después coincidieron dentro de `1e-7`. Las fallas SHAP conservan la predicción, registran el tipo de excepción sin datos personales y aumentan `shap_failures` en el proceso.
 
-En Windows, joblib también puede advertir que no pudo detectar núcleos físicos y utilizar núcleos lógicos. La inferencia verificada finaliza correctamente. `verify_real_http.py` inicia temporalmente el servicio en el puerto 5001, verifica las tres solicitudes con modelos reales y detiene su proceso; ejecutar con ese puerto libre.
+`verify_real_http.py` inicia temporalmente el servicio en el puerto 5001, verifica las tres solicitudes con el modelo real y detiene su proceso; ejecutar con ese puerto libre.
 
 ## Evidencia de entrenamiento
 
-No hay scripts de entrenamiento, métricas ni notebooks en el repositorio. Solo existen los artefactos serializados (`.pkl`) en `src/infrastructure/models/`. Las métricas del ensamble anterior (CatBoost+KNN+LightGBM+RandomForest+XGBoost) no están documentadas.
+No se dispone del conjunto de datos original ni de un conjunto de prueba común para comparar el ensamble anterior, los cinco modelos y XGBoost solo. Por ello **no se afirma superioridad de métricas**. Se eligió XGBoost como único predictor para explicar la predicción activa con `TreeExplainer`; el artefacto se conserva en formato UBJ. Una comparación AUC/recall/F1 requiere recuperar el conjunto original y el protocolo de evaluación, sin inventar resultados.

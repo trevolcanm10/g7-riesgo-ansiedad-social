@@ -40,6 +40,28 @@ def test_health():
     data = resp.get_json()
     assert data["service"] == "academic-agenda"
     assert data["status"] == "OK"
+    assert data["database"] == "OK"
+
+
+def test_health_reports_database_failure():
+    app = create_http_app(
+        create_uc=MagicMock(), list_uc=MagicMock(), get_uc=MagicMock(),
+        update_uc=MagicMock(), delete_uc=MagicMock(), classify_uc=None,
+        alerts_uc=None, models_available=False, token_service=MagicMock(),
+        db_ping=lambda: False,
+    )
+    response = app.test_client().get("/health")
+    assert response.status_code == 503
+    assert response.get_json()["database"] == "UNAVAILABLE"
+
+
+def test_cors_is_disabled_by_default(monkeypatch):
+    monkeypatch.delenv("CORS_ORIGINS", raising=False)
+    response = make_app().test_client().get(
+        "/health", headers={"Origin": "http://localhost:8082"}
+    )
+    assert "Access-Control-Allow-Origin" not in response.headers
+    assert "Access-Control-Allow-Credentials" not in response.headers
 
 
 @pytest.mark.parametrize("environment", ["development", "production"])

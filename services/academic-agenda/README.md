@@ -39,21 +39,24 @@ predictor no está disponible. No se entrena ni se inventa ningún modelo.
 Copia `.env.example` a `.env` y completa con valores reales. Nunca versionar
 `.env`.
 
-Para Render, usa el Dockerfile con directorio raíz `services/academic-agenda`.
+Para Render, usa `render.yaml` con el Dockerfile de `services/academic-agenda`.
 El contenedor inicia Gunicorn con un worker y escucha en `PORT` (5003 por
 defecto). En el servicio de Render configura `DB_ENABLED=true`, `DB_SSL=true`,
 `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` y el mismo
-`JWT_SECRET` que Users. No pongas estos valores en el Dockerfile ni en Git.
+`JWT_SECRET` que Users. Configura los valores secretos en el panel de Render;
+no los pongas en el Dockerfile ni en Git.
 `DB_SSL_CA` es opcional: indica la ruta de un certificado CA disponible dentro
 del contenedor; si se omite se usa el almacén de CA del sistema. La conexión
 verifica certificado e identidad del servidor. Aplica `db/schema.sql` a la
 base exclusiva de Agenda antes de activar el CRUD. `CORS_ORIGINS` acepta
-orígenes separados por coma.
+orígenes separados por coma y está vacío por defecto.
 
 Si falla la conexión inicial, el servicio arranca y el CRUD autenticado
 responde 503 sin exponer credenciales. Si la conexión cae después, el CRUD
-también responde 503. `/health` comprueba el proceso y el predictor, no la
-disponibilidad de la BD. `DB_ENABLED=false` deja el CRUD deshabilitado de
+también responde 503. `/health` informa `database: OK` solo cuando la BD
+responde; si no, responde 503 con `database: UNAVAILABLE`. Si la conexión
+inicial falla, se requiere reiniciar el proceso cuando la BD vuelva a estar
+disponible. `DB_ENABLED=false` deja el CRUD deshabilitado de
 forma explícita. Para MySQL local sin TLS, usa `DB_SSL=false` solo en
 desarrollo.
 
