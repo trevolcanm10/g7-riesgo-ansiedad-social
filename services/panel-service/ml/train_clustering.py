@@ -9,9 +9,17 @@ evaluaciones anonimizadas de estudiantes universitarios.
 
 Algoritmo principal
 --------------------
-K-Means sobre el espacio estandarizado. Se barre k en [2..8] y se selecciona
+K-Means sobre el espacio estandarizado. Se barre k en [2..10] y se selecciona
 el k con mejor Coeficiente de Silueta (desempate por menor Indice
-Davies-Bouldin).
+Davies-Bouldin), siempre que ese k sea estable entre ejecuciones.
+
+Estabilidad entre ejecuciones
+------------------------------
+Un k con buena silueta puede ser un artefacto del azar. Por eso se mide la
+estabilidad con el ARI (Adjusted Rand Index): el mismo ajuste repetido con
+distintas semillas y el ajuste completo frente a ajustes sobre submuestras del
+80 por ciento de los datos. El k definitivo es el de mejor silueta entre los
+que no son claramente menos estables que el k mas simple.
 
 Linea base comparativa
 ----------------------
@@ -22,6 +30,7 @@ Evaluacion tecnica
 ------------------
 - Coeficiente de Silueta (mayor es mejor; rango [-1, 1]).
 - Indice Davies-Bouldin (menor es mejor).
+- ARI (Adjusted Rand Index) para la estabilidad entre ejecuciones.
 
 El modelo se exporta como un Pipeline(StandardScaler, KMeans) en un unico
 archivo .joblib. Empaquetar el escalador junto con el modelo es deliberado:
@@ -51,7 +60,11 @@ import joblib
 import numpy as np
 import pandas as pd
 from sklearn.cluster import AgglomerativeClustering, KMeans
-from sklearn.metrics import davies_bouldin_score, silhouette_score
+from sklearn.metrics import (
+    adjusted_rand_score,
+    davies_bouldin_score,
+    silhouette_score,
+)
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -101,16 +114,8 @@ FEATURES_DESCARTADAS = [
 # entrenado; el texto es orientativo y describe el perfil en el dataset
 # simulado, no a una persona.
 DESCRIPCIONES_CLUSTER = {
-    0: "Perfil de bienestar estable: indicadores de malestar en rangos bajos y recursos de apoyo disponibles.",
-    1: "Perfil de estres academico y financier marcado, con apoyo familiar presente.",
-    2: "Perfil de aislamiento social y menor autoeficacia, con aplicacion sostenida del estres en linea.",
-    3: "Perfil de sintomatologia depresiva y ansiosa elevada, con habitos de sueno y alimentacion irregulares.",
-    4: "Perfil de riesgo medio: presencia simultanea de estres academico y descanso insuficiente.",
-    5: "Perfil de alta carga de estres con apoyo familiar reducido.",
-    6: "Perfil con indicadores predominantemente favorables y recursos de apoyo sostenidos.",
-    7: "Perfil de uso intensivo de pantallas con desbalance entre estres y recursos.",
-    8: "Perfil de sintomatologia Ansiosa moderada con recursos de apoyo fluctuantes.",
-    9: "Perfil de protectores reducidos con alteracion del ritmo de sueno.",
+    0: "Perfil con mayor carga de sintomatologia (PHQ-9 y GAD-7 mas altos), estres online y financiero mas altos, menos ejercicio y menor actividad social.",
+    1: "Perfil con menor carga de sintomatologia y de estres, mas ejercicio y mayor actividad social.",
 }
 
 # Texto obligatorio en toda respuesta de la API que exponga resultados de IA.
@@ -121,6 +126,24 @@ NOTA_IA = (
 
 RANDOM_STATE = 42
 RANGO_K = range(2, 11)
+
+# Medicion de estabilidad entre ejecuciones.
+#
+# - Semillas: se repite K-Means con distintas semillas y con una sola
+#   inicializacion (n_init=1) para medir cuanto depende el resultado del
+#   azar de la inicializacion.
+# - Submuestras: se ajusta sobre el 80 por ciento de los datos y se compara
+#   con el ajuste completo sobre todas las filas.
+#
+# El ARI (Adjusted Rand Index) es invariante a las etiquetas, de modo que
+# permite comparar directamente dos particiones del mismo conjunto de datos.
+SEMILLAS_ESTABILIDAD = (42, 7, 123, 2024)
+PROPORCION_SUBSAMPLE = 0.8
+REPETICIONES_SUBSAMPLE = 5
+
+# Tolerancia con la que se acepta un k mas complejo que el k mas simple: un
+# k se descarta cuando su estabilidad es peor en mas de esta cantidad.
+TOLERANCIA_ESTABILIDAD = 0.05
 
 
 def cargar_datos(ruta: Path) -> pd.DataFrame:
@@ -204,6 +227,84 @@ def seleccionar_k(resultados: list[dict], k_fijado: int | None) -> dict:
     return max(validos, key=lambda r: (r["silueta"], -r["davies_bouldin"]))
 
 
+def ari_entre_semillas(matriz: np.ndarray, k: int) -> float:
+    """Estabilidad entre ejecuciones: ARI medio entre ajustes con distintas semillas."""
+    etiquetas_por_semilla = [
+        KMeans(n_clusters=k, random_state=semilla, n_init=1).fit_predict(matriz)
+        for semilla in SEMILLAS_ESTABILIDAD
+    ]
+
+    pares = []
+    for indice in range(len(etiquetas_por_semilla)):
+        for otro in range(indice + 1, len(etiquetas_por_semilla)):
+            pares.append(
+                adjusted_rand_score(
+                    etiquetas_por_semilla[indice], etiquetas_por_semilla[otro]
+                )
+            )
+
+    return round(float(np.mean(pares)), 6)
+
+
+def ari_entre_subsamples(matriz: np.ndarray, k: int) -> float:
+    """Estabilidad ante submuestras: ARI medio entre el ajuste completo y los parciales."""
+    generador = np.random.default_rng(RANDOM_STATE)
+    total = len(matriz)
+    modelo_completo = KMeans(
+        n_clusters=k, random_state=RANDOM_STATE, n_init=10
+    ).fit(matriz)
+    etiquetas_completas = modelo_completo.labels_
+
+    valores = []
+    for _ in range(REPETICIONES_SUBSAMPLE):
+        permutado = generador.permutation(np.arange(total))
+        subconjunto = permutado[: int(total * PROPORCION_SUBSAMPLE)]
+        modelo = KMeans(
+            n_clusters=k, random_state=RANDOM_STATE, n_init=10
+        ).fit(matriz[subconjunto])
+        etiquetas = modelo.predict(matriz)
+        valores.append(adjusted_rand_score(etiquetas_completas, etiquetas))
+
+    return round(float(np.mean(valores)), 6)
+
+
+def medir_estabilidad(matriz: np.ndarray, k: int) -> dict:
+    """Mide la estabilidad del agrupamiento de K-Means para un k dado."""
+    ari_semillas = ari_entre_semillas(matriz, k)
+    ari_subsamples = ari_entre_subsamples(matriz, k)
+
+    return {
+        "k": k,
+        "ari_semillas": ari_semillas,
+        "ari_subsamples": ari_subsamples,
+        "ari_promedio": round((ari_semillas + ari_subsamples) / 2, 6),
+    }
+
+
+def barrer_estabilidad(matriz: np.ndarray, ks: range) -> list[dict]:
+    """Mide la estabilidad de K-Means para cada k candidato."""
+    return [medir_estabilidad(matriz, k) for k in ks]
+
+
+def ajustar_k_por_estabilidad(resultados: list[dict], estabilidad: list[dict]) -> dict:
+    """Ajusta el k elegido por silueta con el criterio de estabilidad.
+
+    Se descartan los k cuya estabilidad (ARI promedio) es claramente peor que
+    la del k mas simple, con una tolerancia explicita. Entre los que quedan se
+    elige el de mejor silueta y, en empate, el de menor Davies-Bouldin.
+    """
+    ari_por_k = {medida["k"]: medida["ari_promedio"] for medida in estabilidad}
+    referencia = ari_por_k[min(ari_por_k)]
+
+    aceptados = [
+        resultado
+        for resultado in resultados
+        if ari_por_k.get(resultado["k"], 0.0) >= referencia - TOLERANCIA_ESTABILIDAD
+    ]
+
+    return max(aceptados, key=lambda r: (r["silueta"], -r["davies_bouldin"]))
+
+
 def describir_clusters(
     marco: pd.DataFrame, etiquetas: np.ndarray, escalador: StandardScaler
 ) -> list[dict]:
@@ -273,9 +374,22 @@ def main() -> int:
     resultados_kmeans = barrer_kmeans(matriz, RANGO_K)
     print("Evaluando agrupamiento jerarquico (ward)...")
     resultados_jerarquico = barrer_jerarquico(matriz, RANGO_K)
+    print("Midiendo estabilidad entre ejecuciones (ARI)...")
+    estabilidad = barrer_estabilidad(matriz, RANGO_K)
 
     mejor_kmeans = seleccionar_k(resultados_kmeans, argumentos.k)
     mejor_jerarquico = seleccionar_k(resultados_jerarquico, argumentos.k)
+
+    if argumentos.k is None:
+        # El k definitivo no puede depender solo de la silueta: tambien tiene
+        # que ser estable entre ejecuciones.
+        ajustado = ajustar_k_por_estabilidad(resultados_kmeans, estabilidad)
+        if ajustado["k"] != mejor_kmeans["k"]:
+            print(
+                f"Estabilidad: el k {mejor_kmeans['k']} es claramente menos estable "
+                f"y se adopta el k {ajustado['k']}."
+            )
+        mejor_kmeans = ajustado
 
     print()
     print(f"{'algoritmo':<18}{'k':>3}{'silueta':>12}{'davies-bouldin':>18}")
@@ -292,6 +406,15 @@ def main() -> int:
             else "n/d"
         )
         print(f"{resultado['algoritmo']:<18}{resultado['k']:>3}{silueta:>12}{db:>18}")
+    print()
+
+    print(f"{'k':>3}{'ari-semillas':>16}{'ari-submuestras':>18}{'ari-promedio':>15}")
+    print("-" * 52)
+    for medida in estabilidad:
+        print(
+            f"{medida['k']:>3}{medida['ari_semillas']:>16.4f}"
+            f"{medida['ari_subsamples']:>18.4f}{medida['ari_promedio']:>15.4f}"
+        )
     print()
 
     # Modelo final: K-Means (algoritmo principal) sobre el espacio escalado.
@@ -340,6 +463,17 @@ def main() -> int:
         "principal": mejor_kmeans,
         "linea_base_jerarquica": mejor_jerarquico,
         "barrido": resultados_kmeans + resultados_jerarquico,
+        "estabilidad": {
+            "metodo": (
+                "ARI (Adjusted Rand Index) medio entre ajustes con distintas "
+                "semillas y entre el ajuste completo y ajustes sobre submuestras."
+            ),
+            "semillas": list(SEMILLAS_ESTABILIDAD),
+            "proporcion_submuestra": PROPORCION_SUBSAMPLE,
+            "repeticiones_submuestra": REPETICIONES_SUBSAMPLE,
+            "tolerancia_ari": TOLERANCIA_ESTABILIDAD,
+            "por_k": estabilidad,
+        },
         "perfiles": perfiles,
     }
     (RUTA_RESULTADOS / "comparativa.json").write_text(

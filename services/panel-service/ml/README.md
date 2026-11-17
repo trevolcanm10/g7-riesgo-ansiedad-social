@@ -79,7 +79,9 @@ dentro de `train_clustering.py`.
 - Entrada: las siete variables estandarizadas con `StandardScaler`.
 - Barrido de `k` en `[2..10]`, `n_init=10`, `random_state=42`.
 - Seleccion del `k` final: **mayor Coeficiente de Silueta**, con desempate
-  por **menor Indice Davies-Bouldin**.
+  por **menor Indice Davies-Bouldin**, y solo entre los `k` que **no son
+  claramente menos estables** que el `k` mas simple (vease la seccion
+  "Estabilidad entre ejecuciones").
 - El escalador y el modelo se exportan **juntos** como
   `Pipeline(StandardScaler, KMeans)` en un unico `.joblib`. K-Means depende de
   la escala, y separar ambos artefactos es la causa habitual de errores al
@@ -97,6 +99,7 @@ estructura depende del algoritmo o de los datos.
 |---|---|---|
 | Coeficiente de Silueta | Separacion entre clusters (rango -1 a 1) | mayor |
 | Indice Davies-Bouldin | Dispersion intra-cluster vs. separacion entre clusters | menor |
+| ARI (Adjusted Rand Index) | Estabilidad: parecido entre dos particiones del mismo conjunto de datos | mas alto |
 
 ---
 
@@ -106,13 +109,13 @@ Barrido completo ( reproducible con `python train_clustering.py`):
 
 | algoritmo | k | silueta | davies-bouldin |
 |---|---|---|---|
-| kmeans | 2 | 0.1004 | 2.8703 |
+| **kmeans** | **2** | **0.1004** | **2.8703** |
 | kmeans | 3 | 0.0940 | 2.4855 |
 | kmeans | 4 | 0.0944 | 2.2401 |
 | kmeans | 5 | 0.0951 | 2.1068 |
 | kmeans | 6 | 0.0953 | 1.9463 |
 | kmeans | 7 | 0.1004 | 1.8707 |
-| **kmeans** | **8** | **0.1034** | **1.7971** |
+| kmeans | 8 | 0.1034 | 1.7971 |
 | kmeans | 9 | 0.1006 | 1.7876 |
 | kmeans | 10 | 0.1011 | 1.7742 |
 | jerarquico_ward | 2 | 0.0591 | 3.8037 |
@@ -125,14 +128,50 @@ Barrido completo ( reproducible con `python train_clustering.py`):
 | jerarquico_ward | 9 | 0.0398 | 2.2391 |
 | jerarquico_ward | 10 | 0.0405 | 2.1518 |
 
-**Modelo principal:** K-Means con `k=8` (silueta 0.1034, Davies-Bouldin 1.7971).
+**Modelo principal:** K-Means con `k=2` (silueta 0.1004, Davies-Bouldin 2.8703).
 **Linea base:** jerarquico con `k=2` (silueta 0.0591, Davies-Bouldin 3.8037).
 
 K-Means supera a la linea base jerarquica en **ambas** metricas y en **todos** los
-valores de `k` evaluados: la estructura es real en los datos y no un artefacto
-del algoritmo. El salto de Davies-Bouldin entre ambos (1.80 frente a 3.80) es
-notable y confirma que los clusters de K-Means son mas compactos y mejor
-separados.
+valores de `k` evaluados, pero esa diferencia **no demuestra que la estructura
+sea real**: la silueta del `k=8` supera a la del `k=2` en apenas 0.003, una
+diferencia dentro del ruido de la metrica, y la medicion de estabilidad muestra
+que el `k=8` es claramente menos estable (vease la seccion siguiente). Por eso el
+`k` definitivo es 2: la diferencia de silueta no compensa la perdida de
+estabilidad y, ademas, dos perfiles son mucho mas interpretables para el
+personal que ocho.
+
+### Estabilidad entre ejecuciones
+
+Una silueta alta no garantiza que el agrupamiento se repita: un `k` puede ser
+un artefacto del azar de la inicializacion. Por eso se mide la estabilidad con
+el **ARI** (*Adjusted Rand Index*), que compara dos particiones del mismo
+conjunto de datos de forma invariante a las etiquetas:
+
+- **Entre semillas:** se repite K-Means con cuatro semillas distintas y una
+  sola inicializacion (`n_init=1`) y se promedian los seis pares de ARI.
+- **Entre submuestras:** se ajusta sobre el 80 por ciento de los datos (cinco
+  repeticiones) y se compara con el ajuste completo sobre todas las filas.
+
+| k | ARI entre semillas | ARI entre submuestras | ARI promedio |
+|---|---|---|---|
+| **2** | **0.4780** | **0.6400** | **0.5590** |
+| 3 | 0.2023 | 0.2824 | 0.2423 |
+| 4 | 0.2109 | 0.2055 | 0.2082 |
+| 5 | 0.2286 | 0.2468 | 0.2377 |
+| 6 | 0.1911 | 0.2254 | 0.2082 |
+| 7 | 0.2195 | 0.2221 | 0.2208 |
+| 8 | 0.2600 | 0.3557 | 0.3078 |
+| 9 | 0.3005 | 0.2994 | 0.3000 |
+| 10 | 0.2800 | 0.2655 | 0.2727 |
+
+Lectura: el `k=2` es con diferencia el mas estable (ARI promedio 0.56 frente a
+0.31 del `k=8` y menos de 0.31 en el resto). El criterio reproducido en
+`train_clustering.py` descarta un `k` cuando su ARI promedio es peor en mas de
+0.05 que el del `k` mas simple; con los datos de este dataset solo el `k=2`
+supera el corte, de modo que el modelo publicado es el de `k=2`.
+
+Los resultados completos quedan en `resultados/comparativa.json`, en la clave
+`estabilidad`.
 
 ### Lectura honesta de las metricas
 
@@ -141,6 +180,9 @@ umbral de una estructura util. La causa es conocida: el dataset sintetico anade
 ruido gaussiano (sigma = 1) del mismo orden que la senal ponderada. Por eso:
 
 - Los perfiles se presentan como **orientativos** y nunca como clasificacion.
+- El `k` se eligio tambien por **estabilidad** entre ejecuciones, no solo
+  por silueta: un agrupamiento que cambia entre ejecuciones no es
+  interpretable.
 - El panel aplica la **regla k=5**, que ademas oculta los clusters con menos
   de cinco estudiantes.
 - Un modelo equivalente entrenado con datos reales de la institucion
@@ -157,7 +199,26 @@ ruido gaussiano (sigma = 1) del mismo orden que la senal ponderada. Por eso:
 |---|---|
 | `../app/infrastructure/ml/artifacts/modelo_clustering.joblib` | `Pipeline(StandardScaler, KMeans)` listo para inferencia |
 | `../app/infrastructure/ml/artifacts/perfiles_clusteres.json` | Descripcion de cada cluster: `n`, descripcion, medias por feature, centroide escalado, nivel orientativo |
-| `resultados/comparativa.json` | Barrido completo, modelo principal, linea base, perfiles y nota de IA |
+| `resultados/comparativa.json` | Barrido completo, estabilidad (ARI), modelo principal, linea base, perfiles y nota de IA |
+
+---
+
+## Revision de los perfiles por el equipo institucional (UNAYOE)
+
+**Estado: PENDIENTE.** La revision de los perfiles y de sus textos por
+parte del equipo institucional de UNAYOE **no se ha realizado**. En
+consecuencia, las descripciones de los perfiles (`DESCRIPCIONES_CLUSTER` en
+`train_clustering.py`) son las que propone el codigo y **no han sido
+validadas por el personal institucional**.
+
+Cuando se realice, este apartado debe recoger:
+
+- quien reviso los perfiles y con que fecha;
+- que observaciones se hicieron sobre cada perfil;
+- que ajustes se aplicaron a las descripciones y al modelo.
+
+Mientras tanto, la advertencia del modelo sintetico que viaja en cada
+respuesta de la API (`nota_ia`) es la unica garantia de uso responsable.
 
 ---
 
@@ -165,13 +226,17 @@ ruido gaussiano (sigma = 1) del mismo orden que la senal ponderada. Por eso:
 
 - `random_state = 42` en K-Means.
 - `n_init = 10`.
-- Versionado de dependencias en `../requirements.txt`:
-  `scikit-learn==1.6.1`, `numpy==2.0.0`, `pandas==2.2.3`, `joblib==1.3.2`.
+- Semillas, proporcion de submuestra y repeticiones de la medicion de
+  estabilidad: `SEMILLAS_ESTABILIDAD`, `PROPORCION_SUBSAMPLE` y
+  `REPETICIONES_SUBSAMPLE` en `train_clustering.py`.
+- Versionado de dependencias en `../requirements.txt` (`scikit-learn==1.6.1`,
+  `numpy==2.0.0`, `joblib==1.3.2`) y `../requirements-dev.txt`
+  (`pandas==2.2.3`, que solo hace falta para entrenar).
 
 Para regenerar los artefactos desde cero:
 
 ```bash
-pip install -r ../requirements.txt
+pip install -r ../requirements-dev.txt
 python download_dataset.py --refresh
 python train_clustering.py
 ```

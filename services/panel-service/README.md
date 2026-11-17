@@ -6,7 +6,7 @@ expone estadisticas anonimizadas con indicadores de IA y genera el informe
 mensual.
 
 > **Guia completa de instalacion, ejecucion, verificacion y publicacion:**
-> [`README_MODULO_4.md`](../../README_MODULO_4.md) en la raiz del repositorio.
+> [`README_MODULO_4.md`](README_MODULO_4.md), en la misma carpeta del servicio.
 > Este documento describe el servicio en detalle.
 
 ---
@@ -266,7 +266,7 @@ resultado = filtrar_grupos(grupos)   # resultado.grupos, resultado.omitidos
 
 ## Modelo de agrupamiento
 
-El modelo (K-Means, `k=8`) y su metodologia estan documentados en
+El modelo (K-Means, `k=2`) y su metodologia estan documentados en
 [`ml/README.md`](ml/README.md).
 
 Aviso: los perfiles son **estimaciones orientativas** y **no son
