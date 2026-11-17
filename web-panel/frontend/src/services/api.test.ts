@@ -78,6 +78,44 @@ describe('cliente HTTP del panel', () => {
     const { get } = await import('./api');
     await expect(get('/panel/api/panel/estadisticas')).rejects.toThrow(/sesión/i);
   });
+
+  it('avisa al manejador de sesion cuando la respuesta es 401', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ error: 'sin token' }), { status: 401 }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { get, registrarManejadorDeSesion } = await import('./api');
+    const manejador = vi.fn();
+    registrarManejadorDeSesion(manejador);
+
+    await expect(get('/panel/api/panel/estadisticas', 'jwt')).rejects.toThrow(/sesión/i);
+
+    expect(manejador).toHaveBeenCalledTimes(1);
+
+    registrarManejadorDeSesion(null);
+  });
+
+  it('no cierra la sesion ante otros errores', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ error: 'sin permiso' }), { status: 403 }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { get, registrarManejadorDeSesion } = await import('./api');
+    const manejador = vi.fn();
+    registrarManejadorDeSesion(manejador);
+
+    await expect(get('/panel/api/panel/estadisticas', 'jwt')).rejects.toThrow(/permiso/i);
+
+    expect(manejador).not.toHaveBeenCalled();
+  });
+
+  it('espera sesenta segundos antes de abandonar una peticion', async () => {
+    const { TIMEOUT_MS } = await import('./api');
+
+    expect(TIMEOUT_MS).toBe(60000);
+  });
 });
 
 describe('servicios del panel', () => {

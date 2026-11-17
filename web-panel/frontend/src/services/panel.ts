@@ -74,6 +74,30 @@ export async function registrarAtencion(
 }
 
 /**
+ * Verifica que la respuesta de estadisticas cumpla el contrato actual.
+ *
+ * Los conteos protegidos por la regla k=5 pueden venir en null: el servicio
+ * los suprime y el panel los muestra como "menos de cinco".
+ */
+function esRespuestaEstadisticas(valor: unknown): valor is Record<string, unknown> {
+  if (!valor || typeof valor !== 'object') return false;
+
+  const respuesta = valor as Record<string, unknown>;
+
+  return (
+    (respuesta.total_atenciones === null || typeof respuesta.total_atenciones === 'number') &&
+    typeof respuesta.total_atenciones_estimado === 'boolean' &&
+    (respuesta.requieren_seguimiento === null ||
+      typeof respuesta.requieren_seguimiento === 'number') &&
+    typeof respuesta.riesgo_disponible === 'boolean' &&
+    Array.isArray(respuesta.por_tipo) &&
+    Array.isArray(respuesta.por_modalidad) &&
+    Array.isArray(respuesta.por_estado) &&
+    Array.isArray(respuesta.perfiles_ia)
+  );
+}
+
+/**
  * Obtiene las estadísticas anonimizadas del panel.
  */
 export async function obtenerEstadisticas(
@@ -86,7 +110,7 @@ export async function obtenerEstadisticas(
     token,
   );
 
-  if (!respuesta || typeof respuesta.total_atenciones !== 'number') {
+  if (!esRespuestaEstadisticas(respuesta)) {
     throw new Error('El servicio devolvió estadísticas inválidas.');
   }
 

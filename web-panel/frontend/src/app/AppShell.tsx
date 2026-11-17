@@ -154,7 +154,7 @@ export function TopBar({ alAbrirMenu }: { alAbrirMenu: () => void }) {
           <button
             type="button"
             className="btn btn-secondary btn-sm"
-            onClick={salir}
+            onClick={() => salir()}
             aria-label="Cerrar sesión"
           >
             <LogOut size={16} />

@@ -8,8 +8,46 @@
  */
 import { config } from '../config';
 
-/** Milisegundos de espera maxima antes de abandonar una peticion. */
-export const TIMEOUT_MS = 25000;
+/**
+ * Milisegundos de espera maxima antes de abandonar una peticion.
+ *
+ * El plan gratuito de Render puede tardar hasta un minuto y medio en
+ * despertar: 60 s cubren ese arranque sin dejar la interfaz colgada.
+ */
+export const TIMEOUT_MS = 60000;
+
+/**
+ * Manejador que el contexto de sesion registra para cerrar la sesion cuando
+ * el servicio responde 401.
+ *
+ * Vive aqui para que `api.ts` no dependa de `app/`: el cliente HTTP no sabe
+ * nada de React ni del enrutado.
+ */
+type ManejadorSesion = () => void;
+
+let manejadorSesion: ManejadorSesion | null = null;
+
+/**
+ * Registra el manejador que se invoca cuando una peticion recibe un 401.
+ *
+ * Pasar null elimina el manejador registrado.
+ */
+export function registrarManejadorDeSesion(handler: ManejadorSesion | null): void {
+  manejadorSesion = handler;
+}
+
+/**
+ * Avisa al contexto de sesion que el token dejo de ser valido.
+ */
+function notificarSesionRechazada(): void {
+  if (!manejadorSesion) return;
+
+  try {
+    manejadorSesion();
+  } catch {
+    // Un manejador con fallo no puede romper la peticion en curso.
+  }
+}
 
 /**
  * Traduce un codigo HTTP a un mensaje comprensible para el personal.
@@ -105,6 +143,8 @@ async function peticion<T>(
     });
 
     if (!respuesta.ok) {
+      if (respuesta.status === 401) notificarSesionRechazada();
+
       throw new ApiError(
         httpError(respuesta.status, respuesta.headers.get('Retry-After')),
         respuesta.status,
@@ -162,6 +202,8 @@ export async function descargar(ruta: string, token: string): Promise<{ nombre: 
     });
 
     if (!respuesta.ok) {
+      if (respuesta.status === 401) notificarSesionRechazada();
+
       throw new ApiError(
         httpError(respuesta.status, respuesta.headers.get('Retry-After')),
         respuesta.status,

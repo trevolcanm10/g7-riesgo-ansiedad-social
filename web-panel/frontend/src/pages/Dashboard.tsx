@@ -7,7 +7,14 @@ import { useSesion } from '../app/AuthContext';
 import { AvisoIA, AvisoPrivacidad } from '../components/Avisos';
 import { GraficoAnillo, GraficoBarras, TarjetaIndicador } from '../components/Graficos';
 import { obtenerEstadisticas } from '../services/panel';
-import { ETIQUETAS_TIPO, mesesDisponibles } from '../validation';
+import {
+  ETIQUETAS_TIPO,
+  formatearConteoProtegido,
+  formatearTotalAtenciones,
+  mesesDisponibles,
+  textoGruposVisibles,
+  textoRiesgoMotivo,
+} from '../validation';
 import type { Estadisticas } from '../types';
 
 export default function PaginaDashboard() {
@@ -45,8 +52,30 @@ export default function PaginaDashboard() {
   const porModalidad = estadisticas?.por_modalidad ?? [];
   const total = estadisticas?.total_atenciones ?? 0;
 
+  // Los conteos protegidos por la regla k=5 pueden venir suprimidos: el
+  // panel muestra un texto legible en lugar de un numero inventado.
+  const totalAtenciones = estadisticas
+    ? formatearTotalAtenciones(estadisticas.total_atenciones, estadisticas.total_atenciones_estimado)
+    : '—';
+  const seguimiento = estadisticas
+    ? formatearConteoProtegido(estadisticas.requieren_seguimiento)
+    : '—';
+  const gruposVisibles =
+    (estadisticas?.por_tipo.length ?? 0) +
+    (estadisticas?.por_modalidad.length ?? 0) +
+    (estadisticas?.por_estado.length ?? 0);
+  const detalleGrupos = textoGruposVisibles(
+    estadisticas?.grupos_omitidos ?? false,
+    estadisticas?.minimo_grupo_publicable ?? 5,
+  );
+  const motivoRiesgo = estadisticas ? textoRiesgoMotivo(estadisticas.riesgo_motivo) : '';
+
   return (
     <div className="flex flex-col gap-6">
+      {/* El aviso del modelo sintetico encabeza el dashboard: es la primera
+          advertencia que debe ver el personal institucional. */}
+      <AvisoIA nota={estadisticas?.nota_ia} />
+
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-green)]">
@@ -85,30 +114,35 @@ export default function PaginaDashboard() {
       )}
 
       {estadisticas && (
-        <AvisoPrivacidad omitidos={estadisticas.grupos_omitidos_por_privacidad} />
+        <AvisoPrivacidad grupos_omitidos={estadisticas.grupos_omitidos} />
+      )}
+
+      {estadisticas && !estadisticas.riesgo_disponible && motivoRiesgo && (
+        <div className="notice" role="status">
+          <p className="text-sm">
+            <strong className="font-semibold">Sin correlación con el nivel de riesgo. </strong>
+            {motivoRiesgo}
+          </p>
+        </div>
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <TarjetaIndicador
           etiqueta="Atenciones registradas"
-          valor={estadisticas?.total_atenciones ?? 0}
+          valor={totalAtenciones}
           detalle={periodo ? `Periodo ${periodo}` : 'Todo el histórico'}
           icono={<ClipboardCheck size={20} />}
         />
         <TarjetaIndicador
           etiqueta="Requieren seguimiento"
-          valor={estadisticas?.requieren_seguimiento ?? 0}
+          valor={seguimiento}
           detalle="Atenciones con seguimiento pendiente"
           icono={<Activity size={20} />}
         />
         <TarjetaIndicador
           etiqueta="Grupos visibles"
-          valor={
-            (estadisticas?.por_tipo.length ?? 0) +
-            (estadisticas?.por_modalidad.length ?? 0) +
-            (estadisticas?.por_estado.length ?? 0)
-          }
-          detalle="Mínimo 5 estudiantes por grupo"
+          valor={gruposVisibles}
+          detalle={detalleGrupos}
           icono={<Users size={20} />}
         />
         <TarjetaIndicador
@@ -154,10 +188,6 @@ export default function PaginaDashboard() {
           <h3 className="text-base font-bold text-[var(--color-navy)]">
             Perfiles generados por el modelo de agrupamiento
           </h3>
-        </div>
-
-        <div className="mb-4">
-          <AvisoIA nota={estadisticas?.nota_ia} />
         </div>
 
         {cargando ? (
@@ -232,7 +262,9 @@ export default function PaginaDashboard() {
                           )}
                         </span>
                       ) : (
-                        <span className="text-[var(--color-muted)]">Sin correlación</span>
+                        <span className="text-[var(--color-muted)]">
+                          {textoRiesgoMotivo(perfil.riesgo_motivo) || 'Sin correlación'}
+                        </span>
                       )}
                     </td>
                     <td className="tabular-nums">

@@ -2,18 +2,23 @@
  * Pantalla de inicio de sesion del panel institucional.
  */
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Leaf, LogIn } from 'lucide-react';
 import { useSesion } from '../app/AuthContext';
 import { validarCredenciales } from '../validation';
 
 export default function PaginaLogin() {
-  const { entrar, cargando, error } = useSesion();
+  const { entrar, cargando, error, aviso } = useSesion();
   const navegar = useNavigate();
+  const ubicacion = useLocation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errores, setErrores] = useState<Record<string, string>>({});
+
+  // La ruta protegida deja el motivo del rechazo en el estado de navegacion.
+  const mensajeRuta = (ubicacion.state as { mensaje?: string } | null)?.mensaje ?? '';
+  const mensaje = aviso || mensajeRuta;
 
   async function enviar(evento: FormEvent) {
     evento.preventDefault();
@@ -96,6 +101,12 @@ export default function PaginaLogin() {
           {error && (
             <div className="error-banner" role="alert">
               {error}
+            </div>
+          )}
+
+          {mensaje && (
+            <div className="error-banner" role="alert">
+              {mensaje}
             </div>
           )}
 

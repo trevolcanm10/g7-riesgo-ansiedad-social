@@ -1,9 +1,10 @@
 /**
  * Pantalla de reserva para los modulos que conectaran otros microservicios.
  *
- * `/orientacion`, `/citas` y `/agenda` quedan preparadas: cuando su
- * microservicio este listo, se sustituye este componente por la pantalla real
- * sin tocar el enrutado ni la navegacion lateral.
+ * `/orientacion`, `/citas` y `/agenda` son trabajo futuro: todavia no hay
+ * microservicio conectado. Cuando su microservicio este listo, se sustituye
+ * este componente por la pantalla real sin tocar el enrutado ni la navegacion
+ * lateral.
  */
 import { Construction } from 'lucide-react';
 import { NAVEGACION } from '../app/navigation';
@@ -25,15 +26,18 @@ export default function PaginaPreparada({ ruta }: { ruta: string }) {
       </div>
 
       <p className="text-sm">
-        Esta ruta queda reservada en el panel. Cuando el microservicio correspondiente este
-        disponible, su pantalla se conectara aqui sin modificar la navegacion ni el
-        enrutado.
+        Este modulo es trabajo futuro: todavia no esta implementado. La ruta queda reservada
+        en el panel, pero todavia no hay ninguna pantalla ni microservicio conectado
+        detras.
       </p>
 
       <div className="notice">
         <p className="text-sm">
+          <strong className="font-semibold">Estado: pendiente de implementacion. </strong>
           La estructura de rutas, la barra lateral y la proteccion de sesion ya estan
-          preparadas para este modulo.
+          preparadas para este modulo. Cuando el microservicio correspondiente este
+          disponible, su pantalla se conectara aqui sin modificar la navegacion ni el
+          enrutado.
         </p>
       </div>
     </div>
