@@ -21,7 +21,7 @@ por HTTP: `services/users` (nuevo `GET /users/by-code/{code}`) y
 
 | Herramienta | Versión | Nota |
 |---|---|---|
-| Python | **3.9 – 3.12** | 3.9/3.10 requieren `greenlet==3.0.3` (ya fijado). **3.13 funciona; 3.14 no**: `scikit-learn==1.6.1` no publica ruedas para cp314 y pip intentaría compilarla |
+| Python | **3.11** | 3.9 y 3.10 tambien funcionan con `greenlet==3.0.3` (ya fijado). La imagen de Docker usa `python:3.11-slim` |
 | Node.js | 20 o superior | Para el frontend |
 | Docker | con Desktop | Solo si vas a levantar MySQL en contenedor |
 | MySQL | 8.0 | Alternativa: usar el contenedor del paso 2 |
@@ -93,39 +93,14 @@ GRANT ALL PRIVILEGES ON db_panel.* TO 'panel_app'@'%';
 
 ## 3. Configuración por variables de entorno
 
-```powershell
-Copy-Item .env.example .env
+La tabla de variables de entorno, incluidas `DB_SSL`, `DB_SSL_CA` y
+`EXTERNAL_TIMEOUT_SECONDS`, esta en el [README del servicio](README.md),
+seccion **Configuracion**. `.env.example` es el punto de partida:
+
+```bash
+cd services/panel-service
+cp .env.example .env
 ```
-
-Editar `.env` con los valores reales:
-
-```ini
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_NAME=db_panel
-DB_USER=panel_app
-DB_PASS=clave-panel-app
-
-# Debe ser el MISMO valor que el del servicio de usuarios: es lo que
-# permite verificar la firma del token.
-JWT_SECRET=<cadena aleatoria de 32+ caracteres>
-
-# Servicio de usuarios (opcional). Si se deja vacio, el panel funciona
-# sin resolver la identidad de quien registra.
-USERS_BASE_URL=http://localhost:3001
-
-# Servicio de evaluacion de riesgo (opcional). Si se deja vacio, el panel
-# funciona sin la correlacion de nivel de riesgo.
-RISK_EVALUATION_BASE_URL=http://localhost:3002
-
-PORT=5003
-FLASK_DEBUG=false
-LOG_LEVEL=INFO
-CORS_ALLOW_ORIGIN=http://localhost:5174
-```
-
-> `.env` **no se versiona**: está en el `.gitignore` raíz. Solo se versiona
-> `.env.example`.
 
 ---
 
@@ -158,27 +133,19 @@ Debe mostrar **21 columnas** y **9 índices** (8 propios + PRIMARY).
 
 ## 5. Arrancar el backend
 
+El arranque en local esta en el [README del servicio](README.md), seccion
+**Ejecucion local**. El comando minimo es:
+
+```bash
+cd services/panel-service
+python run.py            # http://localhost:5005
+```
+
+Comprobacion de salud:
+
 ```powershell
-python run.py
+(Invoke-WebRequest "http://127.0.0.1:5005/api/panel/health" -UseBasicParsing).Content
 ```
-
-**Salida esperada:**
-```
-Panel institucional escuchando en el puerto 5003
-```
-
-Comprobar que responde y que ve la base de datos:
-
-```powershell
-(Invoke-WebRequest "http://127.0.0.1:5003/api/panel/health" -UseBasicParsing).Content
-```
-
-**Respuesta esperada:**
-```json
-{"database":"OK","service":"panel","status":"OK"}
-```
-
-> `"database":"OK"` confirma que el pool MySQL conectó de verdad.
 
 ---
 
@@ -311,14 +278,14 @@ $H = @{ Authorization = "Bearer " + (node -e "const j=require('jsonwebtoken');co
   $b = @{estudiante_codigo="2026$('{0:D4}' -f $_)"; modalidad="presencial"; tipo="orientacion";
          fecha_atencion="2026-03-15T10:00:00";
          indicadores=@{phq9=8;gad7=6;online_stress=6;financial_stress=5;exercise_freq=3;social_activity=6;sleep_hours=7}} | ConvertTo-Json -Depth 4
-  Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:5003/api/panel/atencion" -Headers $H -ContentType "application/json" -Body $b | Out-Null
+  Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:5005/api/panel/atencion" -Headers $H -ContentType "application/json" -Body $b | Out-Null
 }
 
 # 2. Lo que HAY en la base de datos
 docker exec panel-mysql mysql -upanel_app -pclave-panel-app db_panel -e "SELECT tipo, COUNT(*) n FROM atenciones GROUP BY tipo;"
 
 # 3. Lo que VE el panel
-(Invoke-RestMethod -Uri "http://127.0.0.1:5003/api/panel/estadisticas" -Headers $H) | ConvertTo-Json -Depth 4
+(Invoke-RestMethod -Uri "http://127.0.0.1:5005/api/panel/estadisticas" -Headers $H) | ConvertTo-Json -Depth 4
 ```
 
 **Esperado:** el grupo de 4 **existe** en la base de datos pero **no aparece**
@@ -341,14 +308,14 @@ Solo debe listar `db_panel` e `information_schema` / `performance_schema`.
 cd services\panel-service
 docker build -t panel-service:latest .
 
-docker run -d --name panel-svc -p 5003:5003 --env-file .env panel-service:latest
+docker run -d --name panel-svc -p 5005:5005 --env-file .env panel-service:latest
 ```
 
 En Docker Desktop, el contenedor usa `host.docker.internal` para alcanzar un
 MySQL del host:
 
 ```powershell
-docker run -d --name panel-svc -p 5004:5003 --env-file .env -e DB_HOST=host.docker.internal panel-service:latest
+docker run -d --name panel-svc -p 5004:5005 --env-file .env -e DB_HOST=host.docker.internal panel-service:latest
 ```
 
 Comprobar que el `.env` **no** quedó dentro de la imagen:
@@ -363,23 +330,11 @@ docker run --rm --entrypoint sh panel-service:latest -c "ls -a /app | grep -c '^
 
 ## 10. Modelo de agrupamiento
 
-```powershell
-cd services\panel-service
-
-# Verificar la integridad del dataset
-python ml\download_dataset.py
-
-# Reentrenar (reproduce exactamente los mismos números)
-python ml\train_clustering.py
-```
-
-**Salida esperada:**
-```
-Modelo principal  : K-Means k=8 silueta=0.103353 davies=1.797103
-Linea base        : jerarquico k=2 silueta=0.059057 davies=3.803741
-```
-
-La metodología completa está en [`ml/README.md`](ml/README.md).
+El modelo (K-Means, `k=2`), su metodologia, la evaluacion de estabilidad
+entre ejecuciones (ARI) y las metricas estan en
+[`ml/README.md`](ml/README.md). Los artefactos (`modelo_clustering.joblib`
+y `perfiles_clusteres.json`) se versionan en el repositorio y viajan dentro
+de la imagen de Docker.
 
 ---
 
@@ -408,20 +363,17 @@ Base de datos propia `db_panel`, una sola tabla:
 
 ## 12. Endpoints
 
-Base `/api/panel`. Todos exigen `Authorization: Bearer <jwt>` con rol
-`PERSONAL_UNAYOE` o `ADMINISTRADOR`, salvo `/api/panel/health`.
+El contrato completo de las cinco rutas del panel esta en
+[`openapi/panel.yaml`](../../openapi/panel.yaml) y el resumen en el
+[README del servicio](README.md), seccion **Endpoints**.
 
-| Método | Ruta | Descripción |
+| Metodo | Ruta | Que hace |
 |---|---|---|
-| POST | `/api/panel/atencion` | Registra una atención. `201` |
-| GET | `/api/panel/estadisticas` | KPIs, distribuciones y perfiles de IA. `200` |
-| GET | `/api/panel/informe` | Informe CSV del periodo. `200` |
-| GET | `/api/panel/atenciones` | Listado paginado con filtros. `200` |
-| GET | `/api/panel/health` | Estado del servicio y de la base de datos. `200` / `503` |
-
-Parámetro opcional `?periodo=YYYY-MM` en estadísticas, informe y listado.
-
-Especificación completa: `openapi/panel.yaml` (raíz del repositorio).
+| GET | `/api/panel/health` | Comprobacion de salud (publica) |
+| POST | `/api/panel/atencion` | Registra una atencion |
+| GET | `/api/panel/atenciones` | Listado paginado de atenciones |
+| GET | `/api/panel/estadisticas` | Estadisticas anonimizadas con k=5 |
+| GET | `/api/panel/informe` | Informe CSV del periodo |
 
 ---
 
@@ -471,84 +423,44 @@ git push -u origin feature/panel-gerardo
 
 ---
 
-## 14. Pendiente de despliegue (no corresponde a este módulo)
+## 14. Despliegue en Render y TiDB
+El despliegue del servicio esta definido en el [README del servicio](README.md),
+seccion **Despliegue en Render + TiDB**, y en [`render.yaml`](render.yaml).
 
-Estas tareas son de infraestructura y las realiza el equipo:
+Pasos que dependen de cuentas externas (los hace la persona, no el repositorio):
 
-| Tarea | Por qué |
-|---|---|
-| Publicar `/panel` en Azure API Management | El frontend en producción llama al gateway |
-| Entregar `VITE_APIM_SUBSCRIPTION_KEY` | Sin clave el frontend no puede llamar al gateway |
-| Desplegar `panel-service` en Render | Hoy solo existe la imagen Docker local |
-| Redesplegar `users` y `riskEvaluation` | Los endpoints `by-code` y `summary` son nuevos |
-| Crear el usuario institucional | Requiere `UPDATE` en la base de datos de `users` |
-
-**Mientras tanto**, el panel funciona por completo salvo la correlación de
-riesgo: sin `riskEvaluation` desplegado, la columna «Riesgo» muestra «Sin
-correlación» y `riesgo_disponible` es `false`. Es una degradación
-deliberada, no un fallo.
+| Paso | Quien | Que hace |
+|---|---|---|
+| Crear la base `db_panel` en TiDB Cloud y aplicar el esquema | Persona responsable | `python scripts/init_db.py` o el editor SQL |
+| Cargar las variables en el panel de Render | Persona responsable | `JWT_SECRET` (el mismo de Usuarios), `DB_*`, `USERS_BASE_URL`, `RISK_EVALUATION_BASE_URL`, `CORS_ALLOW_ORIGIN` |
+| Redesplegar Usuarios y Evaluacion con los cambios aprobados | Administradores de esos servicios | El panel degrada solo si no se han desplegado |
+| Registrar la ruta `/panel` en el APIM | Administracion del gateway | Operaciones = las 5 de `openapi/panel.yaml` |
 
 ---
 
 ## 15. Estructura
 
-```text
-services/panel-service/
-├── app/
-│   ├── domain/                    # Sin dependencias de frameworks
-│   │   ├── entities/              # Atencion, PerfilCluster
-│   │   └── services/              # privacidad_k5 (regla k=5), fecha_hora (UTC)
-│   ├── application/               # Casos de uso y puertos (interfaces)
-│   │   ├── interfaces/            # 5 puertos: atenciones, clustering, riesgo, usuarios, personal
-│   │   └── use_cases/             # 5 casos de uso
-│   ├── infrastructure/            # Adaptadores concretos
-│   │   ├── persistence/           # SQLAlchemy
-│   │   ├── ml/                    # Carga del modelo .joblib + artefactos
-│   │   └── clients/               # Clientes HTTP (usuarios, riesgo, personal)
-│   ├── presentation/              # Rutas, DTOs Pydantic, middleware JWT
-│   └── config/settings.py         # Configuración desde .env
-├── db/schema.sql                  # Esquema versionado
-├── scripts/
-│   ├── init_db.py                 # Aplica esquema + migraciones (idempotente)
-│   └── verificacion_e2e.py        # 26 comprobaciones end-to-end
-├── ml/                            # Entrenamiento del modelo
-│   ├── train_clustering.py
-│   ├── download_dataset.py
-│   ├── data/mental_health_indicators.csv
-│   └── resultados/comparativa.json
-├── tests/                         # 79 pruebas
-├── Dockerfile
-├── requirements.txt
-├── .env.example
-└── run.py
+La estructura de carpetas del servicio esta en el
+[README del servicio](README.md), seccion **Estructura**. A nivel de
+repositorio:
 
-web-panel/frontend/
-├── src/
-│   ├── app/                       # AppShell (barra lateral), AuthContext, RutaProtegida, navegación
-│   ├── components/                # Avisos (IA, k=5), Gráficos (SVG sin librería)
-│   ├── pages/                     # Login, Dashboard, RegistroAtencion, Informes, Preparada
-│   ├── services/                  # Cliente HTTP y operaciones del panel
-│   ├── types.ts  validation.ts  config.ts  styles.css
-└── package.json
+```
+services/panel-service/   Microservicio del panel (este modulo)
+web-panel/frontend/       Panel web
+openapi/panel.yaml        Contrato de la API
 ```
 
 ---
 
 ## 16. Resumen de verificación
 
-| Comprobación | Comando | Resultado esperado |
-|---|---|---|
-| Instalación | `pip install -r requirements.txt` | Sin errores |
-| Entorno | `python -c "import flask, sklearn"` | Sin errores |
-| Esquema | `python scripts\init_db.py` | `Esquema aplicado correctamente` |
-| Tabla | `DESCRIBE atenciones` | 21 columnas, 9 índices |
-| Backend | `python run.py` | Escucha en el 5003 |
-| Salud | `GET /api/panel/health` | `{"database":"OK",...}` |
-| Tests backend | `pytest tests -q` | **79 passed** |
-| E2E | `python scripts\verificacion_e2e.py` | 26/26 |
-| Tests frontend | `npm test` | **32 passed** |
-| Tipos | `npm run typecheck` | exit 0 |
-| Build | `npm run build` | exit 0 |
-| Modelo | `python ml\train_clustering.py` | k=8, silueta 0.103353 |
-| Aislamiento | `SHOW DATABASES` | Solo `db_panel` |
-| Imagen | `docker build` + `grep -c '^\.env$'` | `0` |
+Las pruebas automaticas estan en el [README del servicio](README.md), seccion
+**Pruebas**. El checklist manual completo esta en la seccion **Verificacion
+completa** de este documento.
+
+| Comprobacion | Como |
+|---|---|
+| Suite del microservicio | `pytest -q` en `services/panel-service` |
+| Contrato OpenAPI | `openapi/panel.yaml` coincide con las rutas del codigo |
+| Frontend | `npm run typecheck` y `npm test` en `web-panel/frontend` |
+| Privacidad k=5 | Un grupo con menos de cinco estudiantes no aparece |

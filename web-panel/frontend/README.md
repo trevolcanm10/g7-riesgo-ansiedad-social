@@ -10,7 +10,7 @@ la barra lateral, el enrutado y la proteccion de sesion ya estan listos para
 que nuevos modulos conecten sus pantallas.
 
 > **Guia completa de instalacion, ejecucion, verificacion y publicacion:**
-> [`README_MODULO_4.md`](../../README_MODULO_4.md) en la raiz del repositorio.
+> [`README_MODULO_4.md`](../../services/panel-service/README_MODULO_4.md) del modulo del panel.
 > Este documento describe el frontend en detalle.
 
 ---
