@@ -29,27 +29,27 @@ class GetPreventiveAlertsUseCase:
     def _alerts_by_level(self, level: str) -> list[PreventiveAlert]:
         return {
             "BAJA": [
-                PreventiveAlert("AB-001", "Carga academica manejada.", "informacion"),
+                PreventiveAlert("AB-001", "Carga académica manejable.", "informacion"),
             ],
             "MODERADA": [
                 PreventiveAlert(
-                    "AB-002", "Carga semanal elevada; reparte tareas.", "advertencia"
+                    "AB-002", "Carga semanal moderada; distribuye tus tareas.", "advertencia"
                 ),
                 PreventiveAlert(
-                    "AB-003", "Dedica una sesion de descanso activo.", "advertencia"
+                    "AB-003", "Programa pausas durante la semana.", "advertencia"
                 ),
             ],
             "ALTA": [
-                PreventiveAlert("AB-004", "Sobrecarga académica importante.", "alto"),
+                PreventiveAlert("AB-004", "Carga académica alta esta semana.", "alto"),
                 PreventiveAlert(
-                    "AB-005", "Revisa prioridades y difunde trabajos a tiempo.", "alto"
+                    "AB-005", "Revisa prioridades y planifica las entregas a tiempo.", "alto"
                 ),
                 PreventiveAlert(
-                    "AB-006", "Programa pausas y descanso; evita sacrificios nocturnos.",
+                    "AB-006", "Programa pausas y reserva tiempo para descansar.",
                     "alto",
                 ),
                 PreventiveAlert(
-                    "AB-007", "Si la presion persiste, avisa a tutoring o salud mental.",
+                    "AB-007", "Si necesitas apoyo, contacta a tu tutoría académica.",
                     "alto",
                 ),
             ],
@@ -77,9 +77,9 @@ class GetPreventiveAlertsUseCase:
     def _recommendation(self, level: str) -> str:
         if level == "ALTA":
             return (
-                "Reducir cargas inmediatas, priorizar examenes y entregas, "
-                "y pedir apoyo si la presion aumenta."
+                "Reduce las tareas inmediatas, prioriza exámenes y entregas, "
+                "y solicita apoyo académico si lo necesitas."
             )
         if level == "MODERADA":
-            return "Repartir tareas y programar descansos antes de que la carga crezca."
+            return "Distribuye las tareas y programa descansos durante la semana."
         return "Mantener el equilibrio, revisar la agenda y avanzar con constancia."

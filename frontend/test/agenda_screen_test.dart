@@ -1,7 +1,7 @@
 import 'package:ansiedad_ml_app/core/app_colors.dart';
-import 'package:ansiedad_ml_app/data/datasources/local/secure_session_store.dart';
 import 'package:ansiedad_ml_app/data/datasources/remote/api_service.dart';
 import 'package:ansiedad_ml_app/data/datasources/remote/auth_remote_datasource.dart';
+import 'package:ansiedad_ml_app/data/repositories/agenda_remote_repository.dart';
 import 'package:ansiedad_ml_app/data/repositories/auth_repository_impl.dart';
 import 'package:ansiedad_ml_app/domain/entities/actividad_academica.dart';
 import 'package:ansiedad_ml_app/domain/repositories/agenda_repository.dart';
@@ -27,6 +27,43 @@ class _Repository implements AgendaRepository {
 
   @override
   Future<void> guardar(List<ActividadAcademica> next) async => items = next;
+}
+
+class _InsightRepository extends AgendaRemoteRepository {
+  _InsightRepository(this.items)
+    : super(ApiService(), 'http://localhost/agenda/actividades');
+  final List<ActividadAcademica> items;
+  Map<String, num>? indicators;
+
+  @override
+  Future<List<ActividadAcademica>> obtener() async => items;
+
+  @override
+  Future<AgendaWeeklyClassification> clasificarSemana(
+    Map<String, num> values,
+  ) async {
+    indicators = values;
+    return const AgendaWeeklyClassification(
+      nivel: 'ALTA',
+      probabilidadNivel: 0.8,
+      probabilidades: {'BAJA': 0.1, 'MODERADA': 0.1, 'ALTA': 0.8},
+    );
+  }
+
+  @override
+  Future<AgendaPreventiveAlerts> obtenerAlertas(
+    Map<String, num> values,
+  ) async => const AgendaPreventiveAlerts(
+    nivel: 'ALTA',
+    alertas: [
+      {
+        'codigo': 'AB-004',
+        'mensaje': 'Carga académica alta esta semana.',
+        'severidad': 'alto',
+      },
+    ],
+    recomendacion: 'Planifica las entregas.',
+  );
 }
 
 class FakeSessionStore implements SessionStore {
@@ -64,7 +101,7 @@ ActividadAcademica _activity(
 
 Future<void> _pump(
   WidgetTester tester,
-  _Repository repository, {
+  AgendaRepository repository, {
   Size size = const Size(375, 667),
 }) async {
   await tester.binding.setSurfaceSize(size);
@@ -101,6 +138,23 @@ Future<void> _pump(
 }
 
 void main() {
+  testWidgets(
+    'muestra clasificación y avisos remotos con indicadores semanales',
+    (tester) async {
+      final repo = _InsightRepository([
+        _activity('1', DateTime.now(), 'Entrega'),
+      ]);
+      await _pump(tester, repo);
+      expect(repo.indicators?['num_actividades'], 1);
+      expect(find.text('ALTA'), findsOneWidget);
+      expect(
+        find.textContaining('Carga académica alta esta semana.'),
+        findsOneWidget,
+      );
+      expect(find.text('Planifica las entregas.'), findsOneWidget);
+      expect(find.textContaining('Estimación local de respaldo'), findsNothing);
+    },
+  );
   testWidgets(
     'calendar uses current month, day activities and month navigation',
     (tester) async {

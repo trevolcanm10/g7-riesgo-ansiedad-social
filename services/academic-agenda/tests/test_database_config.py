@@ -1,11 +1,20 @@
+from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock
 
+import jwt
 import pytest
 from mysql.connector import Error as MySQLError
 
 import app
 from src.infrastructure.persistence import mysql_database
-from src.infrastructure.services.jwt_token_service import JwtTokenService
+
+
+def _test_token(secret):
+    return jwt.encode(
+        {"userId": 42, "role": "ESTUDIANTE",
+         "exp": datetime.now(timezone.utc) + timedelta(hours=1)},
+        secret, algorithm="HS256",
+    )
 
 
 def test_tidb_tls_verifies_ca_and_hostname(monkeypatch, tmp_path):
@@ -49,7 +58,7 @@ def test_production_db_failure_keeps_crud_unavailable(monkeypatch):
     monkeypatch.setattr(app, "MySQLDatabase", Mock(side_effect=MySQLError("unavailable")))
 
     client = app.create_app().test_client()
-    token = JwtTokenService("test-only-secret").generate_access_token(42, "ESTUDIANTE")
+    token = _test_token("test-only-secret")
     response = client.get("/actividades", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 503
     assert response.get_json()["mensaje"] == "Base de datos no disponible"
@@ -64,7 +73,7 @@ def test_production_rejects_plaintext_db_connection(monkeypatch):
     monkeypatch.setattr(app, "MySQLDatabase", database)
 
     client = app.create_app().test_client()
-    token = JwtTokenService("test-only-secret").generate_access_token(42, "ESTUDIANTE")
+    token = _test_token("test-only-secret")
     response = client.get("/actividades", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 503
     database.assert_not_called()

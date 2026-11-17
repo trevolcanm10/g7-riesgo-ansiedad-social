@@ -22,6 +22,10 @@ class _AgendaScreenState extends State<AgendaScreen> {
   bool _loading = true;
   bool _listView = false;
   String? _error;
+  AgendaWeeklyClassification? _classification;
+  AgendaPreventiveAlerts? _alerts;
+  DateTime? _insightWeek;
+  int _insightRequest = 0;
   late final AuthViewModel _auth;
 
   @override
@@ -48,7 +52,10 @@ class _AgendaScreenState extends State<AgendaScreen> {
     });
     try {
       final items = await _repo.obtener();
-      if (mounted) setState(() => _items = items);
+      if (mounted) {
+        setState(() => _items = items);
+        _refreshInsights();
+      }
     } catch (e, stackTrace) {
       if (kDebugMode) debugPrint('ERROR loading agenda: $e\n$stackTrace');
       if (mounted) setState(() => _error = 'No se pudo cargar la agenda.');
@@ -68,6 +75,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
           _items = saved;
           _error = null;
         });
+        _refreshInsights();
       }
       return true;
     } catch (_) {
@@ -80,6 +88,36 @@ class _AgendaScreenState extends State<AgendaScreen> {
 
   bool _sameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
+  DateTime get _weekDate => _listView ? DateTime.now() : _selected;
+
+  Future<void> _refreshInsights() async {
+    final request = ++_insightRequest;
+    final weekDate = _weekDate;
+    final week = calcularCargaSemanal(_items, weekDate).lunes;
+    setState(() {
+      _insightWeek = week;
+      _classification = null;
+      _alerts = null;
+    });
+    if (_repo is! AgendaRemoteRepository) return;
+    final remote = _repo;
+    final indicators = indicadoresCargaSemanal(_items, weekDate);
+    try {
+      final classification = await remote.clasificarSemana(indicators);
+      if (!mounted || request != _insightRequest) return;
+      setState(() => _classification = classification);
+    } catch (error) {
+      if (kDebugMode) debugPrint('Clasificación semanal no disponible: $error');
+    }
+    try {
+      final alerts = await remote.obtenerAlertas(indicators);
+      if (!mounted || request != _insightRequest) return;
+      setState(() => _alerts = alerts);
+    } catch (error) {
+      if (kDebugMode) debugPrint('Avisos preventivos no disponibles: $error');
+    }
+  }
+
   String _date(DateTime d) =>
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
@@ -207,13 +245,16 @@ class _AgendaScreenState extends State<AgendaScreen> {
             children: [
               IconButton.filledTonal(
                 tooltip: 'Mes anterior',
-                onPressed: () => setState(
-                  () => _selected = DateTime(
-                    _selected.year,
-                    _selected.month - 1,
-                    1,
-                  ),
-                ),
+                onPressed: () {
+                  setState(
+                    () => _selected = DateTime(
+                      _selected.year,
+                      _selected.month - 1,
+                      1,
+                    ),
+                  );
+                  _refreshInsights();
+                },
                 icon: const Icon(Icons.chevron_left),
               ),
               Expanded(
@@ -241,13 +282,16 @@ class _AgendaScreenState extends State<AgendaScreen> {
               ),
               IconButton.filledTonal(
                 tooltip: 'Mes siguiente',
-                onPressed: () => setState(
-                  () => _selected = DateTime(
-                    _selected.year,
-                    _selected.month + 1,
-                    1,
-                  ),
-                ),
+                onPressed: () {
+                  setState(
+                    () => _selected = DateTime(
+                      _selected.year,
+                      _selected.month + 1,
+                      1,
+                    ),
+                  );
+                  _refreshInsights();
+                },
                 icon: const Icon(Icons.chevron_right),
               ),
             ],
@@ -297,7 +341,15 @@ class _AgendaScreenState extends State<AgendaScreen> {
                       'agenda-day-${day.year}-${day.month}-${day.day}',
                     ),
                     borderRadius: BorderRadius.circular(16),
-                    onTap: () => setState(() => _selected = day),
+                    onTap: () {
+                      setState(() => _selected = day);
+                      if (!_sameDay(
+                        calcularCargaSemanal(_items, day).lunes,
+                        _insightWeek ?? DateTime(1900),
+                      )) {
+                        _refreshInsights();
+                      }
+                    },
                     child: Container(
                       margin: const EdgeInsets.all(2),
                       decoration: BoxDecoration(
@@ -377,15 +429,21 @@ class _AgendaScreenState extends State<AgendaScreen> {
 
   Widget _weeklyLoad(AppColors colors, DateTime weekDate) {
     final carga = calcularCargaSemanal(_items, weekDate);
-    final label = switch (carga.nivel) {
-      NivelCargaAcademica.baja => 'BAJA',
-      NivelCargaAcademica.moderada => 'MODERADA',
-      NivelCargaAcademica.alta => 'ALTA',
-    };
-    final color = switch (carga.nivel) {
-      NivelCargaAcademica.baja => const Color(0xFF059669),
-      NivelCargaAcademica.moderada => const Color(0xFFD97706),
-      NivelCargaAcademica.alta => colors.danger,
+    final current =
+        _insightWeek != null && _sameDay(_insightWeek!, carga.lunes);
+    final remoteLevel = current ? _classification?.nivel : null;
+    final alerts = current ? _alerts : null;
+    final label =
+        remoteLevel ??
+        switch (carga.nivel) {
+          NivelCargaAcademica.baja => 'BAJA',
+          NivelCargaAcademica.moderada => 'MODERADA',
+          NivelCargaAcademica.alta => 'ALTA',
+        };
+    final color = switch (label) {
+      'BAJA' => const Color(0xFF059669),
+      'MODERADA' => const Color(0xFFD97706),
+      _ => colors.danger,
     };
     return Card(
       color: colors.card,
@@ -423,6 +481,25 @@ class _AgendaScreenState extends State<AgendaScreen> {
                 'Estimación parcial: faltan duraciones',
                 style: TextStyle(color: colors.textTertiary),
               ),
+            if (remoteLevel == null)
+              Text(
+                'Estimación local de respaldo (10/20 h)',
+                style: TextStyle(color: colors.textTertiary),
+              ),
+            if (alerts != null) ...[
+              const SizedBox(height: 8),
+              ...alerts.alertas.map(
+                (alert) => Text(
+                  '• ${alert['mensaje'] ?? ''}',
+                  style: TextStyle(color: colors.textPrimary),
+                ),
+              ),
+              if (alerts.recomendacion.isNotEmpty)
+                Text(
+                  alerts.recomendacion,
+                  style: TextStyle(color: colors.textTertiary),
+                ),
+            ],
           ],
         ),
       ),

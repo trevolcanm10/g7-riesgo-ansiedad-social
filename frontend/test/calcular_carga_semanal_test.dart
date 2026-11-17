@@ -2,37 +2,84 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ansiedad_ml_app/domain/entities/actividad_academica.dart';
 import 'package:ansiedad_ml_app/domain/services/calcular_carga_semanal.dart';
 
-ActividadAcademica actividad(DateTime fecha, {double? horas, bool completada = false}) =>
-    ActividadAcademica(
-      id: '${fecha.microsecondsSinceEpoch}-$horas-$completada',
-      titulo: 'Actividad', curso: 'Curso', tipo: 'tarea', fecha: fecha,
-      hora: null, duracionEstimadaHoras: horas, prioridad: 'media',
-      descripcion: '', completada: completada,
-    );
+ActividadAcademica actividad(
+  DateTime fecha, {
+  double? horas,
+  bool completada = false,
+}) => ActividadAcademica(
+  id: '${fecha.microsecondsSinceEpoch}-$horas-$completada',
+  titulo: 'Actividad',
+  curso: 'Curso',
+  tipo: 'tarea',
+  fecha: fecha,
+  hora: null,
+  duracionEstimadaHoras: horas,
+  prioridad: 'media',
+  descripcion: '',
+  completada: completada,
+);
 
 void main() {
   final miercoles = DateTime(2026, 11, 11);
 
-  test('semana local inclusiva de lunes a domingo y límites de 10 y 20 horas', () {
-    final lunes = DateTime(2026, 11, 9);
-    final domingo = DateTime(2026, 11, 15);
-    final anterior = DateTime(2026, 11, 8);
-    final siguiente = DateTime(2026, 11, 16);
-    final diez = calcularCargaSemanal([
-      actividad(lunes, horas: 4), actividad(domingo, horas: 6),
-      actividad(anterior, horas: 100), actividad(siguiente, horas: 100),
-    ], miercoles);
-    expect(diez.lunes, lunes);
-    expect(diez.domingo, domingo);
-    expect(diez.horasConocidas, 10);
-    expect(diez.pendientes, 2);
-    expect(diez.nivel, NivelCargaAcademica.moderada);
+  test(
+    'genera los diez indicadores de actividades pendientes de la semana',
+    () {
+      final lunes = DateTime(2026, 11, 9);
+      final martes = DateTime(2026, 11, 10);
+      final items = [
+        actividad(lunes, horas: 2),
+        actividad(martes, horas: 3),
+        actividad(martes),
+        actividad(miercoles, horas: 8, completada: true),
+        actividad(DateTime(2026, 11, 16), horas: 9),
+      ];
+      final result = indicadoresCargaSemanal(items, miercoles, ahora: lunes);
+      expect(result['horas_totales'], 5);
+      expect(result['num_actividades'], 3);
+      expect(result['num_entregas'], 3);
+      expect(result['num_urgentes_48h'], 3);
+      expect(result['dias_con_actividades'], 2);
+      expect(result['max_horas_dia'], 3);
+      expect(result['concentracion_3dias'], 1);
+      expect(result['num_sin_duracion'], 1);
+      expect(result.length, 10);
+    },
+  );
 
-    final veinte = calcularCargaSemanal([actividad(lunes, horas: 20)], miercoles);
-    expect(veinte.nivel, NivelCargaAcademica.moderada);
-    expect(calcularCargaSemanal([actividad(lunes, horas: 9.99)], miercoles).nivel, NivelCargaAcademica.baja);
-    expect(calcularCargaSemanal([actividad(lunes, horas: 20.01)], miercoles).nivel, NivelCargaAcademica.alta);
-  });
+  test(
+    'semana local inclusiva de lunes a domingo y límites de 10 y 20 horas',
+    () {
+      final lunes = DateTime(2026, 11, 9);
+      final domingo = DateTime(2026, 11, 15);
+      final anterior = DateTime(2026, 11, 8);
+      final siguiente = DateTime(2026, 11, 16);
+      final diez = calcularCargaSemanal([
+        actividad(lunes, horas: 4),
+        actividad(domingo, horas: 6),
+        actividad(anterior, horas: 100),
+        actividad(siguiente, horas: 100),
+      ], miercoles);
+      expect(diez.lunes, lunes);
+      expect(diez.domingo, domingo);
+      expect(diez.horasConocidas, 10);
+      expect(diez.pendientes, 2);
+      expect(diez.nivel, NivelCargaAcademica.moderada);
+
+      final veinte = calcularCargaSemanal([
+        actividad(lunes, horas: 20),
+      ], miercoles);
+      expect(veinte.nivel, NivelCargaAcademica.moderada);
+      expect(
+        calcularCargaSemanal([actividad(lunes, horas: 9.99)], miercoles).nivel,
+        NivelCargaAcademica.baja,
+      );
+      expect(
+        calcularCargaSemanal([actividad(lunes, horas: 20.01)], miercoles).nivel,
+        NivelCargaAcademica.alta,
+      );
+    },
+  );
 
   test('excluye duraciones ausentes o inválidas y actividades completadas', () {
     final result = calcularCargaSemanal([
@@ -49,12 +96,18 @@ void main() {
     expect(result.nivel, NivelCargaAcademica.baja);
   });
 
-  test('al cambiar estado o borrar una actividad se recalcula con la nueva lista', () {
-    final original = actividad(miercoles, horas: 21);
-    expect(calcularCargaSemanal([original], miercoles).nivel, NivelCargaAcademica.alta);
-    final completada = original.copyWith(completada: true);
-    expect(calcularCargaSemanal([completada], miercoles).horasConocidas, 0);
-    expect(calcularCargaSemanal([completada], miercoles).completadas, 1);
-    expect(calcularCargaSemanal([], miercoles).pendientes, 0);
-  });
+  test(
+    'al cambiar estado o borrar una actividad se recalcula con la nueva lista',
+    () {
+      final original = actividad(miercoles, horas: 21);
+      expect(
+        calcularCargaSemanal([original], miercoles).nivel,
+        NivelCargaAcademica.alta,
+      );
+      final completada = original.copyWith(completada: true);
+      expect(calcularCargaSemanal([completada], miercoles).horasConocidas, 0);
+      expect(calcularCargaSemanal([completada], miercoles).completadas, 1);
+      expect(calcularCargaSemanal([], miercoles).pendientes, 0);
+    },
+  );
 }

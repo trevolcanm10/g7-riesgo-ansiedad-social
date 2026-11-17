@@ -24,15 +24,6 @@ def test_accepts_users_jwt_claims_and_normalizes_user_id():
     assert claims["role"] == "ESTUDIANTE"
 
 
-def test_agenda_issues_users_compatible_claims():
-    service = JwtTokenService("shared-test-secret")
-    token = service.generate_access_token(42, "ESTUDIANTE")
-    payload = jwt.decode(token, "shared-test-secret", algorithms=["HS256"])
-    assert payload["userId"] == 42
-    assert "user_id" not in payload
-    assert service.verify_access_token(token)["user_id"] == 42
-
-
 @pytest.mark.parametrize("claims,secret", [
     ({"userId": 42, "role": "ESTUDIANTE", "exp": 1}, "shared-test-secret"),
     ({"userId": 42, "role": "OTRO"}, "shared-test-secret"),

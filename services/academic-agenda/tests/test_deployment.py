@@ -1,5 +1,8 @@
+from datetime import datetime, timedelta, timezone
+
+import jwt
+
 from app import create_app
-from src.infrastructure.services.jwt_token_service import JwtTokenService
 
 
 def test_production_without_db_keeps_health_ml_jwt_and_controlled_crud(monkeypatch):
@@ -13,8 +16,10 @@ def test_production_without_db_keeps_health_ml_jwt_and_controlled_crud(monkeypat
     assert health.get_json()["ml_predictor_available"] is True
     assert client.post("/auth/login", json={"user_id": 1}).status_code == 404
 
-    token = JwtTokenService("deployment-test-secret").generate_access_token(
-        42, "ESTUDIANTE"
+    token = jwt.encode(
+        {"userId": 42, "role": "ESTUDIANTE",
+         "exp": datetime.now(timezone.utc) + timedelta(hours=1)},
+        "deployment-test-secret", algorithm="HS256",
     )
     headers = {"Authorization": f"Bearer {token}"}
     assert client.get("/actividades").status_code == 401

@@ -1,5 +1,6 @@
 import json
 from unittest.mock import patch, MagicMock
+import pytest
 
 from src.presentation.http import create_http_app
 
@@ -41,7 +42,9 @@ def test_health():
     assert data["status"] == "OK"
 
 
-def test_login_endpoint_is_absent():
+@pytest.mark.parametrize("environment", ["development", "production"])
+def test_login_endpoint_is_absent(monkeypatch, environment):
+    monkeypatch.setenv("FLASK_ENV", environment)
     app = make_app()
     client = app.test_client()
     resp = client.post("/auth/login", json={"user_id": 42, "role": "ESTUDIANTE"})

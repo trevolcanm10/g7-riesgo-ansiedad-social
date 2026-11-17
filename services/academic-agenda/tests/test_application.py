@@ -155,3 +155,17 @@ def test_get_preventive_alerts_low_level():
     assert "nivel_carga" in result
     assert isinstance(result["alertas"], list)
     assert "recomendacion" in result
+
+
+def test_preventive_alert_texts_are_clear_spanish():
+    from src.application.use_cases.get_preventive_alerts import GetPreventiveAlertsUseCase
+
+    use_case = GetPreventiveAlertsUseCase()
+    for level in ("BAJA", "MODERADA", "ALTA"):
+        texts = [a.mensaje for a in use_case._alerts_by_level(level)]
+        texts.append(use_case._recommendation(level))
+        for value in texts:
+            assert "tutoring" not in value
+            assert "difunde trabajos" not in value
+            assert "academica" not in value
+            assert "presion" not in value
