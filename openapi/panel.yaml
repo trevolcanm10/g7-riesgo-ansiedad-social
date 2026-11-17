@@ -9,19 +9,21 @@ info:
     indicadores generados por un modelo de agrupamiento y genera el informe
     mensual en CSV.
 
-    **Privacidad (k=5).** Toda agrupación con menos de cinco estudiantes se
-    omite de la respuesta. Los grupos suprimidos no aparecen en ningún campo;
-    el campo `grupos_omitidos_por_privacidad` informa únicamente cuántos se
-    ocultaron.
+    **Privacidad (k=5).** Toda agrupacion con menos de cinco estudiantes se
+    omite de la respuesta. Los grupos suprimidos no aparecen en ningun campo:
+    el campo `grupos_omitidos` solo indica que hay grupos ocultos, nunca
+    cuantos. La misma regla se aplica a los totales: con menos de cinco
+    atenciones `total_atenciones` es nulo y, cuando hay grupos ocultos, el
+    total se redondea hacia abajo a un multiplo de cinco.
 
     **IA responsable.** Los perfiles devueltos por el modelo de agrupamiento
     son estimaciones orientativas y no constituyen un diagnóstico clínico.
     Provienen de un dataset sintético y no describen poblaciones reales.
 servers:
-  - url: http://localhost:5003
+  - url: http://localhost:5005
     description: Servidor de desarrollo local
-  - url: http://localhost:5003
-    description: Contenedor Docker de producción
+  - url: https://apim-g7-riesgo-ansiedad.azure-api.net/panel
+    description: API Management (produccion)
 tags:
   - name: Atenciones
     description: Registro y consulta de atenciones institucionales
@@ -194,10 +196,13 @@ paths:
         modalidad, estado y periodo, y los perfiles generados por el modelo de
         agrupamiento.
 
-        **Regla de privacidad k=5.** Toda agrupación con menos de cinco
-        estudiantes se omite por completo. El campo
-        `grupos_omitidos_por_privacidad` informa cuántos grupos se ocultaron
-        sin revelar su contenido.
+        **Regla de privacidad k=5.** Toda agrupacion con menos de cinco
+        estudiantes se omite por completo. El campo `grupos_omitidos` solo
+        indica que hay grupos ocultos, nunca cuantos, para que su numero no
+        permita reconstruir el tamano de los grupos suprimidos. Los totales
+        siguen la misma regla: `total_atenciones` es nulo si hay menos de
+        cinco atenciones y, cuando hay grupos ocultos, se redondea hacia abajo
+        a un multiplo de cinco (`total_atenciones_estimado`).
 
         Los perfiles de IA son estimaciones orientativas y no constituyen un
         diagnóstico clínico.
@@ -509,6 +514,7 @@ components:
         - riesgo
         - riesgo_omitidos
         - riesgo_disponible
+        - riesgo_motivo
       properties:
         cluster:
           type: integer
@@ -561,23 +567,41 @@ components:
         riesgo_disponible:
           type: boolean
           description: |
-            Indica si el microservicio de evaluación de riesgo respondió. Si
-            es false, el perfil se muestra sin la correlación de riesgo y el
+            Indica si el microservicio de evaluacion de riesgo respondio. Si
+            es false, el perfil se muestra sin la correlacion de riesgo y el
             panel funciona con normalidad.
+        riesgo_motivo:
+          type: string
+          enum:
+            - disponible
+            - sin_datos
+            - suprimido_k5
+            - no_configurado
+            - no_autorizado
+            - servicio_no_disponible
+          description: |
+            Motivo por el que un perfil no muestra correlacion de riesgo.
+            `disponible` significa que el microservicio respondio y que el
+            perfil tiene celdas publicables.
     Estadisticas:
       type: object
       required:
         - periodo
         - total_atenciones
+        - total_atenciones_estimado
         - requieren_seguimiento
+        - requieren_seguimiento_suprimido
         - por_tipo
         - por_modalidad
         - por_estado
         - por_periodo
         - perfiles_ia
-        - grupos_omitidos_por_privacidad
+        - grupos_omitidos
         - minimo_grupo_publicable
         - riesgo_disponible
+        - riesgo_motivo
+        - atenciones_sin_resolver
+        - atenciones_sin_resolver_suprimido
         - nota_ia
       properties:
         periodo:
@@ -586,10 +610,28 @@ components:
           description: Periodo consultado en formato YYYY-MM. Nulo si se solicitó todo el histórico.
         total_atenciones:
           type: integer
-          description: Total de atenciones del periodo
+          nullable: true
+          description: |
+            Total de atenciones del periodo. Es nulo cuando hay menos de cinco
+            atenciones: en ese caso no se publica el valor exacto para no
+            permitir reconstruir grupos pequenos.
+        total_atenciones_estimado:
+          type: boolean
+          description: |
+            Indica que el total es una cota inferior: cuando hay grupos
+            ocultos por la regla k=5, el total se redondea hacia abajo a un
+            multiplo de cinco.
         requieren_seguimiento:
           type: integer
-          description: Atenciones que requieren seguimiento
+          nullable: true
+          description: |
+            Atenciones que requieren seguimiento. Es nulo cuando el valor es
+            mayor que cero y menor que cinco.
+        requieren_seguimiento_suprimido:
+          type: boolean
+          description: |
+            Indica que el numero de atenciones que requieren seguimiento se
+            suprimio por ser menor que cinco.
         por_tipo:
           type: array
           items:
@@ -611,12 +653,12 @@ components:
           items:
             $ref: "#/components/schemas/PerfilIA"
           description: Perfiles del modelo de agrupamiento, sujetos a la regla k=5
-        grupos_omitidos_por_privacidad:
-          type: integer
-          minimum: 0
+        grupos_omitidos:
+          type: boolean
           description: |
-            Número de grupos ocultos por la regla de privacidad k=5. Se
-            informa la cantidad, nunca su contenido.
+            Indica que hay grupos ocultos por la regla de privacidad k=5. No
+            se publica cuantos, porque su numero permitiria reconstruir el
+            tamano de los grupos suprimidos.
         minimo_grupo_publicable:
           type: integer
           example: 5
@@ -624,14 +666,39 @@ components:
         riesgo_disponible:
           type: boolean
           description: |
-            Indica si el microservicio de evaluación de riesgo respondió y se
+            Indica si el microservicio de evaluacion de riesgo respondio y se
             pudo correlacionar con los perfiles de agrupamiento. Si es false, el
-            panel funciona con normalidad sin esa correlación.
+            panel funciona con normalidad sin esa correlacion.
+        riesgo_motivo:
+          type: string
+          enum:
+            - disponible
+            - sin_datos
+            - suprimido_k5
+            - no_configurado
+            - no_autorizado
+            - servicio_no_disponible
+          description: |
+            Motivo por el que no hay correlacion de riesgo. El panel lo
+            muestra en pantalla para que la ausencia de correlacion no sea
+            silenciosa.
+        atenciones_sin_resolver:
+          type: integer
+          nullable: true
+          description: |
+            Atenciones cuyo codigo de estudiante no pudo resolverse contra el
+            microservicio de usuarios, por lo que no se pueden correlacionar
+            con el nivel de riesgo. Es nulo cuando hay menos de cinco.
+        atenciones_sin_resolver_suprimido:
+          type: boolean
+          description: |
+            Indica que el conteo de atenciones sin resolver se suprimio por
+            ser menor que cinco.
         nota_ia:
           type: string
           description: |
             Aviso obligatorio: las estimaciones son orientativas y no
-            constituyen un diagnóstico clínico.
+            constituyen un diagnostico clinico.
           example: "Las estimaciones son orientativas y no constituyen un diagnóstico clínico. Los perfiles provienen de un dataset sintético y no describen poblaciones reales."
     MessageError:
       type: object

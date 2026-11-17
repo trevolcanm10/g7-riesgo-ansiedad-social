@@ -126,11 +126,14 @@ cp .env.example .env
 | `DB_NAME` | Base de datos **exclusiva** del panel | `db_panel` |
 | `DB_USER` | Usuario MySQL | (vacio) |
 | `DB_PASS` | Contrasena MySQL | (vacio) |
+| `DB_SSL` | Activa TLS en la conexion a la base (TiDB Cloud lo exige) | `false` |
+| `DB_SSL_CA` | Ruta del archivo CA privada dentro del contenedor | (vacio) |
 | `JWT_SECRET` | Secreto compartido con `users` para validar tokens | (vacio) |
 | `USERS_BASE_URL` | Base del servicio `users` (consulta HTTP) | (vacio) |
 | `RISK_EVALUATION_BASE_URL` | Base de `riskEvaluation` (correlacion de riesgo por HTTP) | (vacio) |
-| `PORT` | Puerto HTTP del servicio | `5003` |
+| `PORT` | Puerto HTTP del servicio | `5005` |
 | `CORS_ALLOW_ORIGIN` | Origenes permitidos, separados por coma | `http://localhost:5174` |
+| `EXTERNAL_TIMEOUT_SECONDS` | Espera maxima al consultar los microservicios externos | `45` |
 | `FLASK_DEBUG` | Modo debug | `false` |
 | `LOG_LEVEL` | Nivel de log | `INFO` |
 
@@ -148,14 +151,14 @@ que los caracteres especiales no rompen la cadena de conexion.
 ```bash
 pip install -r requirements.txt
 python scripts/init_db.py     # aplica db/schema.sql
-python run.py                 # http://localhost:5003
+python run.py                 # http://localhost:5005
 ```
 
 Con Docker:
 
 ```bash
 docker build -t panel-service:latest .
-docker run -d -p 5003:5003 --env-file .env panel-service:latest
+docker run -d -p 5005:5005 --env-file .env panel-service:latest
 ```
 
 ---
@@ -240,8 +243,19 @@ Se aplica a **toda** agrupacion que salga del dominio:
 
 Un grupo con menos de cinco estudiantes se descarta por completo: su
 contenido no aparece en ningun campo de la respuesta. El panel recibe
-`grupos_omitidos_por_privacidad`, que informa **cuantos** grupos se ocultaron
-sin revelar su contenido.
+`grupos_omitidos`, un indicador booleano de que hay grupos ocultos: **no** se
+publica cuantos son, porque su numero permitiria reconstruir el tamano de lo
+suprimido.
+
+La regla se aplica tambien a los **totales**, para que no se puedan deducir
+por resta:
+
+- `total_atenciones` es `null` cuando hay menos de cinco atenciones;
+- si hay grupos ocultos el total se redondea hacia abajo a un multiplo de
+  cinco y se marca con `total_atenciones_estimado`;
+- `requieren_seguimiento` sigue la misma regla, y
+  `requieren_seguimiento_suprimido` indica que el valor fue ocultado;
+- la fila `TOTAL` del informe CSV escribe `<5` en lugar del numero.
 
 ```python
 from app.domain.services.privacidad_k5 import filtrar_grupos
@@ -260,6 +274,59 @@ diagnosticos clinicos**. Provienen de un dataset sintetico (Kaggle, CC0) y no
 describen poblaciones reales. La arquitectura del adaptador no depende del
 dataset: reentrenar con datos reales de la institucion es sustituir el
 `.joblib` y volver a ejecutar `ml/train_clustering.py`.
+
+---
+
+## Datos sensibles, acceso y retencion
+
+- **Notas de la atencion:** se guardan en claro en la base del panel y solo las
+  puede leer el personal institucional (`PERSONAL_UNAYOE` o `ADMINISTRADOR`).
+  No aparecen en los agregados ni en el informe CSV.
+- **Registro de accesos:** el panel no guarda un registro individual de quien
+  consulta o registra una atencion. El rastro disponible es el de los
+  orquestadores (Render) y el campo `registrado_por` de cada atencion.
+- **Retencion:** las atenciones se conservan mientras el panel este operativo.
+  La limpieza de los datos de prueba es manual: ver `scripts/seed_demo.py`
+  (datos de demostracion etiquetados `DEMO-SINTETICO`).
+
+---
+
+## Despliegue en Render + TiDB
+
+El servicio se despliega como imagen Docker en el plan gratuito de Render,
+con la base en TiDB Cloud (plan Starter).
+
+1. **Base de datos.** Crear la base `db_panel` en TiDB Cloud y aplicar el
+   esquema, que es una sola sentencia:
+
+   ```bash
+   python scripts/init_db.py     # aplica db/schema.sql
+   ```
+
+   Comprobar con `SHOW TABLES;`. TiDB usa el **puerto 4000**.
+2. **TLS.** TiDB exige TLS: en el panel de Render hay que poner `DB_SSL=true`
+   y, si el servidor entrega una CA privada, `DB_SSL_CA` con la ruta del
+   archivo dentro del contenedor.
+3. **Variables en Render.** `DB_HOST`, `DB_PORT` (4000), `DB_NAME`
+   (`db_panel`), `DB_USER`, `DB_PASS`, `JWT_SECRET` (**el mismo que usa el
+   servicio de usuarios**), `USERS_BASE_URL`, `RISK_EVALUATION_BASE_URL` y
+   `CORS_ALLOW_ORIGIN` con el origen del panel web. Las credenciales solo se
+   escriben en el panel de Render, nunca en el repositorio ni en documentos.
+4. **Plantilla de despliegue.** [`render.yaml`](render.yaml) describe el
+   servicio web (plan gratuito, imagen Docker, chequeo de salud
+   `/api/panel/health`).
+5. **Notas del plan gratuito.** El servicio se duerme y la primera peticion
+   puede tardar: por eso `EXTERNAL_TIMEOUT_SECONDS` es configurable. El esquema
+   debe estar aplicado **antes** del primer despliegue, porque el chequeo de
+   salud consulta la base. Con el repositorio conectado por URL el despliegue
+   es manual (`Manual Deploy`).
+6. **Comprobacion.**
+
+   ```bash
+   curl https://TU-SERVICIO.onrender.com/api/panel/health
+   ```
+
+   Debe responder `{"database":"OK","service":"panel","status":"OK"}`.
 
 ---
 

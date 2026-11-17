@@ -137,7 +137,7 @@ separados.
 ### Lectura honesta de las metricas
 
 Una silueta de 0.10 esta **muy por debajo** de 0.25, que suele considerarse el
-umbral de una estructura util. La causa esknown: el dataset sintetico anade
+umbral de una estructura util. La causa es conocida: el dataset sintetico anade
 ruido gaussiano (sigma = 1) del mismo orden que la senal ponderada. Por eso:
 
 - Los perfiles se presentan como **orientativos** y nunca como clasificacion.
