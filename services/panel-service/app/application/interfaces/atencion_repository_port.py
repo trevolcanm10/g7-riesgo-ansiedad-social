@@ -63,5 +63,15 @@ class IAtencionRepository(ABC):
         """
 
     @abstractmethod
-    def total_atencioness(self, periodo: Optional[str] = None) -> int:
+    def total_atenciones(self, periodo: Optional[str] = None) -> int:
         """Cuenta el total de atenciones del periodo."""
+
+    @abstractmethod
+    def contar_sin_resolver(self, periodo: Optional[str] = None) -> int:
+        """Cuenta las atenciones cuyo codigo de estudiante no pudo resolverse.
+
+        Son las atenciones que no se pueden correlacionar con el nivel de
+        riesgo porque el microservicio de usuarios no devolvio el identificador
+        del estudiante. Se publica como conteo agregado, nunca con
+        identificadores.
+        """

@@ -104,18 +104,28 @@ def create_app(config_class=Config, crear_esquema: bool = False) -> Flask:
     # Adaptadores concretos.
     repository = SQLAlchemyAtencionRepository()
     clustering = ScikitClusteringAdapter()
+    # En el plan gratuito de Render los servicios se duermen: la primera
+    # peticion puede tardar mas de lo habitual. El tiempo de espera es
+    # configurable por entorno para no fallar en frio.
+    timeout_externo = int(app.config.get("EXTERNAL_TIMEOUT_SECONDS", 45))
     personal_externo = (
-        PersonalExternoClient(app.config.get("USERS_BASE_URL", ""))
+        PersonalExternoClient(
+            app.config.get("USERS_BASE_URL", ""), timeout=timeout_externo
+        )
         if app.config.get("USERS_BASE_URL")
         else None
     )
     usuarios = (
-        UsuariosClient(app.config.get("USERS_BASE_URL", ""))
+        UsuariosClient(
+            app.config.get("USERS_BASE_URL", ""), timeout=timeout_externo
+        )
         if app.config.get("USERS_BASE_URL")
         else None
     )
     evaluaciones_riesgo = (
-        EvaluacionesRiesgoClient(app.config.get("RISK_EVALUATION_BASE_URL", ""))
+        EvaluacionesRiesgoClient(
+            app.config.get("RISK_EVALUATION_BASE_URL", ""), timeout=timeout_externo
+        )
         if app.config.get("RISK_EVALUATION_BASE_URL")
         else None
     )
@@ -157,7 +167,7 @@ def create_app(config_class=Config, crear_esquema: bool = False) -> Flask:
 
 if __name__ == "__main__":
     aplicacion = create_app()
-    puerto = int(os.getenv("PORT", "5003"))
+    puerto = int(os.getenv("PORT", "5005"))
     debug = os.getenv("FLASK_DEBUG", "false").lower() == "true"
 
     if not aplicacion.config.get("JWT_SECRET"):

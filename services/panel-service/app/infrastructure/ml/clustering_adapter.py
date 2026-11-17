@@ -123,7 +123,7 @@ class ScikitClusteringAdapter(IClusteringPort):
             return None
 
     def perfiles_disponibles(self) -> List[PerfilCluster]:
-        """Devuelve la descripcion de cada perfil connu por el modelo."""
+        """Devuelve la descripcion de cada perfil conocido por el modelo."""
         return list(self._perfiles)
 
     @staticmethod

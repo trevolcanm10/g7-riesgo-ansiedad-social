@@ -5,7 +5,7 @@ FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-ENV PORT=5003
+ENV PORT=5005
 
 # Usuario no root (OWASP Docker Security).
 RUN groupadd -r appuser && useradd -r -g appuser appuser

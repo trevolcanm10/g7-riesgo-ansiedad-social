@@ -39,16 +39,19 @@ def crear_blueprint_panel(
 
         indicadores = dto.indicadores.model_dump(exclude_none=True) if dto.indicadores else {}
 
-        atencion = registrar_atencion.execute(
-            estudiante_codigo=dto.estudiante_codigo,
-            modalidad=dto.modalidad,
-            tipo=dto.tipo,
-            fecha_atencion=dto.fecha_atencion,
-            indicadores=indicadores,
-            notas=dto.notas,
-            seguimiento_requerido=dto.seguimiento_requerido,
-            token=token_actual(),
-        )
+        try:
+            atencion = registrar_atencion.execute(
+                estudiante_codigo=dto.estudiante_codigo,
+                modalidad=dto.modalidad,
+                tipo=dto.tipo,
+                fecha_atencion=dto.fecha_atencion,
+                indicadores=indicadores,
+                notas=dto.notas,
+                seguimiento_requerido=dto.seguimiento_requerido,
+                token=token_actual(),
+            )
+        except ValueError as error:
+            return jsonify({"error": str(error)}), 400
 
         return jsonify(atencion.to_dict()), 201
 
@@ -63,7 +66,7 @@ def crear_blueprint_panel(
         if periodo is not None and not _periodo_valido(periodo):
             return jsonify({"error": "El periodo debe tener el formato YYYY-MM."}), 400
 
-        return jsonify(obtener_estadisticas.execute(periodo)), 200
+        return jsonify(obtener_estadisticas.execute(periodo, token=token_actual())), 200
 
     @blueprint.get("/informe")
     @requiere_autorizacion

@@ -26,4 +26,4 @@ class IClusteringPort(ABC):
 
     @abstractmethod
     def perfiles_disponibles(self) -> List[PerfilCluster]:
-        """Devuelve la descripcion de cada perfil connue por el modelo."""
+        """Devuelve la descripcion de cada perfil conocido por el modelo."""

@@ -13,8 +13,15 @@ from typing import List, Optional
 from app.application.interfaces.atencion_repository_port import IAtencionRepository
 from app.application.interfaces.clustering_port import IClusteringPort
 from app.application.use_cases.obtener_riesgo_por_perfil import ObtenerRiesgoPorPerfil
+from app.domain.entities.motivo_riesgo import MotivoRiesgo
 from app.domain.entities.perfil_cluster import Grupo, PerfilCluster
-from app.domain.services.privacidad_k5 import MINIMO_GRUPO, filtrar_grupos, filtrar_perfiles
+from app.domain.services.privacidad_k5 import (
+    MINIMO_GRUPO,
+    conteo_publicable,
+    filtrar_grupos,
+    filtrar_perfiles,
+    total_publicable,
+)
 
 # Texto que acompana toda respuesta con resultados de IA. Es obligatorio por
 # la regla de IA responsable: las estimaciones son orientativas y no son
@@ -38,10 +45,8 @@ class ObtenerEstadisticas:
         self._clustering = clustering
         self._riesgo_por_perfil = riesgo_por_perfil
 
-    def execute(self, periodo: Optional[str] = None) -> dict:
+    def execute(self, periodo: Optional[str] = None, token: Optional[str] = None) -> dict:
         """Devuelve las estadisticas del periodo aplicando la regla k=5."""
-        total_atenciones = self._repository.total_atencioness(periodo)
-
         por_tipo = self._grupos(self._repository.contar_por_dimension("tipo", periodo))
         por_modalidad = self._grupos(self._repository.contar_por_dimension("modalidad", periodo))
         por_estado = self._grupos(self._repository.contar_por_dimension("estado", periodo))
@@ -55,15 +60,22 @@ class ObtenerEstadisticas:
 
         # Correlacion con el nivel de riesgo publicado por el microservicio de
         # evaluacion. Se consulta por HTTP: este servicio no lee la base de
-        # datos de ese servicio.
+        # datos de ese servicio. El token de la peticion se reenvia para que
+        # el servicio de evaluacion valide identidad y rol.
         celdas_riesgo_omitidas = 0
         riesgo_disponible = False
-        if self._riesgo_por_perfil is not None and perfiles_por_cluster.perfiles:
+        if self._riesgo_por_perfil is None:
+            motivo_riesgo = MotivoRiesgo.NO_CONFIGURADO
+        elif not perfiles_por_cluster.perfiles:
+            motivo_riesgo = MotivoRiesgo.SIN_DATOS
+        else:
             estudiantes_por_cluster = self._repository.listar_estudiantes_por_cluster(periodo)
-            perfiles_por_cluster.perfiles, celdas_riesgo_omitidas = (
-                self._riesgo_por_perfil.execute(
-                    perfiles_por_cluster.perfiles, estudiantes_por_cluster
-                )
+            (
+                perfiles_por_cluster.perfiles,
+                celdas_riesgo_omitidas,
+                motivo_riesgo,
+            ) = self._riesgo_por_perfil.execute(
+                perfiles_por_cluster.perfiles, estudiantes_por_cluster, token
             )
             riesgo_disponible = any(
                 perfil.riesgo_disponible for perfil in perfiles_por_cluster.perfiles
@@ -78,18 +90,30 @@ class ObtenerEstadisticas:
             + celdas_riesgo_omitidas
         )
 
+        # Supresion complementaria: el total y los conteos que pueden revelar
+        # el tamano de un grupo pequeno no se publican tal cual. Si hay grupos
+        # ocultos, el total se redondea hacia abajo a multiplo del minimo.
+        total = total_publicable(self._repository.total_atenciones(periodo), omitidos > 0)
+        seguimiento = conteo_publicable(self._repository.contar_por_seguimiento(periodo))
+        sin_resolver = conteo_publicable(self._repository.contar_sin_resolver(periodo))
+
         return {
             "periodo": periodo,
-            "total_atenciones": total_atenciones,
-            "requieren_seguimiento": self._repository.contar_por_seguimiento(periodo),
+            "total_atenciones": total.valor,
+            "total_atenciones_estimado": total.estimado,
+            "requieren_seguimiento": seguimiento.valor,
+            "requieren_seguimiento_suprimido": seguimiento.suprimido,
             "por_tipo": [grupo.to_dict() for grupo in por_tipo.grupos],
             "por_modalidad": [grupo.to_dict() for grupo in por_modalidad.grupos],
             "por_estado": [grupo.to_dict() for grupo in por_estado.grupos],
             "por_periodo": [grupo.to_dict() for grupo in por_periodo.grupos],
             "perfiles_ia": [perfil.to_dict() for perfil in perfiles_por_cluster.perfiles],
-            "grupos_omitidos_por_privacidad": omitidos,
+            "grupos_omitidos": omitidos > 0,
             "minimo_grupo_publicable": MINIMO_GRUPO,
             "riesgo_disponible": riesgo_disponible,
+            "riesgo_motivo": motivo_riesgo.value,
+            "atenciones_sin_resolver": sin_resolver.valor,
+            "atenciones_sin_resolver_suprimido": sin_resolver.suprimido,
             "nota_ia": NOTA_IA,
         }
 

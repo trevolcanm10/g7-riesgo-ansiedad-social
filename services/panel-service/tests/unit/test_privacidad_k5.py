@@ -9,9 +9,11 @@ from __future__ import annotations
 from app.domain.entities.perfil_cluster import Grupo, PerfilCluster
 from app.domain.services.privacidad_k5 import (
     MINIMO_GRUPO,
+    conteo_publicable,
     es_publicable,
     filtrar_grupos,
     filtrar_perfiles,
+    total_publicable,
 )
 
 
@@ -81,3 +83,35 @@ def test_lista_vacia_no_omite_nada():
 
     assert resultado.grupos == []
     assert resultado.omitidos == 0
+
+
+def test_conteo_publicable_suprime_los_cuentos_pequenos():
+    """Un conteo entre 1 y 4 no se publica; el cero si."""
+    cero = conteo_publicable(0)
+    assert cero.valor == 0
+    assert cero.suprimido is False
+
+    pequeno = conteo_publicable(1)
+    assert pequeno.valor is None
+    assert pequeno.suprimido is True
+
+    assert conteo_publicable(MINIMO_GRUPO - 1).suprimido is True
+
+    completo = conteo_publicable(MINIMO_GRUPO)
+    assert completo.valor == MINIMO_GRUPO
+    assert completo.suprimido is False
+
+
+def test_total_publicable_redondea_cuando_hay_grupos_ocultos():
+    """Con grupos ocultos el total publicado es una cota inferior."""
+    exacto = total_publicable(9, False)
+    assert exacto.valor == 9
+    assert exacto.estimado is False
+
+    acotado = total_publicable(9, True)
+    assert acotado.valor == 5
+    assert acotado.estimado is True
+
+    suprimido = total_publicable(3, True)
+    assert suprimido.valor is None
+    assert suprimido.suprimido is True

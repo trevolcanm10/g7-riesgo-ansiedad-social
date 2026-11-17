@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from tests.conftest import cabecera_autorizacion, token_para
 
@@ -215,3 +215,47 @@ def test_periodo_invalido_responde_400(client, token_institucional):
     )
 
     assert respuesta.status_code == 400
+
+
+def test_fecha_futura_se_rechaza(client, token_institucional):
+    """Una atencion con fecha futura no se registra.
+
+    Aceptarla moveria el periodo de las estadisticas del panel.
+    """
+    manana = datetime.now(timezone.utc) + timedelta(days=1)
+
+    respuesta = client.post(
+        "/api/panel/atencion",
+        json=_payload(fecha_atencion=manana.isoformat()),
+        headers=cabecera_autorizacion(token_institucional),
+    )
+
+    assert respuesta.status_code == 400
+    assert "no puede ser futura" in respuesta.get_data(as_text=True)
+
+
+def test_fecha_muy_antigua_se_rechaza(client, token_institucional):
+    """Una atencion de mas de un ano atras no se registra."""
+    antigua = datetime.now(timezone.utc) - timedelta(days=400)
+
+    respuesta = client.post(
+        "/api/panel/atencion",
+        json=_payload(fecha_atencion=antigua.isoformat()),
+        headers=cabecera_autorizacion(token_institucional),
+    )
+
+    assert respuesta.status_code == 400
+    assert "anterior a un ano" in respuesta.get_data(as_text=True)
+
+
+def test_fecha_actual_se_acepta(client, token_institucional):
+    """Una atencion con la fecha de hoy si se registra."""
+    ahora = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    respuesta = client.post(
+        "/api/panel/atencion",
+        json=_payload(fecha_atencion=ahora.isoformat()),
+        headers=cabecera_autorizacion(token_institucional),
+    )
+
+    assert respuesta.status_code == 201

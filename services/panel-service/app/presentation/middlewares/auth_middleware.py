@@ -44,7 +44,7 @@ def _decodificar_token(token: str) -> dict:
             token,
             secreto,
             algorithms=["HS256"],
-            options={"require": ["userId", "role"]},
+            options={"require": ["exp", "userId", "role"]},
         )
     except jwt.ExpiredSignatureError:
         raise ErrorAutenticacion("El token ha expirado. Inicie sesion nuevamente.", 401)

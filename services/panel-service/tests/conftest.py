@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import jwt
 import pytest
@@ -43,9 +43,18 @@ def client(app):
 
 
 def token_para(user_id: int = 42, rol: str = "PERSONAL_UNAYOE", **extra) -> str:
-    """Genera un token JWT valido para las pruebas."""
+    """Genera un token JWT valido para las pruebas.
+
+    Por defecto el token lleva ``exp`` porque el servicio lo exige al
+    validarlo. Para comprobar el rechazo de un token sin ``exp`` se pasa
+    ``exp=None`` y la clave se omite del payload.
+    """
     payload = {"userId": user_id, "role": rol}
     payload.update(extra)
+    if "exp" not in payload:
+        payload["exp"] = datetime.now(timezone.utc) + timedelta(hours=1)
+    elif payload["exp"] is None:
+        del payload["exp"]
     return jwt.encode(payload, SECRETO_PRUEBAS, algorithm="HS256")
 
 

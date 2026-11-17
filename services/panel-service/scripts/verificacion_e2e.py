@@ -146,8 +146,8 @@ def main() -> int:
     )
     comprobar(
         "informa los grupos omitidos",
-        estadisticas["grupos_omitidos_por_privacidad"] >= 1,
-        str(estadisticas["grupos_omitidos_por_privacidad"]),
+        estadisticas["grupos_omitidos"] is True,
+        str(estadisticas["grupos_omitidos"]),
     )
     comprobar("incluye la nota de IA", "orientativas" in estadisticas["nota_ia"])
 

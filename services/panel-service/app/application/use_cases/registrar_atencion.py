@@ -14,7 +14,7 @@ from app.application.interfaces.clustering_port import IClusteringPort
 from app.application.interfaces.personal_externo_port import IPersonalExternoPort
 from app.application.interfaces.usuarios_port import IUsuariosPort
 from app.domain.entities.atencion import Atencion
-from app.domain.services.fecha_hora import ahora_utc
+from app.domain.services.fecha_hora import ahora_utc, validar_fecha_atencion
 
 # Nombre de las variables del contrato de evaluacion de riesgo. Coincide con
 # el orden canonico del modelo de agrupamiento y con el microservicio
@@ -65,11 +65,15 @@ class RegistrarAtencion:
         """
         indicadores_validos = self._normalizar_indicadores(indicadores or {})
 
+        # La fecha se valida en el dominio: una atencion con fecha futura o muy
+        # antigua moveria el periodo de las estadisticas del panel.
+        momento = validar_fecha_atencion(fecha_atencion or ahora_utc())
+
         atencion = Atencion(
             estudiante_codigo=estudiante_codigo,
             modalidad=modalidad,
             tipo=tipo,
-            fecha_atencion=fecha_atencion or ahora_utc(),
+            fecha_atencion=momento,
             indicadores=indicadores_validos,
             notas=notas,
             seguimiento_requerido=seguimiento_requerido,

@@ -42,6 +42,9 @@ class PerfilCluster:
     # Indica si el servicio de evaluacion de riesgo respondio. Si es False,
     # el perfil se muestra sin la correlacion de riesgo.
     riesgo_disponible: bool = False
+    # Motivo por el que la correlacion de riesgo no esta disponible. Permite
+    # que el panel explique la ausencia de datos en lugar de callarla.
+    riesgo_motivo: str = "sin_datos"
 
     def to_dict(self) -> dict:
         """Serializa el perfil para la capa de presentacion."""
@@ -55,6 +58,7 @@ class PerfilCluster:
             "riesgo": dict(self.riesgo),
             "riesgo_omitidos": self.riesgo_omitidos,
             "riesgo_disponible": self.riesgo_disponible,
+            "riesgo_motivo": self.riesgo_motivo,
         }
 
 
@@ -111,3 +115,22 @@ class ResultadoPerfilesPrivacidad:
     def total_visible(self) -> int:
         """Suma de estudiantes en los perfiles visibles."""
         return sum(perfil.n for perfil in self.perfiles)
+
+
+@dataclass(frozen=True)
+class ConteoPrivado:
+    """Conteo que puede quedar oculto por la regla de privacidad k=5.
+
+    ``valor`` es ``None`` cuando el dato no puede publicarse. ``estimado``
+    indica que el valor publicado es una cota inferior redondeada y no el dato
+    exacto.
+    """
+
+    valor: Optional[int] = None
+    suprimido: bool = False
+    estimado: bool = False
+
+    @property
+    def visible(self) -> bool:
+        """Indica si el conteo puede mostrarse."""
+        return not self.suprimido

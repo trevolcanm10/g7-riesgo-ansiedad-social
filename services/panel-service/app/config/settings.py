@@ -8,7 +8,9 @@ explícita al arrancar.
 from __future__ import annotations
 
 import os
+import ssl
 from pathlib import Path
+from typing import Optional
 
 from dotenv import load_dotenv
 
@@ -31,6 +33,14 @@ def _entero(nombre: str, defecto: int) -> int:
         return defecto
 
 
+def _booleano(nombre: str, defecto: bool = False) -> bool:
+    """Lee un booleano del entorno con valor por defecto."""
+    valor = os.getenv(nombre)
+    if valor is None or not str(valor).strip():
+        return defecto
+    return str(valor).strip().lower() in ("1", "true", "yes", "si", "s")
+
+
 class Config:
     """Configuracion base del panel institucional."""
 
@@ -38,7 +48,7 @@ class Config:
     SERVICE_NAME = "panel"
 
     # Puerto HTTP del servicio.
-    PORT = _entero("PORT", 5003)
+    PORT = _entero("PORT", 5005)
 
     # Base de datos propia del servicio. Nunca la de otro microservicio.
     DB_USER = os.getenv("DB_USER", "")
@@ -47,11 +57,21 @@ class Config:
     DB_PORT = _entero("DB_PORT", 3306)
     DB_NAME = os.getenv("DB_NAME", "db_panel")
 
+    # Conexion segura con la base de datos. TiDB Cloud exige TLS; en el
+    # desarrollo local la conexion normal no lo usa.
+    DB_SSL = _booleano("DB_SSL", False)
+    DB_SSL_CA = os.getenv("DB_SSL_CA", "")
+
+    # Segundos de espera maxima de las consultas a otros microservicios. En el
+    # plan gratuito de Render el servicio puede tardar en despertar, asi que
+    # el valor por defecto es holgado.
+    EXTERNAL_TIMEOUT_SECONDS = _entero("EXTERNAL_TIMEOUT_SECONDS", 45)
+
     SQLALCHEMY_DATABASE_URI = os.getenv("SQLALCHEMY_DATABASE_URI", "")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Secreto compartido con el microservicio de usuarios para validar los
-    # tokens. Si falta, las rutas protegidas responden 500 en vez de acceptar
+    # tokens. Si falta, las rutas protegidas responden 500 en vez de aceptar
     # peticiones sin verificar.
     JWT_SECRET = os.getenv("JWT_SECRET", "")
 
@@ -102,3 +122,39 @@ def construir_uri() -> str:
         f"@{Config.DB_HOST}:{Config.DB_PORT}/{Config.DB_NAME}"
         "?charset=utf8mb4"
     )
+
+
+def construir_engine_options(db_ssl: Optional[bool] = None, db_ssl_ca: Optional[str] = None) -> dict:
+    """Construye las opciones del motor SQLAlchemy para la conexion a la base.
+
+    Con ``DB_SSL`` activo se pasa un contexto SSL que valida el certificado
+    del servidor y el nombre del host. Si ``DB_SSL_CA`` apunta a una CA
+    privada se usa esa; si no, se usan las CA del sistema.
+
+    Los parametros son opcionales para poder probar la configuracion sin
+    tocar el entorno.
+    """
+    if db_ssl is None:
+        db_ssl = _booleano("DB_SSL", False)
+    if db_ssl_ca is None:
+        db_ssl_ca = os.getenv("DB_SSL_CA", "")
+
+    if not db_ssl:
+        return {}
+
+    if db_ssl_ca:
+        ruta_ca = Path(db_ssl_ca)
+        if not ruta_ca.is_file():
+            raise RuntimeError(
+                f"DB_SSL_CA apunta a un archivo que no existe: {db_ssl_ca}"
+            )
+        contexto = ssl.create_default_context(cafile=str(ruta_ca))
+    else:
+        contexto = ssl.create_default_context()
+
+    return {"connect_args": {"ssl": contexto}}
+
+
+# Las opciones se calculan al importar el modulo para que la configuracion de
+# la base quede lista antes de inicializar SQLAlchemy.
+Config.SQLALCHEMY_ENGINE_OPTIONS = construir_engine_options()

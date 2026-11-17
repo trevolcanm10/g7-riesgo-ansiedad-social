@@ -111,3 +111,19 @@ def test_health_no_exige_token(client):
     assert cuerpo["service"] == "panel"
     assert cuerpo["status"] == "OK"
     assert cuerpo["database"] == "OK"
+
+
+def test_token_sin_exp_no_permite_entrar(client):
+    """Un token sin fecha de expiracion se rechaza.
+
+    El servicio exige ``exp`` porque un token sin caducidad permitiria
+    accesos perpetuos aunque el usuario haya cerrado sesion.
+    """
+    token = token_para(exp=None)
+
+    respuesta = client.get(
+        "/api/panel/estadisticas",
+        headers=cabecera_autorizacion(token),
+    )
+
+    assert respuesta.status_code == 401

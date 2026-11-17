@@ -8,6 +8,7 @@ from typing import Optional
 from pydantic import BaseModel, Field, field_validator
 
 from app.domain.entities.atencion import MODALIDADES, TIPOS_ATENCION
+from app.domain.services.fecha_hora import validar_fecha_atencion
 
 
 class IndicadoresAtencion(BaseModel):
@@ -52,6 +53,18 @@ class AtencionCreateDTO(BaseModel):
         if valor not in TIPOS_ATENCION:
             raise ValueError(f"Tipo no valido. Valores admitidos: {', '.join(TIPOS_ATENCION)}")
         return valor
+
+    @field_validator("fecha_atencion")
+    @classmethod
+    def validar_fecha(cls, valor: Optional[datetime]) -> Optional[datetime]:
+        """Rechaza fechas futuras o anteriores a un ano.
+
+        Sin esta regla una atencion con fecha arbitraria mueve el periodo de
+        las estadisticas del panel.
+        """
+        if valor is None:
+            return None
+        return validar_fecha_atencion(valor)
 
     @field_validator("estudiante_codigo")
     @classmethod

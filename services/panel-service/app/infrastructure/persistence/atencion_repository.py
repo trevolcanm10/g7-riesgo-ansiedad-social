@@ -139,9 +139,17 @@ class SQLAlchemyAtencionRepository(IAtencionRepository):
         consulta = self._filtros_periodo(consulta, periodo)
         return int(consulta.scalar() or 0)
 
-    def total_atencioness(self, periodo: Optional[str] = None) -> int:
+    def total_atenciones(self, periodo: Optional[str] = None) -> int:
         """Cuenta el total de atenciones del periodo."""
         consulta = db.session.query(func.count(AtencionModel.id))
+        consulta = self._filtros_periodo(consulta, periodo)
+        return int(consulta.scalar() or 0)
+
+    def contar_sin_resolver(self, periodo: Optional[str] = None) -> int:
+        """Cuenta atenciones sin identificador de estudiante resuelto."""
+        consulta = db.session.query(func.count(AtencionModel.id)).filter(
+            AtencionModel.estudiante_id.is_(None)
+        )
         consulta = self._filtros_periodo(consulta, periodo)
         return int(consulta.scalar() or 0)
 

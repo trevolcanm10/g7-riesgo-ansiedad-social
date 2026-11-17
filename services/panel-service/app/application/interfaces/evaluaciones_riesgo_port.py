@@ -1,61 +1,37 @@
-"""Puerto de consulta al microservicio de evaluacion de riesgo.
+"""Puerto de salida hacia el microservicio de evaluacion de riesgo.
 
 REGLA DE AISLAMIENTO DE DATOS
 ------------------------------
-Este servicio **no** lee la base de datos de ``riskEvaluation``. Cuando
-necesita informacion de ese microservicio la obtiene por HTTP, a traves de
-este puerto.
+El nivel de riesgo vive en el microservicio ``riskEvaluation``. Este puerto no
+da acceso a su base de datos: solo permite pedir, para un conjunto de
+estudiantes, el **conteo** por nivel de riesgo. Nunca se pide el riesgo
+individual de un estudiante.
 
-El servicio expone ``GET /risk-evaluations/me/history``, que devuelve el
-historial de evaluaciones del usuario autenticado. Para consultar las
-evaluaciones de varios estudiantes el panel agregaria el endpoint
-correspondiente en ``riskEvaluation``; mientras tanto, el adaptador trabaja
-con lo que ese servicio publica hoy.
+REGLA DE PRIVACIDAD k=5
+-----------------------
+El microservicio deevaluacion aplica la misma regla de privacidad que el
+panel: si el grupo consultado tiene menos de cinco estudiantes, responde que el
+dato esta suprimido y no devuelve conteos.
 """
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import List
 
-
-class EvaluacionRiesgo:
-    """Evaluacion de riesgo tal como la publica ``riskEvaluation``.
-
-    Es una estructura de datos simple, no una entidad de dominio: el panel
-    no tiene (ni debe tener) el modelo de ``riskEvaluation``.
-    """
-
-    def __init__(
-        self,
-        usuario_id: int,
-        probabilidad_ansiedad: float,
-        nivel_riesgo: str,
-        fecha: Optional[str] = None,
-    ) -> None:
-        self.usuario_id = usuario_id
-        self.probabilidad_ansiedad = probabilidad_ansiedad
-        self.nivel_riesgo = nivel_riesgo
-        self.fecha = fecha
-
-    def to_dict(self) -> dict:
-        """Serializa la evaluacion para la capa de presentacion."""
-        return {
-            "usuario_id": self.usuario_id,
-            "probabilidad_ansiedad": self.probabilidad_ansiedad,
-            "nivel_riesgo": self.nivel_riesgo,
-            "fecha": self.fecha,
-        }
+from app.domain.entities.resultado_riesgo import ResultadoRiesgo
 
 
 class IEvaluacionesRiesgoPort(ABC):
-    """Contrato para obtener evaluaciones de riesgo de forma agregada."""
+    """Consulta de conteos por nivel de riesgo a un conjunto de estudiantes."""
 
     @abstractmethod
-    def listar_evaluaciones(self, usuario_ids: List[int]) -> List[EvaluacionRiesgo]:
-        """Devuelve la ultima evaluacion de riesgo de cada usuario indicado.
+    def contar_riesgos(self, usuario_ids: List[int], token: str) -> ResultadoRiesgo:
+        """Devuelve el conteo por nivel de riesgo de los estudiantes indicados.
 
-        Devuelve una lista vacia si el servicio no esta disponible: el panel
-        debe funcionar aunque ``riskEvaluation`` no responda. Es una degradacion
-        deliberada, no un error.
+        El ``token`` es el de la peticion en curso: se reenvia para que el
+        microservicio de evaluacion valide identidad y rol.
+
+        Nunca lanza excepciones: cualquier fallo se traduce a un
+        ``ResultadoRiesgo`` con el motivo correspondiente.
         """
