@@ -132,6 +132,16 @@ def main() -> int:
 
     comprobar("total de atenciones", estadisticas["total_atenciones"] == 10, str(estadisticas))
     comprobar(
+        "motivo de la correlacion de riesgo informado",
+        estadisticas.get("riesgo_motivo") == "no_configurado",
+        str(estadisticas.get("riesgo_motivo")),
+    )
+    comprobar(
+        "informa las atenciones sin resolver",
+        estadisticas.get("atenciones_sin_resolver") == 10,
+        str(estadisticas.get("atenciones_sin_resolver")),
+    )
+    comprobar(
         "grupo de 4 no aparece",
         all(grupo["etiqueta"] != "emergencia" for grupo in estadisticas["por_tipo"]),
         str(estadisticas["por_tipo"]),
