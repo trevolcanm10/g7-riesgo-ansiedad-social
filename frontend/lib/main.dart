@@ -22,7 +22,6 @@ import 'data/datasources/local/escuela_local_datasource.dart';
 import 'data/repositories/escuela_repository_impl.dart';
 import 'data/datasources/remote/citas_remote_datasource.dart';
 import 'data/repositories/citas_repository_impl.dart';
-import 'data/repositories/agenda_remote_repository.dart';
 
 // Domain UseCases
 import 'domain/usecases/login_usecase.dart';
@@ -54,7 +53,6 @@ import 'presentation/pages/evaluacion/evaluacion_screen.dart';
 import 'presentation/pages/evaluacion/resultado_screen.dart';
 import 'presentation/pages/evaluacion/historial_screen.dart';
 import 'presentation/pages/perfil/perfil_screen.dart';
-import 'presentation/pages/agenda/agenda_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -222,14 +220,6 @@ class _AnsiedadAppState extends State<AnsiedadApp> {
                 const SessionProtected(child: AgendarCitaScreen()),
             '/perfil': (context) =>
                 const SessionProtected(child: PerfilScreen()),
-            '/agenda': (context) => SessionProtected(
-              child: AgendaScreen(
-                repository: AgendaRemoteRepository(
-                  context.read<ApiService>(),
-                  '${AppConstants.academicAgendaBaseUrl}/actividades',
-                ),
-              ),
-            ),
           },
         );
       },

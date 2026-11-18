@@ -5,7 +5,6 @@ import {
   RiskRecommendation,
 } from "../../domain/entities/RiskEvaluation.js";
 import { RiskRecommendationRepository } from "../../domain/repositories/RiskRecommendationRepository.js";
-import { decodeLegacyRecommendation } from "./decodeLegacyRecommendation.js";
 
 interface RiskRecommendationRow extends RowDataPacket {
   id: number;
@@ -41,7 +40,7 @@ export class MySqlRiskRecommendationRepository implements RiskRecommendationRepo
       id: row.id,
       category: row.category,
       title: row.title,
-      description: decodeLegacyRecommendation(row.description),
+      description: row.description,
     };
   }
 }

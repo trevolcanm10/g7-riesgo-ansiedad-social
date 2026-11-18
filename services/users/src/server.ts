@@ -18,22 +18,6 @@ const app = express();
 
 app.use(express.json());
 
-// Middleware CORS solo para desarrollo local
-app.use((req, res, next) => {
-  const allowedOrigins = ["http://localhost:8082", "http://127.0.0.1:8082"];
-  const origin = req.headers.origin as string | undefined;
-  if (process.env.NODE_ENV === "development" && origin && allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, POST, PUT, DELETE, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-    res.setHeader("Access-Control-Max-Age", "86400");
-  }
-  if (req.method === "OPTIONS" && process.env.NODE_ENV === "development" && origin && allowedOrigins.includes(origin)) {
-    return res.sendStatus(204);
-  }
-  next();
-});
-
 const userRepository = new MySqlUserRepository();
 const passwordHasher = new BcryptPasswordHasher();
 const tokenService = new JwtTokenServices();

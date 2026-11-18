@@ -8,7 +8,7 @@ class PredictionError(Exception):
 
 
 class ModelsUnavailableError(PredictionError):
-    """The required XGBoost model is unavailable."""
+    """The required ensemble is unavailable."""
 
 
 class RiskPredictor(ABC):

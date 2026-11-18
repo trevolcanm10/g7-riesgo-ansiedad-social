@@ -112,28 +112,6 @@ class AppConstants {
       login.substring(0, login.length - '/users/login'.length);
   static String get usersMe => '$usersOrigin/users/me';
 
-  static const String _academicAgendaConfiguredUrl = String.fromEnvironment(
-    'ACADEMIC_AGENDA_BASE_URL',
-  );
-
-  static String get academicAgendaBaseUrl {
-    if (gateway.enabled) return gateway.academicAgendaOrigin;
-    final configured = _academicAgendaConfiguredUrl.trim().replaceAll(
-      RegExp(r'/+$'),
-      '',
-    );
-    if (configured.isNotEmpty) return configured;
-    if (!kReleaseMode) {
-      try {
-        if (Platform.isAndroid) return 'http://10.0.2.2:5003';
-      } catch (_) {
-        // Flutter Web does not expose dart:io platform APIs.
-      }
-      return 'http://localhost:5003';
-    }
-    throw StateError('ACADEMIC_AGENDA_BASE_URL no está configurada.');
-  }
-
   // ==========================================
   // ENDPOINT DE REGISTRO (MICROSERVICIO USERS)
   // ==========================================

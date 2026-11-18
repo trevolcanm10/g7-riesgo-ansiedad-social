@@ -1,6 +1,5 @@
 import 'reporte_ia.dart';
 import 'recomendacion.dart';
-import 'shap_explanation.dart';
 
 /// Entidad de dominio que representa el resultado de una evaluación ML.
 ///
@@ -15,7 +14,6 @@ class ResultadoMl {
   final String? fechaPrediccion;
   final List<Recomendacion> recomendaciones;
   final ReporteIA? reporteIA;
-  final ShapExplanation? shapExplanation;
 
   ResultadoMl({
     required this.idResultado,
@@ -26,6 +24,5 @@ class ResultadoMl {
     this.fechaPrediccion,
     this.recomendaciones = const [],
     this.reporteIA,
-    this.shapExplanation,
   });
 }

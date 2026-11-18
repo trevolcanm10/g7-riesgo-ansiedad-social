@@ -1,7 +1,6 @@
 import '../../domain/entities/resultado_ml.dart';
 import 'recomendacion_model.dart';
 import 'reporte_ia_model.dart';
-import '../../domain/entities/shap_explanation.dart';
 
 /// DTO (Data Transfer Object) para serializar/deserializar ResultadoMl.
 ///
@@ -16,7 +15,6 @@ class ResultadoMlModel {
   final String? fechaPrediccion;
   final List<RecomendacionModel> recomendaciones;
   final ReporteIAModel? reporteIA;
-  final ShapExplanation? shapExplanation;
 
   ResultadoMlModel({
     required this.idResultado,
@@ -27,7 +25,6 @@ class ResultadoMlModel {
     this.fechaPrediccion,
     this.recomendaciones = const [],
     this.reporteIA,
-    this.shapExplanation,
   });
 
   /// Crea un DTO desde JSON (respuesta de la API)
@@ -131,7 +128,6 @@ class ResultadoMlModel {
           )
           .toList(),
       reporteIA: ReporteIAModel.fromRiskEvaluation(reporteJson),
-      shapExplanation: _parseShap(json['shapExplanation']),
     );
   }
 
@@ -146,7 +142,6 @@ class ResultadoMlModel {
       fechaPrediccion: fechaPrediccion,
       recomendaciones: recomendaciones.map((r) => r.toEntity()).toList(),
       reporteIA: reporteIA?.toEntity(),
-      shapExplanation: shapExplanation,
     );
   }
 
@@ -165,7 +160,6 @@ class ResultadoMlModel {
       reporteIA: resultado.reporteIA != null
           ? ReporteIAModel.fromEntity(resultado.reporteIA!)
           : null,
-      shapExplanation: resultado.shapExplanation,
     );
   }
 
@@ -181,31 +175,5 @@ class ResultadoMlModel {
       'reporte_ia': reporteIA?.toJson(),
       'recomendaciones': recomendaciones.map((r) => r.toJson()).toList(),
     };
-  }
-
-  static ShapExplanation? _parseShap(Object? raw) {
-    if (raw is! Map<String, dynamic>) return null;
-    if (raw['estado'] != 'disponible' || raw['escala'] != 'log_odds_riesgo_clase_0') {
-      return const ShapExplanation(disponible: false, factores: []);
-    }
-    final factors = raw['factores'];
-    if (factors is! List) return const ShapExplanation(disponible: false, factores: []);
-    final parsed = <ShapFactor>[];
-    for (final factor in factors) {
-      if (factor is! Map<String, dynamic>) return const ShapExplanation(disponible: false, factores: []);
-      final name = factor['nombre'];
-      final value = factor['valor'];
-      final direction = factor['direccion'];
-      if (name is! String || value is! num || !value.isFinite ||
-          direction is! String || !{'aumenta', 'disminuye', 'neutra'}.contains(direction)) {
-        return const ShapExplanation(disponible: false, factores: []);
-      }
-      parsed.add(ShapFactor(nombre: name, valor: value.toDouble(), direccion: direction));
-    }
-    return ShapExplanation(
-      disponible: parsed.isNotEmpty,
-      factores: parsed.take(3).toList(),
-      modelo: raw['modelo'] is String ? raw['modelo'] as String : null,
-    );
   }
 }
