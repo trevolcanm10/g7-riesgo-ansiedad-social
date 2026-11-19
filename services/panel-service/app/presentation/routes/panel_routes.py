@@ -122,7 +122,7 @@ def app_response_csv(nombre: str, contenido: str):
 
     return Response(
         contenido,
-        mimetype="text/csv; charset=utf-8",
+        content_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{nombre}"'},
     )
 

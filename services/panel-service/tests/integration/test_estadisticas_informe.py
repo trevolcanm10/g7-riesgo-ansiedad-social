@@ -139,7 +139,7 @@ def test_informe_devuelve_csv_con_bom(client, token_institucional):
     )
 
     assert respuesta.status_code == 200
-    assert "text/csv" in respuesta.headers["Content-Type"]
+    assert respuesta.headers["Content-Type"] == "text/csv; charset=utf-8"
     assert "attachment" in respuesta.headers["Content-Disposition"]
     assert "informe_atenciones_2026-03.csv" in respuesta.headers["Content-Disposition"]
 
