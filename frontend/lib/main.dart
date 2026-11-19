@@ -20,6 +20,8 @@ import 'data/datasources/remote/evaluacion_remote_datasource.dart';
 import 'data/datasources/remote/medico_remote_datasource.dart';
 import 'data/datasources/local/escuela_local_datasource.dart';
 import 'data/repositories/escuela_repository_impl.dart';
+import 'data/datasources/remote/apoyo_remote_datasource.dart';
+import 'data/repositories/apoyo_repository_impl.dart';
 
 // Domain UseCases
 import 'domain/usecases/login_usecase.dart';
@@ -38,6 +40,7 @@ import 'presentation/viewmodels/evaluacion_viewmodel.dart';
 import 'presentation/viewmodels/medico_viewmodel.dart';
 import 'presentation/viewmodels/theme_viewmodel.dart';
 import 'presentation/viewmodels/escuela_viewmodel.dart';
+import 'presentation/viewmodels/apoyo_viewmodel.dart';
 import 'presentation/pages/onboarding/onboarding_screen.dart';
 import 'presentation/pages/auth/login_screen.dart';
 import 'presentation/pages/home/home_screen.dart';
@@ -47,6 +50,7 @@ import 'presentation/pages/evaluacion/evaluacion_screen.dart';
 import 'presentation/pages/evaluacion/resultado_screen.dart';
 import 'presentation/pages/evaluacion/historial_screen.dart';
 import 'presentation/pages/perfil/perfil_screen.dart';
+import 'presentation/pages/apoyo/apoyo_home_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -78,6 +82,7 @@ class _AnsiedadAppState extends State<AnsiedadApp> {
     final evaluacionRemoteDataSource = EvaluacionRemoteDataSource(apiService);
     final medicoRemoteDataSource = MedicoRemoteDataSource(apiService);
     final escuelaLocalDataSource = EscuelaLocalDataSource();
+    final apoyoRemoteDataSource = ApoyoRemoteDataSource(apiService);
 
     // Repository Layer
     final authRepository = AuthRepositoryImpl(
@@ -89,6 +94,7 @@ class _AnsiedadAppState extends State<AnsiedadApp> {
     );
     final medicoRepository = MedicoRepositoryImpl(medicoRemoteDataSource);
     final escuelaRepository = EscuelaRepositoryImpl(escuelaLocalDataSource);
+    final apoyoRepository = ApoyoRepositoryImpl(apoyoRemoteDataSource);
 
     // UseCase Layer
     final loginUseCase = LoginUseCase(authRepository);
@@ -115,6 +121,7 @@ class _AnsiedadAppState extends State<AnsiedadApp> {
       obtenerPacientesUseCase,
       obtenerEvaluacionesRecientesUseCase,
     );
+    final apoyoVM = ApoyoViewModel(apoyoRepository);
     final authVM = AuthViewModel(
       loginUseCase,
       registerUseCase,
@@ -124,6 +131,7 @@ class _AnsiedadAppState extends State<AnsiedadApp> {
     authVM.onSessionReset = () {
       evaluationVM.limpiarSesion();
       medicoVM.limpiarSesion();
+      apoyoVM.clearSession();
     };
     apiService.onUnauthorized = authVM.invalidarSesion;
     _providers = [
@@ -132,6 +140,7 @@ class _AnsiedadAppState extends State<AnsiedadApp> {
       ChangeNotifierProvider(create: (_) => authVM, lazy: false),
       ChangeNotifierProvider(create: (_) => evaluationVM, lazy: false),
       ChangeNotifierProvider(create: (_) => medicoVM, lazy: false),
+      ChangeNotifierProvider(create: (_) => apoyoVM, lazy: false),
       ChangeNotifierProvider(
         create: (_) => EscuelaViewModel(obtenerEscuelasUseCase),
       ),
@@ -199,6 +208,8 @@ class _AnsiedadAppState extends State<AnsiedadApp> {
                 const SessionProtected(child: HistorialScreen()),
             '/perfil': (context) =>
                 const SessionProtected(child: PerfilScreen()),
+            '/apoyo': (context) =>
+                const SessionProtected(child: ApoyoHomePage()),
           },
         );
       },

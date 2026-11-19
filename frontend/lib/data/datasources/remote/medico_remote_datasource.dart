@@ -1,4 +1,4 @@
-import '../../../../core/constants.dart';
+import '../../../core/constants.dart';
 import 'api_service.dart';
 
 /// DataSource remoto para operaciones del rol Médico.

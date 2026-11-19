@@ -1,9 +1,9 @@
-import '../../../domain/entities/usuario.dart';
-import '../../../domain/repositories/auth_repository.dart';
+import '../../domain/entities/usuario.dart';
+import '../../domain/repositories/auth_repository.dart';
 import '../datasources/remote/auth_remote_datasource.dart';
 import '../datasources/remote/api_service.dart';
-import '../../../core/constants.dart';
-import '../../../domain/services/session_store.dart';
+import '../../core/constants.dart';
+import '../../domain/services/session_store.dart';
 
 /// Implementación del repositorio de autenticación.
 ///

@@ -1,4 +1,4 @@
-import '../../../domain/repositories/medico_repository.dart';
+import '../../domain/repositories/medico_repository.dart';
 import '../datasources/remote/medico_remote_datasource.dart';
 
 /// Implementación del repositorio para el rol Médico.

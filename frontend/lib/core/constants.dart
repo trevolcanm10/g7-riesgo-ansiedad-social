@@ -122,6 +122,40 @@ class AppConstants {
       gateway.enabled ? gateway.registration : '$usersOrigin/users';
 
   // ==========================================
+  // ENDPOINTS DE APOYO ACADÉMICO (microservicio M5)
+  // ==========================================
+  static const String _apoyoBaseUrl = String.fromEnvironment('APOYO_BASE_URL');
+  static const String _apoyoPort = '5003';
+
+  static String _detectarApoyoHost() {
+    try {
+      if (Platform.isAndroid) return 'http://10.0.2.2:' + _apoyoPort;
+      if (Platform.isWindows || Platform.isLinux || Platform.isMacOS || Platform.isIOS) {
+        return 'http://localhost:' + _apoyoPort;
+      }
+    } catch (_) {}
+    if (kIsWeb) return 'http://localhost:' + _apoyoPort;
+    return 'http://localhost:' + _apoyoPort;
+  }
+
+  /// APOYO_BASE_URL tiene prioridad; luego usa APIM /a; en desarrollo,
+  /// usa el puerto local 5003 del microservicio.
+  static String get apoyoOrigin {
+    final configured = _apoyoBaseUrl.trim().replaceAll(RegExp(r'/+$'), '');
+    if (configured.isNotEmpty) return configured;
+    if (gateway.enabled) return gateway.apoyoOrigin;
+    return _detectarApoyoHost();
+  }
+
+  static String get apoyoResources => apoyoOrigin + '/resources';
+  static String apoyoResource(int id) => apoyoResources + '/' + id.toString();
+  static String get apoyoPreferences => apoyoOrigin + '/students/me/preferences';
+  static String get apoyoRecommendations => apoyoOrigin + '/recommendations';
+  static String get apoyoInteractions => apoyoOrigin + '/interactions';
+  static String apoyoWorkshopEnroll(int id) => apoyoOrigin + '/workshops/' + id.toString() + '/enroll';
+  static String get apoyoEnrollments => apoyoOrigin + '/students/me/enrollments';
+
+  // ==========================================
   // ENDPOINTS DE EVALUACIONES (microservicio RiskEvaluation)
   // ==========================================
 

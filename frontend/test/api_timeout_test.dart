@@ -37,6 +37,19 @@ void main() {
     }
   });
 
+  testWidgets('cliente de Apoyo tolera arranque en frío de más de 90 segundos', (tester) async {
+    final pending = Completer<http.Response>();
+    await http.runWithClient(() async {
+      final api = ApiService();
+      final operation = api.get('http://local/apoyo', timeout: const Duration(seconds: 120));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 91));
+      pending.complete(http.Response('{}', 200));
+      await tester.pump();
+      expect(await operation, isEmpty);
+    }, () => MockClient((_) => pending.future));
+  });
+
   testWidgets('registro simulado de 24.84 segundos completa sin reintentos', (
     tester,
   ) async {

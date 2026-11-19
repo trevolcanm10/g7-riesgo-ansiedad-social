@@ -75,6 +75,16 @@ class _HomeScreenState extends State<HomeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildHeader(nombreUsuario),
+                            const SizedBox(height: 16),
+                            Card(
+                              child: ListTile(
+                                leading: Icon(Icons.auto_awesome, color: colors.primary),
+                                title: const Text('Talleres y recursos académicos'),
+                                subtitle: const Text('Explora actividades según tus intereses'),
+                                trailing: const Icon(Icons.chevron_right),
+                                onTap: () => Navigator.pushNamed(context, '/apoyo'),
+                              ),
+                            ),
                             const SizedBox(height: 20),
 
                             if (!tieneHistorial) ...[

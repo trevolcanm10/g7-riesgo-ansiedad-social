@@ -1,7 +1,7 @@
-import '../../../domain/entities/evaluacion.dart';
-import '../../../domain/entities/recomendacion.dart';
-import '../../../domain/entities/resultado_ml.dart';
-import '../../../domain/repositories/evaluacion_repository.dart';
+import '../../domain/entities/evaluacion.dart';
+import '../../domain/entities/recomendacion.dart';
+import '../../domain/entities/resultado_ml.dart';
+import '../../domain/repositories/evaluacion_repository.dart';
 import '../datasources/remote/evaluacion_remote_datasource.dart';
 
 /// Implementación del repositorio de evaluaciones.

@@ -86,3 +86,13 @@ El script lee `.env`, valida las dos variables y lanza:
 sin mostrar la clave. Recuerda: `--dart-define` **incorpora la clave al
 ejecutable** del cliente, así que esta configuración es **solo para pruebas
 controladas**, no para producción.
+
+## Apoyo Académico (M5)
+
+El módulo agrega el prefijo `/a` y las rutas declaradas en `openapi/academic-support.yaml`. APIM debe tener las 13 operaciones publicadas; hasta entonces la app puede apuntar directamente a Render con `APOYO_BASE_URL`:
+
+```powershell
+flutter run -d windows --dart-define=APOYO_BASE_URL=https://TU-SERVICIO.onrender.com
+```
+
+En local, inicia el servicio en el puerto 5003 y usa `--dart-define=APOYO_BASE_URL=http://localhost:5003`. En Android Emulator el host local es `http://10.0.2.2:5003`. Para usar APIM, omite `APOYO_BASE_URL`; la app construye automáticamente la ruta `/a`. Las llamadas de este módulo admiten hasta 120 segundos para el despertar de Render.

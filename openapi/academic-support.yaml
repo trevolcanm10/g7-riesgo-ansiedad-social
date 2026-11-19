@@ -5,10 +5,12 @@ info:
   description: |
     API M5 para catálogo, preferencias y recomendaciones de tutorías, talleres
     y materiales. Las rutas protegidas reciben el JWT HS256 emitido por Users.
-    La URL APIM se añadirá cuando el gateway publique el prefijo del servicio.
+    El prefijo APIM elegido es /a; el gateway debe publicar las operaciones antes de que la app lo use.
 servers:
   - url: http://localhost:5003
     description: Desarrollo local
+  - url: https://apim-g7-riesgo-ansiedad.azure-api.net/a
+    description: APIM (prefijo elegido; requiere publicar las operaciones)
 tags:
   - name: Salud
   - name: Recursos
@@ -362,9 +364,9 @@ components:
           type: array
           items: {type: string}
         modality:
-          allOf:
-            - {$ref: "#/components/schemas/Modality"}
+          type: string
           nullable: true
+          enum: [PRESENCIAL, REMOTO, HIBRIDO]
         location: {type: string, nullable: true}
         startAt: {type: string, format: date-time, nullable: true}
         endAt: {type: string, format: date-time, nullable: true}
@@ -408,9 +410,9 @@ components:
           maxItems: 40
           items: {type: string, minLength: 1, maxLength: 30}
         modality:
-          allOf:
-            - {$ref: "#/components/schemas/Modality"}
+          type: string
           nullable: true
+          enum: [PRESENCIAL, REMOTO, HIBRIDO]
         location: {type: string, maxLength: 255, nullable: true}
         startAt: {type: string, format: date-time, nullable: true, description: Debe incluir zona horaria.}
         endAt: {type: string, format: date-time, nullable: true, description: Debe incluir zona horaria.}
@@ -475,9 +477,9 @@ components:
           maxItems: 40
           items: {type: string, minLength: 1, maxLength: 30}
         modality:
-          allOf:
-            - {$ref: "#/components/schemas/Modality"}
+          type: string
           nullable: true
+          enum: [PRESENCIAL, REMOTO, HIBRIDO]
         location: {type: string, maxLength: 255, nullable: true}
         startAt: {type: string, format: date-time, nullable: true}
         endAt: {type: string, format: date-time, nullable: true}
@@ -598,8 +600,8 @@ components:
             endAt: {type: string, format: date-time}
             location: {type: string, nullable: true}
             modality:
-              allOf:
-                - {$ref: "#/components/schemas/Modality"}
+              type: string
               nullable: true
+              enum: [PRESENCIAL, REMOTO, HIBRIDO]
             capacity: {type: integer, nullable: true}
             availableSeats: {type: integer, nullable: true}

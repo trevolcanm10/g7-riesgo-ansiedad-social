@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:http/http.dart' as http;
 
-import '../../../../core/constants.dart';
+import '../../../core/constants.dart';
 import '../../models/evaluacion_model.dart';
 import '../../models/recomendacion_model.dart';
 import '../../models/resultado_ml_model.dart';

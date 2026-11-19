@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
-import '../../../domain/entities/escuela.dart';
-import '../../../domain/usecases/obtener_escuelas_usecase.dart';
+import '../../domain/entities/escuela.dart';
+import '../../domain/usecases/obtener_escuelas_usecase.dart';
 
 /// ViewModel del catálogo de escuelas profesionales.
 ///

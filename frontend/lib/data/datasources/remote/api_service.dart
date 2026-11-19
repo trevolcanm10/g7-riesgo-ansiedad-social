@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../../../../core/constants.dart';
-import '../../../../core/api_gateway_config.dart';
+import '../../../core/constants.dart';
+import '../../../core/api_gateway_config.dart';
 
 /// Servicio genérico para realizar llamadas HTTP al backend.
 ///
@@ -29,6 +29,16 @@ class ApiService {
       );
     }
   }
+  Duration _effectiveTimeout(Duration? timeout) {
+    final value = timeout ?? requestTimeout;
+    if (value <= Duration.zero || value > const Duration(minutes: 3)) {
+      throw ArgumentError(
+        'HTTP timeout must be greater than zero and at most 180 seconds.',
+      );
+    }
+    return value;
+  }
+
   Future<void> Function()? onUnauthorized;
   int _sessionVersion = 0;
 
@@ -81,21 +91,21 @@ class ApiService {
   }
 
   /// Realiza una petición GET
-  Future<Map<String, dynamic>> get(String url) async {
+  Future<Map<String, dynamic>> get(String url, {Duration? timeout}) async {
     final session = (_token, _sessionVersion);
     final response = await http
         .get(Uri.parse(url), headers: _headers(url))
-        .timeout(requestTimeout);
+        .timeout(_effectiveTimeout(timeout));
     await _checkUnauthorized(response, session);
     return _procesarRespuesta(response);
   }
 
   /// Realiza una petición GET que devuelve una lista
-  Future<List<dynamic>> getList(String url) async {
+  Future<List<dynamic>> getList(String url, {Duration? timeout}) async {
     final session = (_token, _sessionVersion);
     final response = await http
         .get(Uri.parse(url), headers: _headers(url))
-        .timeout(requestTimeout);
+        .timeout(_effectiveTimeout(timeout));
     await _checkUnauthorized(response, session);
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as List<dynamic>;
@@ -112,6 +122,7 @@ class ApiService {
     Map<String, dynamic>? body,
     bool withAuth = true,
     int? expectedStatus,
+    Duration? timeout,
   }) async {
     final session = (withAuth ? _token : null, _sessionVersion);
     final response = await http
@@ -120,7 +131,7 @@ class ApiService {
           headers: _headers(url, withAuth: withAuth),
           body: body != null ? jsonEncode(body) : null,
         )
-        .timeout(requestTimeout);
+        .timeout(_effectiveTimeout(timeout));
     await _checkUnauthorized(response, session);
     if (expectedStatus != null &&
         response.statusCode >= 200 &&
@@ -135,6 +146,7 @@ class ApiService {
   Future<Map<String, dynamic>> put(
     String url, {
     Map<String, dynamic>? body,
+    Duration? timeout,
   }) async {
     final session = (_token, _sessionVersion);
     final response = await http
@@ -143,17 +155,17 @@ class ApiService {
           headers: _headers(url),
           body: body != null ? jsonEncode(body) : null,
         )
-        .timeout(requestTimeout);
+        .timeout(_effectiveTimeout(timeout));
     await _checkUnauthorized(response, session);
     return _procesarRespuesta(response);
   }
 
   /// Realiza una petición DELETE
-  Future<Map<String, dynamic>> delete(String url) async {
+  Future<Map<String, dynamic>> delete(String url, {Duration? timeout}) async {
     final session = (_token, _sessionVersion);
     final response = await http
         .delete(Uri.parse(url), headers: _headers(url))
-        .timeout(requestTimeout);
+        .timeout(_effectiveTimeout(timeout));
     await _checkUnauthorized(response, session);
     return _procesarRespuesta(response);
   }

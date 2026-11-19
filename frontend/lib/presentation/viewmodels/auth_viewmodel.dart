@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
-import '../../../domain/entities/usuario.dart';
-import '../../../domain/usecases/login_usecase.dart';
-import '../../../domain/usecases/register_usecase.dart';
-import '../../../domain/usecases/logout_usecase.dart';
-import '../../../domain/usecases/restaurar_sesion_usecase.dart';
+import '../../domain/entities/usuario.dart';
+import '../../domain/usecases/login_usecase.dart';
+import '../../domain/usecases/register_usecase.dart';
+import '../../domain/usecases/logout_usecase.dart';
+import '../../domain/usecases/restaurar_sesion_usecase.dart';
 
 /// ViewModel encargado de la autenticación (Login y Registro).
 ///

@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
-import '../../../domain/entities/evaluacion.dart';
-import '../../../domain/entities/recomendacion.dart';
-import '../../../domain/entities/resultado_ml.dart';
-import '../../../domain/usecases/evaluar_riesgo_usecase.dart';
-import '../../../domain/usecases/obtener_historial_usecase.dart';
+import '../../domain/entities/evaluacion.dart';
+import '../../domain/entities/recomendacion.dart';
+import '../../domain/entities/resultado_ml.dart';
+import '../../domain/usecases/evaluar_riesgo_usecase.dart';
+import '../../domain/usecases/obtener_historial_usecase.dart';
 
 /// ViewModel encargado de las evaluaciones de riesgo de ansiedad.
 ///

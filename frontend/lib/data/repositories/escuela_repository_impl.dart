@@ -1,5 +1,5 @@
-import '../../../domain/entities/escuela.dart';
-import '../../../domain/repositories/escuela_repository.dart';
+import '../../domain/entities/escuela.dart';
+import '../../domain/repositories/escuela_repository.dart';
 import '../datasources/local/escuela_local_datasource.dart';
 
 /// Implementación del repositorio del catálogo de escuelas.

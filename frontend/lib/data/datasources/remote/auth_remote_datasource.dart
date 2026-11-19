@@ -1,4 +1,4 @@
-import '../../../../core/constants.dart';
+import '../../../core/constants.dart';
 import '../../models/usuario_model.dart';
 import 'api_service.dart';
 import 'dart:async';

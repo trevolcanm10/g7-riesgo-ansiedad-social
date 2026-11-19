@@ -97,7 +97,7 @@ Desde la raíz del repositorio, en Git Bash:
     python -m pip install -r requirements.txt
     cp .env.example .env
 
-Configura `.env` con las variables de `.env.example`. Puedes usar el mismo servidor MySQL que `users`, pero este microservicio debe tener su propia base (`DB_NAME=academic_support`) y una cuenta con permisos limitados sobre ella. No apuntes `DB_NAME` a la base de `users` ni guardes credenciales en el repositorio. `JWT_SECRET` sí debe coincidir exactamente con el de `users` para validar sus tokens.
+Configura `.env` con las variables de `.env.example`. Configura un servidor MySQL o un clúster TiDB para este microservicio, con su propia base DB_NAME=academic_support y una cuenta con permisos limitados. No requiere compartir la base ni las credenciales de Users. No apuntes `DB_NAME` a la base de `users` ni guardes credenciales en el repositorio. `JWT_SECRET` sí debe coincidir exactamente con el de `users` para validar sus tokens.
 
 Para una instancia MySQL remota que requiera TLS, configura `DB_SSL=true`; el cliente valida el certificado y el nombre del servidor. Si la instancia usa una autoridad certificadora privada, define `DB_SSL_CA` con la ruta al certificado CA en formato PEM. En una base local de desarrollo puede dejarse `DB_SSL=false`.
 
@@ -107,7 +107,7 @@ Crea primero la base de datos. Aplica schema.sql con una cuenta de migraciones q
     mysql -u academic_support_app -p academic_support < seed_demo.sql
     python app.py
 
-La configuración de conexión usa el mismo formato de variables (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`) que `services/users`; el archivo `.env` de ese servicio no se incluye en el repositorio. Reutiliza el host y puerto de la instancia compartida, crea la base `academic_support` y otorga permisos a una cuenta propia del microservicio. No copies ni publiques contraseñas en el chat o en Git.
+La conexión usa DB_HOST, DB_PORT, DB_NAME, DB_USER y DB_PASSWORD de la instancia que configures para el servicio. TiDB Cloud usa el puerto 4000; MySQL local normalmente usa 3306. La base y la cuenta de ejecución deben ser propias de este microservicio. No copies ni publiques contraseñas en el chat o en Git.
 
 Con `.env` configurado y `schema.sql` aplicado, puedes comprobar la conexión real, las cuatro tablas y la colación del esquema desde PowerShell:
 
@@ -115,6 +115,13 @@ Con `.env` configurado y `schema.sql` aplicado, puedes comprobar la conexión re
     python -m unittest discover -s tests -p test_mysql_live.py -v
 
 Esta prueba consulta únicamente la base configurada y comprueba conexión, tablas, colación y GET_LOCK (adquisición y liberación). Sin la variable de activación, se omite durante la suite normal de pruebas.
+
+La prueba de contrato valida el OpenAPI y una respuesta de recurso con modality nula. Desde esta carpeta, instala las herramientas solo de prueba y ejecútala:
+
+    python -m pip install -r requirements-test.txt
+    python -m unittest discover -s tests -p test_openapi_contract.py -v
+
+
 
 También hay pruebas de integración del repositorio que crean y eliminan datos de prueba. Ejecútalas solo contra una base aislada cuyo nombre termine en `_test` (por ejemplo, `academic_support_test`), con `schema.sql` aplicado:
 
@@ -139,7 +146,7 @@ El archivo .env local está ignorado por Git. app.py carga el .env de esta carpe
 ## Integración
 
 - La aplicación móvil debe usar el token Bearer existente y enviar las preferencias antes de pedir recomendaciones.
-- APIM debe publicar este backend como ruta propia; el gateway y el despliegue Azure quedan configurados por el responsable transversal. No se inventa aquí una URL de producción.
+- El prefijo elegido para APIM es /a; el gateway debe registrar las operaciones antes de que la app lo use. El servidor /a del OpenAPI es el destino previsto, no una confirmación de que ya esté publicado.
 - Los IDs de curso, tags y catálogo deben acordarse con el equipo. El código no modifica users, riskEvaluation, prediction-ml ni sus contratos.
 
 
@@ -149,7 +156,7 @@ El Blueprint está en render.yaml. Al crear el Blueprint en Render, selecciona s
 
 Antes de desplegar, crea una base propia para este servicio y aplica schema.sql con una cuenta de migraciones. Luego configura de forma privada DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD y el mismo JWT_SECRET que usa Users. El Blueprint marca esos valores como sync:false para no guardarlos en Git. DB_SSL está activo para conexión TLS. DB_SSL_CA solo se configura en Render si la base usa una autoridad certificadora privada.
 
-La comprobación de salud consulta MySQL, así que el esquema y las variables deben estar listos antes de que el servicio pase el health check. Render no ejecuta schema.sql automáticamente. El APIM no está incluido porque el equipo aún debe asignar el prefijo y la URL pública.
+La comprobación de salud consulta MySQL, así que el esquema y las variables deben estar listos antes de que el servicio pase el health check. Render no ejecuta schema.sql automáticamente. El Blueprint no crea la ruta APIM; el prefijo elegido y documentado es /a, pendiente de habilitación por el equipo.
 
 ### Compatibilidad con TiDB
 

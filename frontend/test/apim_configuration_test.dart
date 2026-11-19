@@ -17,6 +17,7 @@ void main() {
     expect(gateway.registration, '${gateway.origin}/u/users');
     expect(gateway.login, '${gateway.origin}/u/users/login');
     expect(gateway.evaluation, '${gateway.origin}/re/risk-evaluations');
+    expect(gateway.apoyoOrigin, gateway.origin + '/a');
     expect(gateway.usersOrigin, '${gateway.origin}/u');
   });
 
@@ -24,12 +25,14 @@ void main() {
     const apim = String.fromEnvironment('APIM_BASE_URL');
     const users = String.fromEnvironment('USERS_BASE_URL');
     const risk = String.fromEnvironment('RISK_EVALUATION_BASE_URL');
+    const apoyo = String.fromEnvironment('APOYO_BASE_URL');
     if (apim.isNotEmpty) {
       final origin = apim.replaceAll(RegExp(r'/+$'), '');
       expect(AppConstants.registroUsers, '$origin/u/users');
       expect(AppConstants.login, '$origin/u/users/login');
       expect(AppConstants.usersMe, '$origin/u/users/me');
       expect(AppConstants.evaluar, '$origin/re/risk-evaluations');
+      expect(AppConstants.apoyoOrigin, apoyo.isNotEmpty ? apoyo.replaceAll(RegExp(r'/+$'), '') : '$origin/a');
     } else {
       final usersOrigin = users.isEmpty ? AppConstants.baseUrl : users;
       expect(AppConstants.registroUsers, '$usersOrigin/users');
@@ -38,6 +41,7 @@ void main() {
         AppConstants.evaluar,
         '${risk.isEmpty ? 'http://localhost:3002' : risk}/risk-evaluations/',
       );
+      expect(AppConstants.apoyoOrigin, apoyo.isNotEmpty ? apoyo.replaceAll(RegExp(r'/+$'), '') : contains(':5003'));
     }
   });
 

@@ -269,3 +269,17 @@ _La terminal compilará la aplicación y la abrirá de forma interactiva en tu c
 - ❌ **Domain** NO puede depender de **Data** ni **Presentation**
 - ❌ **Presentation** NO puede depender de **Data** directamente
 - ❌ Los ViewModels NO deben hacer llamadas HTTP directamente
+
+## Módulo Apoyo Académico (M5)
+
+Desde el acceso **Talleres y recursos académicos** del inicio, el estudiante puede consultar el catálogo, filtrar por tipo/curso/modalidad, abrir detalles, inscribirse o cancelar talleres, guardar preferencias y ver recomendaciones con sus razones. El cliente no presenta el score como porcentaje y usa el JWT de la sesión.
+
+La URL del servicio sigue esta prioridad: `APOYO_BASE_URL`, luego APIM en `/a` si `APIM_BASE_URL` está configurada y, por último, local `http://localhost:5003` (Android emulador: `http://10.0.2.2:5003`). Cada llamada de Apoyo espera hasta 120 segundos para permitir el arranque en frío de Render.
+
+Desde `frontend/`, para probar con Render sin APIM:
+
+```powershell
+flutter run -d windows --dart-define=APOYO_BASE_URL=https://TU-SERVICIO.onrender.com
+```
+
+Para APIM, publica las 13 operaciones del contrato bajo `/a`, configura el `.env` de `run-apim.sh` y deja `APOYO_BASE_URL` sin definir. La app usará `https://apim-g7-riesgo-ansiedad.azure-api.net/a`. No agregues claves ni tokens a los `dart-define` del repositorio.

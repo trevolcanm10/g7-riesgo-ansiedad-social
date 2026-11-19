@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
-import '../../../domain/usecases/obtener_estadisticas_medico_usecase.dart';
-import '../../../domain/usecases/obtener_pacientes_usecase.dart';
-import '../../../domain/usecases/obtener_evaluaciones_recientes_usecase.dart';
+import '../../domain/usecases/obtener_estadisticas_medico_usecase.dart';
+import '../../domain/usecases/obtener_pacientes_usecase.dart';
+import '../../domain/usecases/obtener_evaluaciones_recientes_usecase.dart';
 
 /// ViewModel para el panel del Médico.
 ///
