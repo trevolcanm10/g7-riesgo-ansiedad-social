@@ -1,0 +1,269 @@
+{
+  "nota_ia": "Las estimaciones son orientativas y no constituyen un diagnostico clinico. Los perfiles provienen de un dataset sintetico y no describen poblaciones reales.",
+  "dataset": {
+    "origen": "Kaggle: yuanchunhong/university-student-mental-health-indicators",
+    "licencia": "CC0-1.0 (dominio publico)",
+    "filas": 1800,
+    "features": [
+      "PHQ9",
+      "GAD7",
+      "OnlineStress",
+      "FinancialStress",
+      "ExerciseFreq",
+      "SocialActivity",
+      "SleepHours"
+    ],
+    "tipo": "sintetico"
+  },
+  "random_state": 42,
+  "principal": {
+    "algoritmo": "kmeans",
+    "k": 2,
+    "silueta": 0.100447,
+    "davies_bouldin": 2.870311,
+    "inercia": 11312.744963
+  },
+  "linea_base_jerarquica": {
+    "algoritmo": "jerarquico_ward",
+    "k": 2,
+    "silueta": 0.059057,
+    "davies_bouldin": 3.803741
+  },
+  "barrido": [
+    {
+      "algoritmo": "kmeans",
+      "k": 2,
+      "silueta": 0.100447,
+      "davies_bouldin": 2.870311,
+      "inercia": 11312.744963
+    },
+    {
+      "algoritmo": "kmeans",
+      "k": 3,
+      "silueta": 0.093973,
+      "davies_bouldin": 2.48554,
+      "inercia": 10453.227096
+    },
+    {
+      "algoritmo": "kmeans",
+      "k": 4,
+      "silueta": 0.094381,
+      "davies_bouldin": 2.240124,
+      "inercia": 9776.11245
+    },
+    {
+      "algoritmo": "kmeans",
+      "k": 5,
+      "silueta": 0.095075,
+      "davies_bouldin": 2.106805,
+      "inercia": 9267.790374
+    },
+    {
+      "algoritmo": "kmeans",
+      "k": 6,
+      "silueta": 0.09529,
+      "davies_bouldin": 1.946301,
+      "inercia": 8805.668568
+    },
+    {
+      "algoritmo": "kmeans",
+      "k": 7,
+      "silueta": 0.100372,
+      "davies_bouldin": 1.870656,
+      "inercia": 8398.641629
+    },
+    {
+      "algoritmo": "kmeans",
+      "k": 8,
+      "silueta": 0.103353,
+      "davies_bouldin": 1.797103,
+      "inercia": 8062.809548
+    },
+    {
+      "algoritmo": "kmeans",
+      "k": 9,
+      "silueta": 0.100635,
+      "davies_bouldin": 1.787603,
+      "inercia": 7819.558186
+    },
+    {
+      "algoritmo": "kmeans",
+      "k": 10,
+      "silueta": 0.101068,
+      "davies_bouldin": 1.774189,
+      "inercia": 7589.968185
+    },
+    {
+      "algoritmo": "jerarquico_ward",
+      "k": 2,
+      "silueta": 0.059057,
+      "davies_bouldin": 3.803741
+    },
+    {
+      "algoritmo": "jerarquico_ward",
+      "k": 3,
+      "silueta": 0.038762,
+      "davies_bouldin": 3.287809
+    },
+    {
+      "algoritmo": "jerarquico_ward",
+      "k": 4,
+      "silueta": 0.038639,
+      "davies_bouldin": 2.959518
+    },
+    {
+      "algoritmo": "jerarquico_ward",
+      "k": 5,
+      "silueta": 0.038154,
+      "davies_bouldin": 2.697392
+    },
+    {
+      "algoritmo": "jerarquico_ward",
+      "k": 6,
+      "silueta": 0.044734,
+      "davies_bouldin": 2.516134
+    },
+    {
+      "algoritmo": "jerarquico_ward",
+      "k": 7,
+      "silueta": 0.042288,
+      "davies_bouldin": 2.436771
+    },
+    {
+      "algoritmo": "jerarquico_ward",
+      "k": 8,
+      "silueta": 0.043398,
+      "davies_bouldin": 2.325313
+    },
+    {
+      "algoritmo": "jerarquico_ward",
+      "k": 9,
+      "silueta": 0.039792,
+      "davies_bouldin": 2.239109
+    },
+    {
+      "algoritmo": "jerarquico_ward",
+      "k": 10,
+      "silueta": 0.040494,
+      "davies_bouldin": 2.151807
+    }
+  ],
+  "estabilidad": {
+    "metodo": "ARI (Adjusted Rand Index) medio entre ajustes con distintas semillas y entre el ajuste completo y ajustes sobre submuestras.",
+    "semillas": [
+      42,
+      7,
+      123,
+      2024
+    ],
+    "proporcion_submuestra": 0.8,
+    "repeticiones_submuestra": 5,
+    "tolerancia_ari": 0.05,
+    "por_k": [
+      {
+        "k": 2,
+        "ari_semillas": 0.477966,
+        "ari_subsamples": 0.640001,
+        "ari_promedio": 0.558984
+      },
+      {
+        "k": 3,
+        "ari_semillas": 0.202297,
+        "ari_subsamples": 0.282385,
+        "ari_promedio": 0.242341
+      },
+      {
+        "k": 4,
+        "ari_semillas": 0.210864,
+        "ari_subsamples": 0.205501,
+        "ari_promedio": 0.208182
+      },
+      {
+        "k": 5,
+        "ari_semillas": 0.228624,
+        "ari_subsamples": 0.246758,
+        "ari_promedio": 0.237691
+      },
+      {
+        "k": 6,
+        "ari_semillas": 0.191084,
+        "ari_subsamples": 0.22538,
+        "ari_promedio": 0.208232
+      },
+      {
+        "k": 7,
+        "ari_semillas": 0.219458,
+        "ari_subsamples": 0.222099,
+        "ari_promedio": 0.220778
+      },
+      {
+        "k": 8,
+        "ari_semillas": 0.260012,
+        "ari_subsamples": 0.355668,
+        "ari_promedio": 0.30784
+      },
+      {
+        "k": 9,
+        "ari_semillas": 0.300533,
+        "ari_subsamples": 0.299414,
+        "ari_promedio": 0.299974
+      },
+      {
+        "k": 10,
+        "ari_semillas": 0.279957,
+        "ari_subsamples": 0.265531,
+        "ari_promedio": 0.272744
+      }
+    ]
+  },
+  "perfiles": [
+    {
+      "cluster": 0,
+      "n": 895,
+      "descripcion": "Perfil con mayor carga de sintomatologia (PHQ-9 y GAD-7 mas altos), estres online y financiero mas altos, menos ejercicio y menor actividad social.",
+      "medias": {
+        "PHQ9": 8.512,
+        "GAD7": 8.536,
+        "OnlineStress": 6.015,
+        "FinancialStress": 4.819,
+        "ExerciseFreq": 2.775,
+        "SocialActivity": 4.739,
+        "SleepHours": 7.201
+      },
+      "centroide_escalado": {
+        "PHQ9": 0.0378,
+        "GAD7": 0.3733,
+        "OnlineStress": 0.5416,
+        "FinancialStress": 0.4664,
+        "ExerciseFreq": -0.107,
+        "SocialActivity": -0.1525,
+        "SleepHours": 0.1921
+      },
+      "nivel_orientativo": "moderado"
+    },
+    {
+      "cluster": 1,
+      "n": 905,
+      "descripcion": "Perfil con menor carga de sintomatologia y de estres, mas ejercicio y mayor actividad social.",
+      "medias": {
+        "PHQ9": 8.155,
+        "GAD7": 5.653,
+        "OnlineStress": 3.929,
+        "FinancialStress": 3.118,
+        "ExerciseFreq": 3.175,
+        "SocialActivity": 5.348,
+        "SleepHours": 6.65
+      },
+      "centroide_escalado": {
+        "PHQ9": -0.0374,
+        "GAD7": -0.3692,
+        "OnlineStress": -0.5356,
+        "FinancialStress": -0.4612,
+        "ExerciseFreq": 0.1058,
+        "SocialActivity": 0.1508,
+        "SleepHours": -0.19
+      },
+      "nivel_orientativo": "moderado"
+    }
+  ]
+}

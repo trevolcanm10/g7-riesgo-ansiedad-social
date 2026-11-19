@@ -1,0 +1,31 @@
+# Este archivo es necesario porque Docker NO lee .gitignore.
+# Sin el, "COPY . ." meteria el .env (con JWT_SECRET y la contrasena de la
+# base de datos) dentro de la imagen.
+
+# Secretos y configuracion local
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# Artefactos de desarrollo
+.git/
+.gitignore
+.idea/
+.vscode/
+*.tsbuildinfo
+
+# El dataset de entrenamiento (111 KB) no se necesita en tiempo de ejecucion:
+# el modelo ya esta en app/infrastructure/ml/artifacts/
+ml/data/
+
+# Las pruebas no se ejecutan en el contenedor
+tests/

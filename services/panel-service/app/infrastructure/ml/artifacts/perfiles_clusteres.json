@@ -1,0 +1,63 @@
+{
+  "nota_ia": "Las estimaciones son orientativas y no constituyen un diagnostico clinico. Los perfiles provienen de un dataset sintetico y no describen poblaciones reales.",
+  "features": [
+    "PHQ9",
+    "GAD7",
+    "OnlineStress",
+    "FinancialStress",
+    "ExerciseFreq",
+    "SocialActivity",
+    "SleepHours"
+  ],
+  "k": 2,
+  "perfiles": [
+    {
+      "cluster": 0,
+      "n": 895,
+      "descripcion": "Perfil con mayor carga de sintomatologia (PHQ-9 y GAD-7 mas altos), estres online y financiero mas altos, menos ejercicio y menor actividad social.",
+      "medias": {
+        "PHQ9": 8.512,
+        "GAD7": 8.536,
+        "OnlineStress": 6.015,
+        "FinancialStress": 4.819,
+        "ExerciseFreq": 2.775,
+        "SocialActivity": 4.739,
+        "SleepHours": 7.201
+      },
+      "centroide_escalado": {
+        "PHQ9": 0.0378,
+        "GAD7": 0.3733,
+        "OnlineStress": 0.5416,
+        "FinancialStress": 0.4664,
+        "ExerciseFreq": -0.107,
+        "SocialActivity": -0.1525,
+        "SleepHours": 0.1921
+      },
+      "nivel_orientativo": "moderado"
+    },
+    {
+      "cluster": 1,
+      "n": 905,
+      "descripcion": "Perfil con menor carga de sintomatologia y de estres, mas ejercicio y mayor actividad social.",
+      "medias": {
+        "PHQ9": 8.155,
+        "GAD7": 5.653,
+        "OnlineStress": 3.929,
+        "FinancialStress": 3.118,
+        "ExerciseFreq": 3.175,
+        "SocialActivity": 5.348,
+        "SleepHours": 6.65
+      },
+      "centroide_escalado": {
+        "PHQ9": -0.0374,
+        "GAD7": -0.3692,
+        "OnlineStress": -0.5356,
+        "FinancialStress": -0.4612,
+        "ExerciseFreq": 0.1058,
+        "SocialActivity": 0.1508,
+        "SleepHours": -0.19
+      },
+      "nivel_orientativo": "moderado"
+    }
+  ]
+}

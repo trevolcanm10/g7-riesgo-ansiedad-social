@@ -4,16 +4,28 @@ node_modules/
 !.env.example
 dist/
 
-# IDEs locales
+# Editores y herramientas locales
+.vscode/
 .idea/
+.playwright-mcp/
+*.swp
 
-# Python & Pytest
+# Python, pytest y bases locales
 __pycache__/
 *.pyc
 .pytest_cache/
+.venv/
 venv/
 *.db
 
-# Config local de Flutter (no versionar)
+# Flutter y configuración local
+.dart_tool/
+.flutter-plugins*
+build/
 frontend/devtools_options.yaml
 frontend/.env
+
+# Logs y archivos temporales
+*.log
+*.tmp
+*.bak

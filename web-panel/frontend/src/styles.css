@@ -1,0 +1,288 @@
+@import 'tailwindcss';
+
+/*
+ * Sistema de diseno del Panel Institucional.
+ *
+ * Se usan las mismas variables que la demo estudiantil (web-demo) para que
+ * ambas aplicaciones compartan identidad visual: navy, verde institucional,
+ * gris azulado y bordes frios.
+ */
+@theme {
+  --color-navy: #0b456d;
+  --color-navy-soft: #12618f;
+  --color-navy-tint: #e8f1f8;
+  --color-green: #13765f;
+  --color-green-tint: #e6f2ed;
+  --color-muted: #5b6c80;
+  --color-border: #e2e8ed;
+  --color-surface: #ffffff;
+  --color-canvas: #f4f7f9;
+  --color-danger: #a3322b;
+  --color-danger-tint: #fbeeed;
+  --color-warning: #9a6b0c;
+  --color-warning-tint: #fdf4e0;
+
+  --font-sans: Inter, 'Segoe UI', Arial, sans-serif;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-canvas);
+    color: #10243b;
+    font-family: var(--font-sans);
+    font-synthesis: none;
+  }
+
+  h1,
+  h2,
+  h3 {
+    margin: 0;
+    letter-spacing: -0.02em;
+  }
+
+  p {
+    margin: 0;
+    line-height: 1.6;
+    color: var(--color-muted);
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  :focus-visible {
+    outline: 3px solid #4c8adc;
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* --- Superficies --- */
+  .panel {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgb(16 36 59 / 4%);
+  }
+
+  .panel-body {
+    padding: 1.5rem;
+  }
+
+  /* --- Botones --- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    padding: 0 1.15rem;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: var(--color-navy);
+    color: #fff;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: background 0.15s;
+  }
+
+  .btn:hover:not(:disabled) {
+    background: var(--color-navy-soft);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    border-color: #8092a5;
+    color: var(--color-navy);
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    background: var(--color-navy-tint);
+  }
+
+  .btn-sm {
+    min-height: 36px;
+    padding: 0 0.8rem;
+    font-size: 0.8125rem;
+  }
+
+  /* --- Formularios --- */
+  .field label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+
+  .field input,
+  .field select,
+  .field textarea {
+    width: 100%;
+    min-height: 44px;
+    padding: 0.65rem 0.8rem;
+    border: 1px solid #cdd7df;
+    border-radius: 6px;
+    background: #fcfdfd;
+    color: #10243b;
+  }
+
+  .field input[aria-invalid='true'],
+  .field select[aria-invalid='true'],
+  .field textarea[aria-invalid='true'] {
+    border-color: #bc4b43;
+  }
+
+  .field-error {
+    margin-top: 0.3rem;
+    font-size: 0.75rem;
+    color: var(--color-danger);
+  }
+
+  .required {
+    color: #c24942;
+  }
+
+  /* --- Avisos --- */
+  .notice {
+    display: flex;
+    gap: 0.85rem;
+    padding: 1rem 1.25rem;
+    border-radius: 8px;
+    background: #e9f3ff;
+    color: #1264bb;
+  }
+
+  .notice-ia {
+    display: flex;
+    gap: 0.85rem;
+    padding: 1rem 1.25rem;
+    border-radius: 8px;
+    background: var(--color-warning-tint);
+    color: var(--color-warning);
+  }
+
+  .notice-privacidad {
+    display: flex;
+    gap: 0.85rem;
+    padding: 1rem 1.25rem;
+    border-radius: 8px;
+    background: var(--color-green-tint);
+    color: var(--color-green);
+  }
+
+  .error-banner {
+    padding: 0.85rem 1rem;
+    border-radius: 6px;
+    background: var(--color-danger-tint);
+    color: var(--color-danger);
+    font-size: 0.875rem;
+  }
+
+  /* --- Tablas --- */
+  .tabla {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+
+  .tabla th {
+    padding: 0.7rem 0.9rem;
+    border-bottom: 2px solid var(--color-border);
+    background: #f8fafb;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  .tabla td {
+    padding: 0.7rem 0.9rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .tabla tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  /* --- Distintivos --- */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    background: var(--color-navy-tint);
+    color: var(--color-navy);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .badge-bajo {
+    background: var(--color-green-tint);
+    color: var(--color-green);
+  }
+
+  .badge-moderado {
+    background: var(--color-warning-tint);
+    color: var(--color-warning);
+  }
+
+  .badge-elevado {
+    background: var(--color-danger-tint);
+    color: var(--color-danger);
+  }
+
+  .badge-neutro {
+    background: #eef2f5;
+    color: var(--color-muted);
+  }
+
+  /* --- Enlaces navegables --- */
+  .skip {
+    position: fixed;
+    top: -100px;
+    left: 1rem;
+    z-index: 100;
+    padding: 0.6rem 1rem;
+    border-radius: 6px;
+    background: var(--color-navy);
+    color: #fff;
+  }
+
+  .skip:focus {
+    top: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

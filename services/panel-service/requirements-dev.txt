@@ -1,0 +1,10 @@
+# Dependencias solo de desarrollo. No se instalan en la imagen de Docker.
+#
+# Uso:
+#   pip install -r requirements-dev.txt
+#
+# pandas solo se usa para entrenar el modelo de agrupamiento
+# (ml/train_clustering.py), nunca en tiempo de ejecucion del servicio.
+-r requirements.txt
+pandas==2.2.3
+pytest==8.3.3
