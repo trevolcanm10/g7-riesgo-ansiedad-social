@@ -27,6 +27,14 @@ void main() {
               'title': 'Manejo del estrés',
               'description': 'Taller',
               'availableSeats': 2,
+              'isSynthetic': false,
+            },
+            {
+              'id': 8,
+              'type': 'WORKSHOP',
+              'title': 'Taller de ejemplo',
+              'description': 'Datos de prueba',
+              'isSynthetic': true,
             },
           ],
           'pagination': {'total': 1, 'limit': 20, 'offset': 0},
@@ -40,8 +48,19 @@ void main() {
                 'type': 'WORKSHOP',
                 'title': 'Manejo del estrés',
                 'description': 'Taller',
+                'isSynthetic': false,
               },
               'score': 0.8,
+            },
+            {
+              'resource': {
+                'id': 8,
+                'type': 'WORKSHOP',
+                'title': 'Taller de ejemplo',
+                'description': 'Datos de prueba',
+                'isSynthetic': true,
+              },
+              'score': 0.9,
             },
           ],
         };
@@ -78,6 +97,7 @@ void main() {
         'Manejo del estrés',
       );
       expect((await repo.recommendations()).single.id, 7);
+      expect((await repo.resources('WORKSHOP')).single.isSynthetic, isFalse);
       expect((await repo.preferences())['interests'], ['bienestar']);
       await repo.savePreferences({
         'interests': ['estrés'],

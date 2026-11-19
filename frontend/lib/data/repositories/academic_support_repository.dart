@@ -11,6 +11,7 @@ class SupportResource {
   final int? availableSeats;
   final String? url;
   final List<String> tags;
+  final bool isSynthetic;
 
   const SupportResource({
     required this.id,
@@ -23,6 +24,7 @@ class SupportResource {
     this.availableSeats,
     this.url,
     this.tags = const [],
+    this.isSynthetic = false,
   });
 
   factory SupportResource.fromJson(Map<String, dynamic> json) =>
@@ -37,6 +39,7 @@ class SupportResource {
         availableSeats: (json['availableSeats'] as num?)?.toInt(),
         url: json['url'] as String?,
         tags: (json['tags'] as List<dynamic>? ?? const []).cast<String>(),
+        isSynthetic: json['isSynthetic'] == true,
       );
 }
 
@@ -62,6 +65,7 @@ class HttpAcademicSupportRepository implements AcademicSupportRepository {
     final response = await _api.get('$_base/resources?type=$type');
     return (response['items'] as List<dynamic>)
         .map((item) => SupportResource.fromJson(item as Map<String, dynamic>))
+        .where((resource) => !resource.isSynthetic)
         .toList();
   }
 
@@ -74,6 +78,7 @@ class HttpAcademicSupportRepository implements AcademicSupportRepository {
             (item as Map<String, dynamic>)['resource'] as Map<String, dynamic>,
           ),
         )
+        .where((resource) => !resource.isSynthetic)
         .toList();
   }
 

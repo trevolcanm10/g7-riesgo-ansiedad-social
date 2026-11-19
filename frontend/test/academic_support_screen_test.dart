@@ -11,6 +11,7 @@ class FakeSupport implements AcademicSupportRepository {
   bool fail = false;
   bool empty = false;
   bool enrolled = false;
+  bool includeSynthetic = false;
   Completer<void>? wait;
   final workshop = const SupportResource(
     id: 7,
@@ -19,15 +20,23 @@ class FakeSupport implements AcademicSupportRepository {
     description: 'Encuentro preventivo',
     availableSeats: 4,
   );
+  final syntheticWorkshop = const SupportResource(
+    id: 8,
+    type: 'WORKSHOP',
+    title: 'Taller de ejemplo',
+    description: 'Datos de prueba',
+    isSynthetic: true,
+  );
   @override
   Future<List<SupportResource>> resources(String type) async {
     await wait?.future;
     if (fail) throw StateError('Sin conexión');
-    return empty ? [] : [workshop];
+    return empty ? [] : [workshop, if (includeSynthetic) syntheticWorkshop];
   }
 
   @override
-  Future<List<SupportResource>> recommendations() async => [workshop];
+  Future<List<SupportResource>> recommendations() async =>
+      includeSynthetic ? [syntheticWorkshop] : [workshop];
   @override
   Future<Map<String, dynamic>> preferences() async => {
     'interests': <String>[],
@@ -64,6 +73,15 @@ Future<void> showCatalog(WidgetTester tester, FakeSupport repo) async {
 }
 
 void main() {
+  testWidgets('student catalog hides synthetic resources and recommendations', (tester) async {
+    final repo = FakeSupport()..includeSynthetic = true;
+    await showCatalog(tester, repo);
+    await tester.pumpAndSettle();
+    expect(find.text('Manejo del estrés'), findsOneWidget);
+    expect(find.text('Taller de ejemplo'), findsNothing);
+    expect(find.text('RECOMENDADO PARA TI'), findsNothing);
+  });
+
   testWidgets('support hub keeps existing Orientation access', (tester) async {
     final repo = FakeSupport();
     await tester.pumpWidget(Provider<AcademicSupportRepository>.value(

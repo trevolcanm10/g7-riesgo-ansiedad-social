@@ -201,8 +201,8 @@ class _AcademicSupportCatalogScreenState
           : <int>{};
       if (!mounted || generation != _generation) return;
       setState(() {
-        _items = items;
-        _recommended = recommendations;
+        _items = items.where((item) => !item.isSynthetic).toList();
+        _recommended = recommendations.where((item) => !item.isSynthetic).toList();
         _enrolled = enrolled;
         _loading = false;
       });
