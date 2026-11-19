@@ -1,7 +1,19 @@
 node_modules/
 .env
-dist/
+*.env
 !.env.example
+dist/
 
-# Config local de Flutter DevTools (no versionar)
+# IDEs locales
+.idea/
+
+# Python & Pytest
+__pycache__/
+*.pyc
+.pytest_cache/
+venv/
+*.db
+
+# Config local de Flutter (no versionar)
 frontend/devtools_options.yaml
+frontend/.env

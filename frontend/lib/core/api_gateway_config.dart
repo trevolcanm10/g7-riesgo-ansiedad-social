@@ -12,6 +12,7 @@ class ApiGatewayConfig {
   String get evaluation => '$origin/re/risk-evaluations';
   String get citasOrigin => '$origin/c';
   String get academicAgendaOrigin => '$origin/agenda';
+  String get orientacionOrigin => '$origin/o';
 
   /// Never forward the APIM key to localhost or a different server/path.
   Map<String, String> headersFor(String url) {

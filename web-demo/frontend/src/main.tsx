@@ -6,7 +6,8 @@ import HomePage from './pages/Home';
 import RegisterPage from './pages/Register';
 import EvaluationPage from './pages/Evaluation';
 import ResultPage from './pages/Result';
+import BandejaOrientacion from './pages/BandejaOrientacion';
 import type { Prediction } from './types';
 import './styles.css';
-function App() { const [result, setResult] = useState<Prediction | null>(null), [attempt, setAttempt] = useState(0); const navigate = useNavigate(); return <Routes><Route element={<Layout/>}><Route index element={<HomePage/>}/><Route path="registro" element={<RegisterPage/>}/><Route path="evaluacion" element={<EvaluationPage key={attempt} onResult={setResult}/>}/><Route path="resultado" element={<ResultPage result={result} reset={() => { setResult(null); setAttempt(a => a + 1); navigate('/evaluacion'); }}/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Route></Routes>; }
+function App() { const [result, setResult] = useState<Prediction | null>(null), [attempt, setAttempt] = useState(0); const navigate = useNavigate(); return <Routes><Route element={<Layout/>}><Route index element={<HomePage/>}/><Route path="registro" element={<RegisterPage/>}/><Route path="evaluacion" element={<EvaluationPage key={attempt} onResult={setResult}/>}/><Route path="resultado" element={<ResultPage result={result} reset={() => { setResult(null); setAttempt(a => a + 1); navigate('/evaluacion'); }}/>}/><Route path="orientacion" element={<BandejaOrientacion/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Route></Routes>; }
 createRoot(document.getElementById('root')!).render(<React.StrictMode><BrowserRouter><App/></BrowserRouter></React.StrictMode>);

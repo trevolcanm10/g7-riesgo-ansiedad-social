@@ -38,7 +38,7 @@ http.createServer((request, response) => {
     response.writeHead(403).end();
     return;
   }
-  const route = ['/u', '/re', '/p', '/c', '/agenda'].find(prefix =>
+  const route = ['/u', '/re', '/p', '/c', '/o', '/agenda'].find(prefix =>
     requestUrl.pathname === prefix || requestUrl.pathname.startsWith(`${prefix}/`));
   if (!route) {
     response.writeHead(404, cors).end();
