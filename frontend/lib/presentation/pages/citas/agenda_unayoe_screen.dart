@@ -320,7 +320,7 @@ class _CitaPersonalCard extends StatelessWidget {
                       vertical: 3,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFD97706).withOpacity(0.12),
+                      color: const Color(0xFFD97706).withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Text(

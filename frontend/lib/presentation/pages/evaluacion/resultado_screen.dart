@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../domain/entities/recomendacion.dart';
+import '../../../domain/entities/shap_explanation.dart';
+import '../../../core/app_colors.dart';
 import '../../../presentation/viewmodels/evaluacion_viewmodel.dart';
 import '../../widgets/risk_indicator.dart';
 
@@ -39,6 +41,8 @@ class ResultadoScreen extends StatelessWidget {
                   nivelRiesgo: evVM.nivelRiesgo ?? '',
                 ),
                 const SizedBox(height: 16),
+                _buildShap(context, evVM.ultimoResultado?.shapExplanation),
+                const SizedBox(height: 16),
 
                 if (evVM.explicacion != null)
                   TarjetasAnimadasIA(
@@ -60,7 +64,7 @@ class ResultadoScreen extends StatelessWidget {
                   const Align(
                     alignment: Alignment.centerLeft,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      padding: EdgeInsets.symmetric(vertical: 8.0),
                       child: Text(
                         'Recomendaciones Base',
                         style: TextStyle(
@@ -193,6 +197,61 @@ class ResultadoScreen extends StatelessWidget {
     );
   }
 
+  static const _shapNames = <String, String>{
+    'PHQ9': 'Síntomas depresivos (PHQ-9)',
+    'GAD7': 'Síntomas de ansiedad (GAD-7)',
+    'OnlineStress': 'Estrés en línea',
+    'FinancialStress': 'Estrés financiero',
+    'ExerciseFreq': 'Frecuencia de ejercicio',
+    'SocialActivity': 'Actividad social',
+    'SleepHours': 'Horas de sueño',
+  };
+
+  Widget _buildShap(BuildContext context, ShapExplanation? explanation) {
+    final colors = AppColors.of(context);
+    final available = explanation?.disponible == true && explanation!.factores.isNotEmpty;
+    return Card(
+      color: colors.card,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('¿Qué influyó en tu resultado?',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: colors.textPrimary)),
+          const SizedBox(height: 8),
+          if (!available)
+            Text('Explicación no disponible para esta evaluación.',
+                style: TextStyle(color: colors.textTertiary))
+          else ...explanation.factores.map((factor) {
+            final increases = factor.direccion == 'aumenta';
+            final direction = increases ? 'Aumentó' : factor.direccion == 'disminuye' ? 'Redujo' : 'No cambió';
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              child: Row(children: [
+                Icon(increases ? Icons.trending_up : factor.direccion == 'disminuye' ? Icons.trending_down : Icons.trending_flat,
+                    color: increases ? colors.danger : colors.primary),
+                const SizedBox(width: 10),
+                Expanded(child: Text(_shapNames[factor.nombre] ?? factor.nombre,
+                    style: TextStyle(color: colors.textPrimary))),
+                Text(explanation.modelo == null
+                    ? '$direction la estimación de riesgo'
+                    : '$direction la estimación de XGBoost',
+                    style: TextStyle(color: colors.textTertiary, fontSize: 12)),
+              ]),
+            );
+          }),
+          if (available) ...[
+            const SizedBox(height: 6),
+            if (explanation.modelo != null)
+              Text('Factores del ${explanation.modelo}; el resultado total usa cinco modelos.',
+                  style: TextStyle(color: colors.textTertiary, fontSize: 12)),
+            Text('Contribuciones al riesgo de clase 0 en escala log-odds; no son porcentajes ni un diagnóstico.',
+                style: TextStyle(color: colors.textTertiary, fontSize: 12)),
+          ],
+        ]),
+      ),
+    );
+  }
+
   List<Widget> _buildRecomendaciones(List<Recomendacion> recomendaciones) {
     return recomendaciones.map((rec) {
       return Card(
@@ -200,7 +259,7 @@ class ResultadoScreen extends StatelessWidget {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: Colors.amber.withOpacity(0.3), width: 1),
+          side: BorderSide(color: Colors.amber.withValues(alpha: 0.3), width: 1),
         ),
         child: ListTile(
           leading: const CircleAvatar(
@@ -244,7 +303,7 @@ class ResultadoScreen extends StatelessWidget {
                   esYouTube
                       ? Icons.play_arrow_rounded
                       : Icons.check_circle_outline,
-                  color: colorTema.withOpacity(0.6),
+                  color: colorTema.withValues(alpha: 0.6),
                   size: 16,
                 ),
                 const SizedBox(width: 8),
@@ -330,7 +389,7 @@ class _TarjetasAnimadasIAState extends State<TarjetasAnimadasIA> {
           margin: const EdgeInsets.only(bottom: 14),
           // 1. Efecto Micro-Escala: Se agranda levemente al pasar el cursor o pulsar
           transform: _isHovered
-              ? (Matrix4.identity()..scale(1.02, 1.02))
+              ? Matrix4.diagonal3Values(1.02, 1.02, 1)
               : Matrix4.identity(),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -339,13 +398,13 @@ class _TarjetasAnimadasIAState extends State<TarjetasAnimadasIA> {
             border: Border.all(
               color: _isHovered
                   ? widget.colorTema.shade400
-                  : widget.colorTema.withOpacity(0.25),
+                  : widget.colorTema.withValues(alpha: 0.25),
               width: _isHovered ? 2.0 : 1.5,
             ),
             // 3. Efecto de Sombra con Profundidad Dinámica (Elevación Neumórfica)
             boxShadow: [
               BoxShadow(
-                color: widget.colorTema.withOpacity(_isHovered ? 0.12 : 0.04),
+                color: widget.colorTema.withValues(alpha: _isHovered ? 0.12 : 0.04),
                 blurRadius: _isHovered ? 16 : 8,
                 spreadRadius: _isHovered ? 2 : 0,
                 offset: _isHovered ? const Offset(0, 8) : const Offset(0, 4),

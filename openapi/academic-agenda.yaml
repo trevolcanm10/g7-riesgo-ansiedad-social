@@ -1,0 +1,199 @@
+openapi: 3.0.3
+info:
+  title: Academic Agenda API
+  version: 1.0.0
+  description: Actividades académicas por usuario y clasificación semanal informativa.
+servers:
+  - url: https://apim-g7-riesgo-ansiedad.azure-api.net/agenda
+    description: Prefijo de Academic Agenda en APIM
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      security: []
+      summary: Estado del servicio, predictor y base de datos
+      responses:
+        '200': { description: Base disponible, content: { application/json: { schema: { $ref: '#/components/schemas/Health' } } } }
+        '503': { description: Base no disponible, content: { application/json: { schema: { $ref: '#/components/schemas/Health' } } } }
+  /actividades:
+    get:
+      summary: Listar actividades del usuario del JWT
+      responses:
+        '200':
+          description: Actividades del usuario
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Activity' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+    post:
+      summary: Crear una actividad del usuario del JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ActivityInput' }
+      responses:
+        '201': { description: Actividad creada, content: { application/json: { schema: { $ref: '#/components/schemas/Activity' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+  /actividades/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer, minimum: 1 }
+    get:
+      summary: Consultar una actividad propia
+      responses:
+        '200': { description: Actividad, content: { application/json: { schema: { $ref: '#/components/schemas/Activity' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+    patch:
+      summary: Actualizar una actividad propia
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ActivityPatch' }
+      responses:
+        '200': { description: Actividad actualizada, content: { application/json: { schema: { $ref: '#/components/schemas/Activity' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+    delete:
+      summary: Eliminar una actividad propia
+      responses:
+        '200': { description: Actividad eliminada, content: { application/json: { schema: { $ref: '#/components/schemas/Deleted' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+  /clasificacion/semanal:
+    post:
+      summary: Clasificar la carga semanal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Indicators' }
+      responses:
+        '200': { description: Clasificación, content: { application/json: { schema: { $ref: '#/components/schemas/Classification' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+  /alertas/preventivas:
+    post:
+      summary: Avisos preventivos según la carga semanal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Indicators' }
+      responses:
+        '200': { description: Avisos, content: { application/json: { schema: { $ref: '#/components/schemas/Alerts' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  responses:
+    BadRequest: { description: Datos inválidos, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    Unauthorized: { description: JWT ausente o inválido, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    NotFound: { description: Actividad ajena o inexistente, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    Unavailable: { description: Base o predictor no disponible, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  schemas:
+    Error:
+      type: object
+      required: [error, mensaje]
+      properties:
+        error: { type: string }
+        mensaje: { type: string }
+    Health:
+      type: object
+      required: [service, status, database, ml_predictor_available]
+      properties:
+        service: { type: string, enum: [academic-agenda] }
+        status: { type: string, enum: [OK, ERROR] }
+        database: { type: string, enum: [OK, UNAVAILABLE] }
+        ml_predictor_available: { type: boolean }
+    ActivityFields:
+      type: object
+      properties:
+        title: { type: string, minLength: 1 }
+        course: { type: string, minLength: 1 }
+        activity_type: { type: string, enum: [tarea, examen, proyecto, lectura, otro] }
+        activity_date: { type: string, format: date }
+        estimated_hours: { type: number, minimum: 0 }
+        priority: { type: string, enum: [baja, media, alta] }
+        description: { type: string }
+        completed: { type: boolean }
+    ActivityInput:
+      allOf:
+        - $ref: '#/components/schemas/ActivityFields'
+      required: [title, course, activity_type, activity_date, estimated_hours, priority]
+    ActivityPatch:
+      allOf:
+        - $ref: '#/components/schemas/ActivityFields'
+    Activity:
+      allOf:
+        - $ref: '#/components/schemas/ActivityFields'
+        - type: object
+          required: [id, user_id, title, course, activity_type, activity_date, estimated_hours, priority, description, completed, created_at]
+          properties:
+            id: { type: integer }
+            user_id: { type: integer, description: Identificador derivado del JWT. }
+            created_at: { type: string, format: date-time }
+    Deleted:
+      type: object
+      required: [mensaje]
+      properties:
+        mensaje: { type: string }
+    Indicators:
+      type: object
+      additionalProperties: false
+      required: [horas_totales, num_actividades, num_examenes, num_entregas, num_urgentes_48h, num_prioridad_alta, dias_con_actividades, max_horas_dia, concentracion_3dias, num_sin_duracion]
+      properties:
+        horas_totales: { type: number }
+        num_actividades: { type: number }
+        num_examenes: { type: number }
+        num_entregas: { type: number }
+        num_urgentes_48h: { type: number }
+        num_prioridad_alta: { type: number }
+        dias_con_actividades: { type: number }
+        max_horas_dia: { type: number }
+        concentracion_3dias: { type: number }
+        num_sin_duracion: { type: number }
+    Classification:
+      type: object
+      required: [nivel_carga, probabilidad_nivel, probabilidades, modelo]
+      properties:
+        nivel_carga: { type: string, enum: [BAJA, MODERADA, ALTA] }
+        probabilidad_nivel: { type: number, minimum: 0, maximum: 1 }
+        probabilidades:
+          type: object
+          required: [BAJA, MODERADA, ALTA]
+          properties:
+            BAJA: { type: number, minimum: 0, maximum: 1 }
+            MODERADA: { type: number, minimum: 0, maximum: 1 }
+            ALTA: { type: number, minimum: 0, maximum: 1 }
+        modelo: { type: string }
+    Alerts:
+      type: object
+      required: [nivel_carga, alertas, recomendacion]
+      properties:
+        nivel_carga: { type: string, enum: [BAJA, MODERADA, ALTA] }
+        alertas:
+          type: array
+          items:
+            type: object
+            required: [codigo, mensaje, severidad]
+            properties:
+              codigo: { type: string }
+              mensaje: { type: string }
+              severidad: { type: string, enum: [informacion, advertencia, alto] }
+        recomendacion: { type: string }

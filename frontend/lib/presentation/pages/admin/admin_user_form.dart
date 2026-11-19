@@ -193,7 +193,7 @@ class _AdminUserFormState extends State<AdminUserForm> {
                   border: Border.all(color: colors.border),
                 ),
                 child: DropdownButtonFormField<String>(
-                  value: _rol,
+                  initialValue: _rol,
                   decoration: const InputDecoration(
                     border: InputBorder.none,
                     labelText: 'Rol',

@@ -29,23 +29,32 @@ class EvaluacionRemoteDataSource {
     })
   >
   evaluarRiesgo(Map<String, num> variables) async {
-    final Map<String, dynamic> response;
-    try {
-      response = await _apiService.post(
-        AppConstants.evaluar,
-        body: variables,
-        expectedStatus: 201,
-      );
-    } on ApiException catch (e) {
-      throw Exception(_mensajeHttp(e.statusCode));
-    } on TimeoutException {
-      throw Exception('El servidor tardo en responder. Intentalo de nuevo.');
-    } on http.ClientException {
-      throw Exception('No se pudo conectar con el servicio de evaluacion.');
-    } on FormatException {
-      throw Exception(
-        'El servicio devolvió una respuesta inesperada. Reintenta.',
-      );
+    late final Map<String, dynamic> response;
+    for (var attempt = 0; ; attempt++) {
+      try {
+        response = await _apiService.post(
+          AppConstants.evaluar,
+          body: variables,
+          expectedStatus: 201,
+        );
+        break;
+      } on ApiException catch (e) {
+        // Un 503 declara que el servicio no procesó la evaluación. No se
+        // reintentan timeouts: la respuesta podría haberse perdido tras guardar.
+        if (e.statusCode == 503 && attempt == 0) {
+          await Future<void>.delayed(const Duration(seconds: 2));
+          continue;
+        }
+        throw Exception(_mensajeHttp(e.statusCode));
+      } on TimeoutException {
+        throw Exception('El servidor tardo en responder. Intentalo de nuevo.');
+      } on http.ClientException {
+        throw Exception('No se pudo conectar con el servicio de evaluacion.');
+      } on FormatException {
+        throw Exception(
+          'El servicio devolvió una respuesta inesperada. Reintenta.',
+        );
+      }
     }
 
     // Una respuesta que no cumple el contrato se rechaza: nunca se muestra

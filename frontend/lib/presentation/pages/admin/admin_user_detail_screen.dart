@@ -67,7 +67,7 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
         ],
       ),
     );
-    if (confirm != true) return;
+    if (confirm != true || !mounted) return;
 
     try {
       final apiService = context.read<ApiService>();
@@ -121,7 +121,7 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
         ],
       ),
     );
-    if (confirm != true) return;
+    if (confirm != true || !mounted) return;
 
     try {
       final apiService = context.read<ApiService>();
@@ -424,7 +424,6 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
           )
         else
           ...evaluaciones.asMap().entries.map((entry) {
-            final index = entry.key;
             final eval = entry.value as Map<String, dynamic>;
             final resultado = eval['resultado'] as Map<String, dynamic>?;
             final nivelRiesgo = resultado?['nivel_riesgo'] ?? 'BAJO';

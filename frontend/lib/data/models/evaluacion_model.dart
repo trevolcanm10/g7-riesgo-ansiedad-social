@@ -54,9 +54,9 @@ class EvaluacionModel {
   /// Crea un DTO desde JSON (respuesta de la API)
   factory EvaluacionModel.fromJson(Map<String, dynamic> json) {
     return EvaluacionModel(
-      idEvaluacion: json['id_evaluacion'] ?? 0,
-      idUsuario: json['id_usuario'] ?? 0,
-      fechaRealizacion: json['fecha_realizacion'],
+      idEvaluacion: json['id'] ?? json['id_evaluacion'] ?? 0,
+      idUsuario: json['userId'] ?? json['id_usuario'] ?? 0,
+      fechaRealizacion: json['createdAt'] ?? json['fecha_realizacion'],
       phq9Score: (json['phq9_score'] ?? 0).toDouble(),
       gad7Score: (json['gad7_score'] ?? 0).toDouble(),
       sleepHours: (json['sleep_hours'] ?? 0).toDouble(),
@@ -64,17 +64,17 @@ class EvaluacionModel {
       socialActivity: (json['social_activity'] ?? 0).toDouble(),
       onlineStress: (json['online_stress'] ?? 0).toDouble(),
       gpa: (json['gpa'] ?? 0).toDouble(),
-      familySupport: (json['family_support'] ?? 0).toDouble(),
-      screenTime: (json['screen_time'] ?? 0).toDouble(),
-      academicStress: (json['academic_stress'] ?? 0).toDouble(),
-      dietQuality: (json['diet_quality'] ?? 0).toDouble(),
-      selfEfficacy: (json['self_efficacy'] ?? 0).toDouble(),
-      peerRelationship: (json['peer_relationship'] ?? 0).toDouble(),
-      financialStress: (json['financial_stress'] ?? 0).toDouble(),
-      sleepQuality: (json['sleep_quality'] ?? 0).toDouble(),
-      resultado: json['resultado'] != null
-          ? ResultadoMlModel.fromJson(json['resultado'])
-          : null,
+      familySupport: (json['familySupport'] ?? json['family_support'] ?? 0).toDouble(),
+      screenTime: (json['screenTime'] ?? json['screen_time'] ?? 0).toDouble(),
+      academicStress: (json['academicStress'] ?? json['academic_stress'] ?? 0).toDouble(),
+      dietQuality: (json['dietQuality'] ?? json['diet_quality'] ?? 0).toDouble(),
+      selfEfficacy: (json['selfEfficacy'] ?? json['self_efficacy'] ?? 0).toDouble(),
+      peerRelationship: (json['peerRelationship'] ?? json['peer_relationship'] ?? 0).toDouble(),
+      financialStress: (json['financialStress'] ?? json['financial_stress'] ?? 0).toDouble(),
+      sleepQuality: (json['sleepQuality'] ?? json['sleep_quality'] ?? 0).toDouble(),
+      resultado: json['resultado'] is Map<String, dynamic>
+          ? ResultadoMlModel.fromJson(json['resultado'] as Map<String, dynamic>)
+          : ResultadoMlModel.fromRiskEvaluationHistory(json),
     );
   }
 

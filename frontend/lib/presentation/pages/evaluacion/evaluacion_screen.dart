@@ -406,7 +406,7 @@ class _EvaluacionScreenState extends State<EvaluacionScreen> {
                 activeTrackColor: const Color(0xFF6366F1),
                 inactiveTrackColor: const Color(0xFFE2E8F0),
                 thumbColor: const Color(0xFF6366F1),
-                overlayColor: const Color(0xFF6366F1).withOpacity(0.2),
+                overlayColor: const Color(0xFF6366F1).withValues(alpha: 0.2),
                 valueIndicatorColor: const Color(0xFF6366F1),
                 valueIndicatorTextStyle: const TextStyle(color: Colors.white),
               ),
@@ -517,20 +517,22 @@ class _EvaluacionScreenState extends State<EvaluacionScreen> {
                     pregunta.key == 'self_efficacy' ||
                     pregunta.key == 'peer_relationship') {
                   // Valores más altos son MEJORES (Verde)
-                  if (val <= 3)
+                  if (val <= 3) {
                     itemColor = Colors.redAccent;
-                  else if (val <= 6)
+                  } else if (val <= 6) {
                     itemColor = Colors.orangeAccent;
-                  else
+                  } else {
                     itemColor = const Color(0xFF10B981);
+                  }
                 } else {
                   // Valores más altos son PEORES (Rojo - estresantes)
-                  if (val <= 3)
+                  if (val <= 3) {
                     itemColor = const Color(0xFF10B981);
-                  else if (val <= 6)
+                  } else if (val <= 6) {
                     itemColor = Colors.orangeAccent;
-                  else
+                  } else {
                     itemColor = Colors.redAccent;
+                  }
                 }
 
                 return GestureDetector(
@@ -551,7 +553,7 @@ class _EvaluacionScreenState extends State<EvaluacionScreen> {
                       boxShadow: isSelected
                           ? [
                               BoxShadow(
-                                color: itemColor.withOpacity(0.4),
+                                color: itemColor.withValues(alpha: 0.4),
                                 blurRadius: 6,
                                 offset: const Offset(0, 2),
                               ),
@@ -767,7 +769,7 @@ class _EvaluacionScreenState extends State<EvaluacionScreen> {
                     ),
                     child: Card(
                       elevation: 4,
-                      shadowColor: Colors.black.withOpacity(0.04),
+                      shadowColor: Colors.black.withValues(alpha: 0.04),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(24),
                       ),
@@ -854,7 +856,7 @@ class _EvaluacionScreenState extends State<EvaluacionScreen> {
                 color: AppColors.of(context).surface,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
+                    color: Colors.black.withValues(alpha: 0.04),
                     blurRadius: 10,
                     offset: const Offset(0, -4),
                   ),
@@ -862,77 +864,94 @@ class _EvaluacionScreenState extends State<EvaluacionScreen> {
               ),
               child: Consumer<EvaluacionViewModel>(
                 builder: (context, evVM, _) {
-                  return Row(
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Botón Atrás
-                      Expanded(
-                        child: TextButton(
-                          onPressed: _currentPage == 0 ? null : _prevPage,
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: Text(
-                            'Atrás',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: _currentPage == 0
-                                  ? const Color(0xFFCBD5E1)
-                                  : const Color(0xFF64748B),
-                            ),
-                          ),
+                      if (evVM.isLoading) ...[
+                        const Text(
+                          'Estamos preparando el servicio; puede tardar hasta un par de minutos.',
+                          textAlign: TextAlign.center,
                         ),
-                      ),
-                      const SizedBox(width: 16),
-
-                      // Botón Siguiente / Terminar Test
-                      Expanded(
-                        flex: 2,
-                        child: ElevatedButton(
-                          onPressed: evVM.isLoading ? null : _nextPage,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF6366F1),
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: evVM.isLoading
-                              ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.5,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      _currentPage == _preguntas.length - 1
-                                          ? 'Terminar Test'
-                                          : 'Siguiente',
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Icon(
-                                      _currentPage == _preguntas.length - 1
-                                          ? Icons.done_all_rounded
-                                          : Icons.arrow_forward_rounded,
-                                      size: 18,
-                                    ),
-                                  ],
+                        const SizedBox(height: 8),
+                      ],
+                      Row(
+                        children: [
+                          // Botón Atrás
+                          Expanded(
+                            child: TextButton(
+                              onPressed: _currentPage == 0 ? null : _prevPage,
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
                                 ),
-                        ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                              child: Text(
+                                'Atrás',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: _currentPage == 0
+                                      ? const Color(0xFFCBD5E1)
+                                      : const Color(0xFF64748B),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+
+                          // Botón Siguiente / Terminar Test
+                          Expanded(
+                            flex: 2,
+                            child: ElevatedButton(
+                              onPressed: evVM.isLoading ? null : _nextPage,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF6366F1),
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                              child: evVM.isLoading
+                                  ? const SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          _currentPage == _preguntas.length - 1
+                                              ? 'Terminar Test'
+                                              : 'Siguiente',
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Icon(
+                                          _currentPage == _preguntas.length - 1
+                                              ? Icons.done_all_rounded
+                                              : Icons.arrow_forward_rounded,
+                                          size: 18,
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   );

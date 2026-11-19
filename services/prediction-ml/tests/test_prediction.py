@@ -59,8 +59,8 @@ class PredictionTests(unittest.TestCase):
 
     def test_http_valid_and_invalid(self):
         fake = FakePredictor()
-        client = create_http_app(PredictRiskUseCase(fake, FallbackReportGenerator()), 5).test_client()
-        self.assertEqual(client.get("/health").json["models_loaded"], 5)
+        client = create_http_app(PredictRiskUseCase(fake, FallbackReportGenerator()), 1).test_client()
+        self.assertEqual(client.get("/health").json["models_loaded"], 1)
         response = client.post("/predict", json=PAYLOAD)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json["nivel_riesgo"], "ALTO")
@@ -76,41 +76,10 @@ class PredictionTests(unittest.TestCase):
         self.assertEqual(client.get("/health").status_code, 503)
         self.assertEqual(client.post("/predict", json=PAYLOAD).status_code, 503)
         for error, status in [(PredictionError("private details"), 500), (ModelsUnavailableError("private details"), 503)]:
-            client = create_http_app(PredictRiskUseCase(FakePredictor(error=error), FallbackReportGenerator()), 5).test_client()
+            client = create_http_app(PredictRiskUseCase(FakePredictor(error=error), FallbackReportGenerator()), 1).test_client()
             response = client.post("/predict", json=PAYLOAD)
             self.assertEqual(response.status_code, status)
             self.assertNotIn("private details", response.get_data(as_text=True))
-
-
-class EnsembleTests(unittest.TestCase):
-    def test_feature_order_reversed_classes_and_equal_weights(self):
-        import numpy as np
-        from src.infrastructure.ensemble_predictor import EnsemblePredictor, FEATURES
-
-        class Model:
-            classes_ = np.array([1, 0])
-            n_features_in_ = 7
-            feature_names_in_ = np.array(FEATURES)
-
-            def __init__(self, probability):
-                self.probability = probability
-
-            def predict_proba(self, frame):
-                self_columns = list(frame.columns)
-                if self_columns != list(FEATURES) or frame.iloc[0].tolist() != [8, 6, 6, 5, 3, 6, 7.5]:
-                    raise AssertionError("Incorrect feature contract")
-                return [[1 - self.probability, self.probability]]
-
-        with patch("src.infrastructure.ensemble_predictor.joblib.load", side_effect=[Model(p) for p in [.1, .2, .3, .4, .5]]) as load:
-            predictor = EnsemblePredictor()
-        self.assertEqual(load.call_count, 5)
-        self.assertAlmostEqual(predictor.predict_probability(PAYLOAD), .3)
-
-    def test_loading_failure_has_no_fallback(self):
-        from src.infrastructure.ensemble_predictor import EnsemblePredictor
-        with patch("src.infrastructure.ensemble_predictor.joblib.load", side_effect=OSError("missing")):
-            with self.assertRaises(ModelsUnavailableError):
-                EnsemblePredictor()
 
 
 if __name__ == "__main__":

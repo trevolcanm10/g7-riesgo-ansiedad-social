@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: g7-academic-agenda
+    runtime: docker
+    plan: free
+    dockerfilePath: services/academic-agenda/Dockerfile
+    dockerContext: services/academic-agenda
+    healthCheckPath: /health
+    envVars:
+      - key: DB_ENABLED
+        value: "true"
+      - key: DB_SSL
+        value: "true"
+      - key: FLASK_ENV
+        value: production
+      - key: CORS_ORIGINS
+        value: ""
+      - key: JWT_SECRET
+        sync: false
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false

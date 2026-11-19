@@ -4,7 +4,7 @@ import {
   AiPredictionResult,
 } from "../../application/clients/AiPredictionClient.js";
 import { AI_PREDICTION_URL } from "../../config/config.js";
-import { AIReport, RiskLevel } from "../../domain/entities/RiskEvaluation.js";
+import { AIReport, RiskLevel, ShapExplanation } from "../../domain/entities/RiskEvaluation.js";
 
 interface PythonAIReport {
   resumen: string;
@@ -24,6 +24,7 @@ interface PythonPredictionResponse {
   nivel_riesgo: RiskLevel;
   explicacion: string;
   reporte_ia: PythonAIReport;
+  explicacion_shap?: ShapExplanation;
 }
 
 interface PythonErrorResponse {
@@ -79,6 +80,7 @@ export class HttpAiPredictionClient implements AiPredictionClient {
       riskLevel: data.nivel_riesgo,
       explanation: data.explicacion,
       aiReport: this.mapAIReport(data.reporte_ia),
+      shapExplanation: data.explicacion_shap,
     };
   }
 

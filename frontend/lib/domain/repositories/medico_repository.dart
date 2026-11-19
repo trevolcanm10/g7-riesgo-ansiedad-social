@@ -1,4 +1,3 @@
-import '../entities/evaluacion.dart';
 
 /// Interfaz abstracta del repositorio para el rol Médico.
 ///

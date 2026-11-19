@@ -6,7 +6,11 @@ Python 3.12. Dependencias fijadas a las versiones verificadas localmente.
 ## Reporte Gemini y respaldo
 
 `POST /predict` devuelve exactamente `probabilidad_ansiedad`, `nivel_riesgo`,
-`explicacion` y `reporte_ia`. La inferencia, las siete features y los umbrales
+`explicacion`, `reporte_ia` y `explicacion_shap`. Este último campo contiene
+`estado` (`disponible` o `no_disponible`), escala
+`log_odds_riesgo_clase_0` y hasta tres factores con `nombre`, `valor` y
+`direccion`; las contribuciones no son porcentajes ni diagnósticos. La
+inferencia, las siete features y los umbrales
 no cambian. La explicación reutiliza los textos por nivel del proyecto original,
 añadiendo que no es diagnóstico clínico. Gemini nunca calcula el riesgo.
 
@@ -99,7 +103,7 @@ El servidor de Flask se utiliza para pruebas locales, con debug desactivado.
 
 ## HTTP
 
-- `GET http://localhost:5001/health`: 200 con `service`, `status`, `models_loaded`; 503 si no se cargaron los cinco modelos.
+- `GET http://localhost:5001/health`: 200 con `service`, `status`, `models_loaded`; 503 si no se cargó XGBoost.
 - `POST http://localhost:5001/predict`: Content-Type `application/json`; usar `example.json`.
 - Las 15 variables son obligatorias, numéricas, finitas y dentro de los rangos de `src/presentation/validation.py`. Booleanos y cadenas numéricas se rechazan. Campos adicionales se ignoran.
 - Entrada inválida: 400 con `error` y `mensaje`. Modelos no disponibles: 503. Error de inferencia: 500. No se exponen detalles internos en la respuesta.
@@ -113,28 +117,25 @@ curl -H 'Content-Type: application/json' --data-binary @example.json http://loca
 
 ## Arquitectura
 
-`app.py` es la raíz de composición. Conecta el adaptador de salida `EnsemblePredictor` con `PredictRiskUseCase` y el adaptador de entrada Flask.
+`app.py` es la raíz de composición. Conecta el adaptador de salida `XGBoostPredictor` con `PredictRiskUseCase` y el adaptador de entrada Flask.
 
 - Domain: puerto `RiskPredictor`, errores y reglas de categorización; solo biblioteca estándar.
 - Application: caso de uso dependiente del puerto, sin bibliotecas ML.
-- Infrastructure: carga de cinco artefactos confiables del repositorio, verificación de metadatos y soft voting.
+- Infrastructure: `XGBoostPredictor` carga únicamente `xgboost_risk.ubj` con `load_model`, verifica metadatos (clases {0,1}, 7 features, orden contractual, `predict_proba`) y provee explicación SHAP de esa misma predicción (TreeExplainer, top 3 factores, escala log-odds de clase 0).
 - Presentation: validación del contrato JSON y traducción HTTP.
 
 SRP separa estas responsabilidades. DIP hace depender el caso de uso de una abstracción. OCP permite reemplazar el predictor al componer la aplicación sin cambiar el caso de uso.
 
-Se construye un DataFrame en orden PHQ9, GAD7, OnlineStress, FinancialStress, ExerciseFreq, SocialActivity, SleepHours. Para KNN, entrenado sin nombres, se convierte a ndarray preservando ese orden. Cada modelo localiza clase 0 en `classes_`; se promedian sus cinco probabilidades con igual peso. BAJO < 0.35; MEDIO entre 0.35 y 0.70 inclusive; ALTO > 0.70. No hay entrenamiento ni fallback ni integración con usuarios.
+Se construye un DataFrame en orden PHQ9, GAD7, OnlineStress, FinancialStress, ExerciseFreq, SocialActivity, SleepHours. XGBoost localiza clase 0 (riesgo) en `classes_` y devuelve su probabilidad. BAJO < 0.35; MEDIO entre 0.35 y 0.70 inclusive; ALTO > 0.70. SHAP explica la probabilidad de clase 0 con los 3 factores de mayor impacto absoluto. No hay entrenamiento ni integración con usuarios.
 
 ## Metadatos y compatibilidad
 
-En la verificación de esta integración, el Python local resolvió scikit-learn
-1.9.0, distinto del 1.6.1 fijado en requirements.txt y utilizado al serializar
-los modelos. La prueba HTTP local pasó, pero emitió InconsistentVersionWarning.
-No se instalaron ni cambiaron dependencias. Antes de desplegar, reproducir el
-entorno fijado y validar los artefactos; el smoke test no garantiza equivalencia
-entre versiones.
+`models_loaded` reporta 1 (único artefacto XGBoost). El artefacto UBJ conserva los siete nombres de variables y se carga con XGBoost 3.3.0 sin deserializar un pickle.
 
-Los cinco modelos contienen clases 0 y 1. CatBoost, LightGBM, Random Forest y XGBoost conservan los siete nombres en el orden requerido. KNN indica siete features pero no sus nombres, por lo que no es posible corroborar su orden original mediante metadatos; se aplica el contrato indicado. CatBoost reporta `n_features_in_=0` tras deserializar; sus siete nombres verifican la dimensión.
+La conversión desde el artefacto anterior se verificó con el mismo `example.json`: las probabilidades antes y después coincidieron dentro de `1e-7`. Las fallas SHAP conservan la predicción, registran el tipo de excepción sin datos personales y aumentan `shap_failures` en el proceso.
 
-Se utiliza scikit-learn 1.6.1. XGBoost 3.3.0 emite un warning al cargar el pickle generado por una versión anterior: la compatibilidad entre versiones de snapshots pickle no está garantizada. No se oculta el warning y no se modifican los artefactos. Las versiones originales de las otras bibliotecas no fueron suministradas. Cualquier incompatibilidad detectada impide utilizar un ensamble parcial.
+`verify_real_http.py` inicia temporalmente el servicio en el puerto 5001, verifica las tres solicitudes con el modelo real y detiene su proceso; ejecutar con ese puerto libre.
 
-En Windows, joblib también puede advertir que no pudo detectar núcleos físicos y utilizar núcleos lógicos. La inferencia verificada finaliza correctamente. `verify_real_http.py` inicia temporalmente el servicio en el puerto 5001, verifica las tres solicitudes con modelos reales y detiene su proceso; ejecutar con ese puerto libre.
+## Evidencia de entrenamiento
+
+No se dispone del conjunto de datos original ni de un conjunto de prueba común para comparar el ensamble anterior, los cinco modelos y XGBoost solo. Por ello **no se afirma superioridad de métricas**. Se eligió XGBoost como único predictor para explicar la predicción activa con `TreeExplainer`; el artefacto se conserva en formato UBJ. Una comparación AUC/recall/F1 requiere recuperar el conjunto original y el protocolo de evaluación, sin inventar resultados.
