@@ -1,16 +1,19 @@
 """Casos de uso de Citas. Reciben puertos por constructor (sin Flask ni MySQL)."""
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Callable
 
 from src.domain.errors import ConflictError, ForbiddenError, NotFoundError, ValidationError
 from src.domain.model import (
     ALLOWED_TRANSITIONS, MAX_ACTIVE_APPOINTMENTS, MAX_REASON_LENGTH,
-    MAX_SLOTS_PER_REQUEST, MIN_HOURS_TO_CHANGE, SLOT_MINUTES, Appointment, AppointmentStatus,
-    Priority, Role, Slot,
+    MAX_SLOTS_PER_REQUEST, MIN_HOURS_TO_CHANGE, REINFORCED_REMINDER_HOURS, REMINDER_HOURS,
+    SLOT_MINUTES, Appointment, AppointmentStatus, Priority, Role, Slot,
 )
 from src.domain.ports import AppointmentRepository, NoShowPredictor, SlotRepository
 
 Clock = Callable[[], datetime]
+
+log = logging.getLogger(__name__)
 
 LIMA = timezone(timedelta(hours=-5))   # America/Lima (sin horario de verano)
 _CHANGED_MEANWHILE = "La cita cambió mientras la modificabas. Actualiza e inténtalo de nuevo"
@@ -116,6 +119,33 @@ class AppointmentService:
                 raise ConflictError(
                     f"Solo se puede modificar con al menos {MIN_HOURS_TO_CHANGE} horas de anticipación")
 
+    def _no_show_features(self, appt: Appointment) -> dict:
+        start_local, created_local = appt.start_at.astimezone(LIMA), appt.created_at.astimezone(LIMA)
+        # Mismas definiciones que en el entrenamiento: anticipación en DÍAS CALENDARIO (Lima) e
+        # historial = citas anteriores del estudiante, sin contar la que se evalúa.
+        prior = dict(before=appt.start_at, exclude_id=appt.id)
+        return {
+            "lead_days": max((start_local.date() - created_local.date()).days, 0),
+            "hour_local": start_local.hour,
+            "prior_no_shows": self._apps.count_by_status(
+                appt.student_user_id, AppointmentStatus.NO_ASISTIO.value, **prior),
+            "prior_cancellations": self._apps.count_by_status(
+                appt.student_user_id, AppointmentStatus.CANCELADA.value, **prior),
+            "reschedule_count": appt.reschedule_count,
+        }
+
+    def _needs_reinforced_reminder(self, appt: Appointment) -> bool:
+        """True si la probabilidad estimada de inasistencia supera el umbral del modelo.
+
+        Un fallo del predictor nunca debe romper ni ocultar los recordatorios: se trata como «no».
+        """
+        try:
+            probability = self._predictor.predict(self._no_show_features(appt))["probability"]
+        except Exception:
+            log.warning("No se pudo estimar la inasistencia de la cita %s", appt.id, exc_info=True)
+            return False
+        return probability >= getattr(self._predictor, "FLAG_THRESHOLD", 0.30)
+
     # ---- casos de uso --------------------------------------------------
     def request(self, student_id: int, slot_id: int, priority: str | None,
                 reason: str | None) -> Appointment:
@@ -151,6 +181,31 @@ class AppointmentService:
 
     def list_mine(self, student_id: int) -> list[Appointment]:
         return self._apps.list_for_student(student_id)
+
+    def reminders(self, student_id: int) -> list[dict]:
+        """Recordatorios dentro de la app: citas activas que aún no ocurren.
+
+        `dueNow` indica si ya toca mostrar el aviso: desde 24 h antes para todos y, para las citas
+        con mayor probabilidad estimada de inasistencia, desde 48 h antes (recordatorio reforzado).
+        El refuerzo solo adelanta el aviso: no se expone la probabilidad ni se etiqueta al
+        estudiante, y nunca condiciona la atención.
+        """
+        now = self._clock()
+        items = []
+        for appt in self._apps.list_for_student(student_id):
+            if not appt.is_active or appt.start_at <= now:
+                continue
+            hours = (appt.start_at - now).total_seconds() / 3600
+            if hours <= REMINDER_HOURS:
+                due = True
+            elif hours <= REINFORCED_REMINDER_HOURS:
+                due = self._needs_reinforced_reminder(appt)   # solo se estima si puede cambiar el resultado
+            else:
+                due = False
+            change_until = appt.start_at - timedelta(hours=MIN_HOURS_TO_CHANGE)
+            items.append({"appointment": appt, "hoursUntil": int(hours), "dueNow": due,
+                          "canChange": now <= change_until, "canChangeUntil": change_until})
+        return sorted(items, key=lambda i: i["appointment"].start_at)
 
     def agenda(self, actor_id: int, actor_role: str, status: str | None,
                start: datetime | None, end: datetime | None) -> list[Appointment]:
@@ -236,20 +291,7 @@ class AppointmentService:
         appt = self._get_visible(appointment_id, actor_id, actor_role)
         if not appt.is_active:
             raise ConflictError("Solo se estima la inasistencia de citas activas")
-        start_local, created_local = appt.start_at.astimezone(LIMA), appt.created_at.astimezone(LIMA)
-        # Mismas definiciones que en el entrenamiento: anticipación en DÍAS CALENDARIO (Lima) e
-        # historial = citas anteriores del estudiante, sin contar la que se evalúa.
-        prior = dict(before=appt.start_at, exclude_id=appt.id)
-        features = {
-            "lead_days": max((start_local.date() - created_local.date()).days, 0),
-            "hour_local": start_local.hour,
-            "prior_no_shows": self._apps.count_by_status(
-                appt.student_user_id, AppointmentStatus.NO_ASISTIO.value, **prior),
-            "prior_cancellations": self._apps.count_by_status(
-                appt.student_user_id, AppointmentStatus.CANCELADA.value, **prior),
-            "reschedule_count": appt.reschedule_count,
-        }
-        result = self._predictor.predict(features)
+        result = self._predictor.predict(self._no_show_features(appt))
         return {"appointmentId": appt.id, "noShowProbability": result["probability"],
                 "factors": result["factors"], "model": result["model"],
                 "note": "Orientativo: solo sirve para decidir recordatorios; nunca para negar o retrasar una cita."}

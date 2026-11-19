@@ -51,3 +51,9 @@ String etiquetaEstado(String estado) {
       return estado;
   }
 }
+
+/// "menos de 1 hora", "1 hora", "20 horas"
+String textoFaltan(int horas) {
+  if (horas < 1) return 'menos de 1 hora';
+  return horas == 1 ? '1 hora' : '$horas horas';
+}

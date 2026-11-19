@@ -353,6 +353,105 @@ class CitasApiTest(unittest.TestCase):
         otro = auth(11, "PERSONAL_UNAYOE")
         self.assertEqual(self._post_slots(base + 15, headers=otro).status_code, 201)
 
+    # ---------------- recordatorios dentro de la app ----------------
+    def _reminders_client(self, probability=0.1, fail=False):
+        """Cliente cuyo predictor devuelve siempre [probability] (o falla), con umbral 0.30."""
+        class Fixed(NoShowPredictor):
+            MODEL = "fijo"
+
+            def predict(self, features):
+                if fail:
+                    raise RuntimeError("modelo caído")
+                return {"probability": probability, "factors": ["x"], "model": "fijo"}
+
+        clock = lambda: self.now
+        app = create_http_app(
+            SlotService(self.slots_repo, clock),
+            AppointmentService(self.slots_repo, self.apps_repo, Fixed(), clock),
+            JwtTokenService(SECRET), lambda: True)
+        return app.test_client()
+
+    def _reminders(self, client=None, headers=None):
+        r = (client or self.c).get("/appointments/me/reminders", headers=headers or self.student)
+        self.assertEqual(r.status_code, 200, r.get_json())
+        return r.get_json()
+
+    def test_reminders_require_student_role(self):
+        self.assertEqual(self.c.get("/appointments/me/reminders").status_code, 401)
+        r = self.c.get("/appointments/me/reminders", headers=self.staff)
+        self.assertEqual(r.status_code, 403)
+
+    def test_reminders_empty_without_appointments(self):
+        self.assertEqual(self._reminders(), [])
+
+    def test_standard_reminder_appears_24_hours_before(self):
+        low = self._reminders_client(probability=0.05)
+        a = self.book(self.publish(30)[0]["id"]).get_json()      # en 30 h: aún no toca
+        b = self.book(self.publish(20)[0]["id"]).get_json()      # en 20 h: ya toca
+        items = {i["appointmentId"]: i for i in self._reminders(low)}
+        self.assertFalse(items[a["id"]]["dueNow"])
+        self.assertTrue(items[b["id"]]["dueNow"])
+        self.assertEqual(items[b["id"]]["hoursUntil"], 20)
+
+    def test_reinforced_reminder_appears_48_hours_before(self):
+        appt = self.book(self.publish(30)[0]["id"]).get_json()
+        high = self._reminders_client(probability=0.5)
+        self.assertTrue(self._reminders(high)[0]["dueNow"])
+        low = self._reminders_client(probability=0.1)
+        self.assertFalse(self._reminders(low)[0]["dueNow"])
+        self.assertEqual(self._reminders(high)[0]["appointmentId"], appt["id"])
+
+    def test_reinforced_reminder_does_not_apply_beyond_48_hours(self):
+        self.book(self.publish(60)[0]["id"])
+        self.assertFalse(self._reminders(self._reminders_client(probability=0.9))[0]["dueNow"])
+
+    def test_reminder_threshold_is_inclusive(self):
+        self.book(self.publish(30)[0]["id"])
+        self.assertTrue(self._reminders(self._reminders_client(probability=0.30))[0]["dueNow"])
+        self.assertFalse(self._reminders(self._reminders_client(probability=0.29))[0]["dueNow"])
+
+    def test_reminders_survive_a_predictor_failure(self):
+        self.book(self.publish(30)[0]["id"])
+        items = self._reminders(self._reminders_client(fail=True))
+        self.assertEqual(len(items), 1)
+        self.assertFalse(items[0]["dueNow"])      # sin estimación no hay refuerzo
+        # Y una cita a menos de 24 h sigue avisando sin consultar el modelo.
+        self.book(self.publish(10)[0]["id"])
+        self.assertTrue(all(i["dueNow"] for i in self._reminders(self._reminders_client(fail=True))
+                            if i["hoursUntil"] <= 24))
+
+    def test_reminders_only_list_upcoming_active_appointments_in_order(self):
+        far = self.book(self.publish(40)[0]["id"]).get_json()
+        soon = self.book(self.publish(5)[0]["id"]).get_json()
+        items = self._reminders()
+        self.assertEqual([i["appointmentId"] for i in items], [soon["id"], far["id"]])
+        self.c.patch(f"/appointments/{soon['id']}/cancel", json={}, headers=self.staff)
+        self.assertEqual([i["appointmentId"] for i in self._reminders()], [far["id"]])
+        self.now += timedelta(hours=41)     # la cita restante ya pasó sin marcarse
+        self.assertEqual(self._reminders(), [])
+
+    def test_reminders_are_private_to_each_student(self):
+        self.book(self.publish(10)[0]["id"])
+        other = auth(2, "ESTUDIANTE")
+        self.assertEqual(self._reminders(headers=other), [])
+        self.assertEqual(len(self._reminders()), 1)
+
+    def test_reminders_report_when_the_appointment_can_still_change(self):
+        self.book(self.publish(20)[0]["id"])
+        item = self._reminders()[0]
+        self.assertTrue(item["canChange"])
+        self.assertEqual(item["canChangeUntil"], iso(self.now + timedelta(hours=8)))
+        self.now += timedelta(hours=9)      # faltan 11 h: ya no se puede cambiar desde la app
+        item = self._reminders()[0]
+        self.assertFalse(item["canChange"])
+        self.assertTrue(item["dueNow"])
+
+    def test_reminders_do_not_expose_the_risk_estimate(self):
+        self.book(self.publish(30)[0]["id"])
+        item = self._reminders(self._reminders_client(probability=0.9))[0]
+        self.assertEqual(set(item), {"appointmentId", "staffUserId", "startAt", "endAt", "status",
+                                     "hoursUntil", "dueNow", "canChange", "canChangeUntil"})
+
     def test_malformed_json(self):
         r = self.c.post("/appointments", data="no es json", content_type="application/json",
                         headers=self.student)

@@ -135,6 +135,40 @@ paths:
               schema: { type: array, items: { $ref: "#/components/schemas/Appointment" } }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
+  /appointments/me/reminders:
+    get:
+      tags: [Appointments]
+      summary: Recordatorios de mis próximas citas (ESTUDIANTE)
+      description: >
+        Citas activas (SOLICITADA o CONFIRMADA) que aún no ocurren, de la más próxima a la más
+        lejana. `dueNow` indica si ya corresponde mostrar el aviso en la app: desde 24 h antes
+        de la cita y, cuando el modelo de inasistencia estima una probabilidad igual o mayor a
+        su umbral (`flag_threshold` del artefacto; 0,30 en la línea base por reglas), desde 48 h
+        antes (recordatorio reforzado). El refuerzo solo adelanta el aviso: la respuesta no
+        incluye la probabilidad ni ningún factor, y nunca se usa para negar ni retrasar una cita.
+        Si el modelo falla, se responde igual (sin refuerzo).
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Recordatorios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    appointmentId: { type: integer }
+                    staffUserId: { type: integer }
+                    startAt: { type: string, format: date-time }
+                    endAt: { type: string, format: date-time }
+                    status: { $ref: "#/components/schemas/AppointmentStatus" }
+                    hoursUntil: { type: integer, description: Horas enteras que faltan para la cita }
+                    dueNow: { type: boolean, description: Ya corresponde mostrar el aviso }
+                    canChange: { type: boolean, description: El estudiante aún puede cancelar o reprogramar (faltan 12 h o más) }
+                    canChangeUntil: { type: string, format: date-time, description: Último momento para cancelar o reprogramar }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /appointments/{id}/cancel:
     patch:
       tags: [Appointments]

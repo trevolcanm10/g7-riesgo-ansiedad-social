@@ -14,6 +14,7 @@ class CitasViewModel extends ChangeNotifier {
   String? _error;
   List<Horario> _horarios = [];
   List<Cita> _citas = [];
+  List<Recordatorio> _recordatorios = [];
 
   bool get cargando => _cargando;
   bool get guardando => _guardando;
@@ -21,12 +22,31 @@ class CitasViewModel extends ChangeNotifier {
   List<Horario> get horarios => _horarios;
   List<Cita> get citas => _citas;
 
+  /// Recordatorios que ya toca mostrar. Se descartan los de citas que dejaron de
+  /// estar activas o cambiaron de horario desde la ultima carga (cancelar o
+  /// reprogramar), para no avisar de algo que ya no es cierto.
+  List<Recordatorio> get recordatoriosPendientes => _recordatorios
+      .where(
+        (r) =>
+            r.corresponde &&
+            _citas.any(
+              (c) => c.id == r.citaId && c.activa && c.inicio == r.inicio,
+            ),
+      )
+      .toList();
+
   Future<void> cargarHorarios() => _cargar(() async {
     _horarios = await _repository.horariosLibres();
   });
 
   Future<void> cargarMisCitas() => _cargar(() async {
     _citas = await _repository.misCitas();
+    // Los recordatorios son un complemento: si fallan, la lista de citas se muestra igual.
+    try {
+      _recordatorios = await _repository.misRecordatorios();
+    } catch (_) {
+      _recordatorios = [];
+    }
   });
 
   /// Solicita una cita. [prioridad] es ALTA solo si el ultimo resultado fue de
@@ -130,6 +150,7 @@ class CitasViewModel extends ChangeNotifier {
     _error = null;
     _horarios = [];
     _citas = [];
+    _recordatorios = [];
     notifyListeners();
   }
 }

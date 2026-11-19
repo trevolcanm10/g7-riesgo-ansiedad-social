@@ -118,6 +118,8 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
                           ],
                         ),
                       ),
+                    for (final r in vm.recordatoriosPendientes)
+                      _RecordatorioCard(recordatorio: r),
                     if (activas.isNotEmpty) const _Titulo('Próximas'),
                     for (final c in activas)
                       _CitaCard(
@@ -141,6 +143,65 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
                   ],
                 ),
               ),
+      ),
+    );
+  }
+}
+
+/// Aviso de una cita proxima. Tono tranquilo y sin juicios: solo informa y
+/// recuerda que se puede cancelar o reprogramar si no se puede asistir.
+class _RecordatorioCard extends StatelessWidget {
+  final Recordatorio recordatorio;
+  const _RecordatorioCard({required this.recordatorio});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final r = recordatorio;
+    final hasta = r.puedeCambiarHasta;
+    final pie = r.puedeCambiar && hasta != null
+        ? 'Si no puedes asistir, cancélala o reprográmala hasta el ${fechaCorta(hasta)} a las ${hora(hasta)}; así otra persona podrá usar el horario.'
+        : 'Si no puedes asistir, avisa a UNAYOE lo antes posible.';
+    return Semantics(
+      container: true,
+      label: 'Recordatorio de cita',
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: scheme.primaryContainer.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.notifications_active_outlined, color: scheme.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Tienes una cita próxima',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${fechaCorta(r.inicio)} · ${hora(r.inicio)} (faltan ${textoFaltan(r.horasRestantes)})',
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    pie,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

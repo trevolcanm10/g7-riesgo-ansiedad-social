@@ -66,6 +66,9 @@ class AppointmentRepository(ABC):
 
 
 class NoShowPredictor(ABC):
+    # Probabilidad desde la cual una cita recibe el recordatorio reforzado (top ~20 % en el entrenamiento).
+    FLAG_THRESHOLD: float = 0.30
+
     @abstractmethod
     def predict(self, features: dict) -> dict:
         """Devuelve {'probability': float, 'factors': [str], 'model': str}."""

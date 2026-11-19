@@ -57,6 +57,14 @@ def appointment_json(a: Appointment) -> dict:
             "createdAt": _iso(a.created_at), "updatedAt": _iso(a.updated_at)}
 
 
+def reminder_json(item: dict) -> dict:
+    a = item["appointment"]
+    return {"appointmentId": a.id, "staffUserId": a.staff_user_id, "startAt": _iso(a.start_at),
+            "endAt": _iso(a.end_at), "status": a.status.value, "hoursUntil": item["hoursUntil"],
+            "dueNow": item["dueNow"], "canChange": item["canChange"],
+            "canChangeUntil": _iso(item["canChangeUntil"])}
+
+
 def create_http_app(slots: SlotService, appointments: AppointmentService,
                     tokens: TokenService, db_ping: Callable[[], bool]) -> Flask:
     app = Flask(__name__)
@@ -129,6 +137,11 @@ def create_http_app(slots: SlotService, appointments: AppointmentService,
     @auth(Role.ESTUDIANTE.value)
     def my_appointments():
         return jsonify([appointment_json(a) for a in appointments.list_mine(g.user_id)])
+
+    @app.get("/appointments/me/reminders")
+    @auth(Role.ESTUDIANTE.value)
+    def my_reminders():
+        return jsonify([reminder_json(i) for i in appointments.reminders(g.user_id)])
 
     @app.get("/appointments")
     @auth(*STAFF)

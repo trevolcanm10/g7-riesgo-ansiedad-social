@@ -85,10 +85,21 @@ class _FakeRepo implements CitasRepository {
     return horarios;
   }
 
+  /// Citas y recordatorios que devuelve el servicio para el estudiante.
+  List<Cita> mias = [];
+  List<Recordatorio> recordatorios = [];
+  bool fallaRecordatorios = false;
+
   @override
   Future<List<Cita>> misCitas() async {
     if (fallaLecturas) throw Exception('429');
-    return [];
+    return mias;
+  }
+
+  @override
+  Future<List<Recordatorio>> misRecordatorios() async {
+    if (fallaRecordatorios) throw Exception('500');
+    return recordatorios;
   }
   @override
   Future<Cita> reprogramar(int citaId, int slotId) async => _c(citaId, 'X');
@@ -159,6 +170,36 @@ void main() {
       expect(c.estudianteId, 7);
       expect(c.personalId, 9);
     });
+    test('lee un recordatorio sin ningun dato de riesgo', () {
+      final r = CitaModel.recordatorioFromJson({
+        'appointmentId': 5,
+        'staffUserId': 9,
+        'startAt': '2026-11-20T15:00:00Z',
+        'endAt': '2026-11-20T15:30:00Z',
+        'status': 'CONFIRMADA',
+        'hoursUntil': 30,
+        'dueNow': true,
+        'canChange': true,
+        'canChangeUntil': '2026-11-20T03:00:00Z',
+      });
+      expect(r.citaId, 5);
+      expect(r.horasRestantes, 30);
+      expect(r.corresponde, isTrue);
+      expect(r.puedeCambiarHasta, DateTime.utc(2026, 11, 20, 3));
+    });
+    test('recordatorio sin dueNow es invalido', () {
+      expect(
+        () => CitaModel.recordatorioFromJson({
+          'appointmentId': 5,
+          'startAt': '2026-11-20T15:00:00Z',
+          'endAt': '2026-11-20T15:30:00Z',
+          'status': 'CONFIRMADA',
+          'hoursUntil': 30,
+          'canChange': true,
+        }),
+        throwsFormatException,
+      );
+    });
     test('riesgo sin probabilidad es invalido', () {
       expect(
         () => CitaModel.riesgoFromJson({'factors': []}),
@@ -193,6 +234,66 @@ void main() {
       expect(await vm.cancelar(1), isTrue);
       expect(vm.citas.single.estado, Cita.cancelada);
       expect(vm.citas, hasLength(1));
+    });
+
+    Recordatorio rec(int citaId, {bool corresponde = true}) => Recordatorio(
+      citaId: citaId,
+      inicio: DateTime.utc(2026, 11, 20, 15),
+      fin: DateTime.utc(2026, 11, 20, 15, 30),
+      estado: Cita.confirmada,
+      horasRestantes: 20,
+      corresponde: corresponde,
+      puedeCambiar: true,
+    );
+
+    Cita citaActiva(int id) => Cita(
+      id: id,
+      slotId: 1,
+      inicio: DateTime.utc(2026, 11, 20, 15),
+      fin: DateTime.utc(2026, 11, 20, 15, 30),
+      estado: Cita.confirmada,
+      prioridad: 'NORMAL',
+    );
+
+    test('muestra solo los recordatorios que ya corresponden', () async {
+      final repo = _FakeRepo()
+        ..mias = [citaActiva(1), citaActiva(2)]
+        ..recordatorios = [rec(1), rec(2, corresponde: false)];
+      final vm = CitasViewModel(repo);
+      await vm.cargarMisCitas();
+      expect(vm.recordatoriosPendientes.map((r) => r.citaId), [1]);
+    });
+
+    test('al cancelar la cita su recordatorio desaparece sin recargar', () async {
+      final repo = _FakeRepo()
+        ..mias = [citaActiva(1)]
+        ..recordatorios = [rec(1)];
+      final vm = CitasViewModel(repo);
+      await vm.cargarMisCitas();
+      expect(vm.recordatoriosPendientes, hasLength(1));
+      expect(await vm.cancelar(1), isTrue);
+      expect(vm.recordatoriosPendientes, isEmpty);
+    });
+
+    test('si fallan los recordatorios, las citas se muestran igual', () async {
+      final repo = _FakeRepo()
+        ..mias = [citaActiva(1)]
+        ..fallaRecordatorios = true;
+      final vm = CitasViewModel(repo);
+      await vm.cargarMisCitas();
+      expect(vm.error, isNull);
+      expect(vm.citas, hasLength(1));
+      expect(vm.recordatoriosPendientes, isEmpty);
+    });
+
+    test('limpiarSesion borra tambien los recordatorios', () async {
+      final repo = _FakeRepo()
+        ..mias = [citaActiva(1)]
+        ..recordatorios = [rec(1)];
+      final vm = CitasViewModel(repo);
+      await vm.cargarMisCitas();
+      vm.limpiarSesion();
+      expect(vm.recordatoriosPendientes, isEmpty);
     });
 
     test('con las lecturas caidas (429) la escritura sigue siendo exito', () async {
