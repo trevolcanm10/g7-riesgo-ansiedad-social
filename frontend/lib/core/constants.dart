@@ -218,14 +218,13 @@ class AppConstants {
   static String get evaluar => _webDevProxy.isNotEmpty
       ? '$_webDevProxy/re/risk-evaluations'
       : gateway.enabled
-          ? gateway.evaluation
-          : '$riskEvaluationOrigin/risk-evaluations/';
-  static String get historialEvaluaciones =>
-      _webDevProxy.isNotEmpty
-          ? '$_webDevProxy/re/risk-evaluations/me/history'
-          : gateway.enabled
-              ? '${gateway.evaluation}/me/history'
-              : '$riskEvaluationOrigin/risk-evaluations/me/history';
+      ? gateway.evaluation
+      : '$riskEvaluationOrigin/risk-evaluations/';
+  static String get historialEvaluaciones => _webDevProxy.isNotEmpty
+      ? '$_webDevProxy/re/risk-evaluations/me/history'
+      : gateway.enabled
+      ? '${gateway.evaluation}/me/history'
+      : '$riskEvaluationOrigin/risk-evaluations/me/history';
 
   // ==========================================
   // ENDPOINTS DE CITAS (microservicio Citas, prefijo /c en APIM)
@@ -265,8 +264,9 @@ class AppConstants {
   // ENDPOINTS DE ORIENTACIÓN (microservicio Orientación, prefijo /o en APIM)
   // ==========================================
   static const String _orientacionPort = '5002';
-  static const String _orientacionBaseUrl =
-      String.fromEnvironment('ORIENTACION_BASE_URL');
+  static const String _orientacionBaseUrl = String.fromEnvironment(
+    'ORIENTACION_BASE_URL',
+  );
 
   /// Origen del microservicio Orientación Confidencial.
   /// ORIENTACION_BASE_URL tiene prioridad; si no, con APIM usa `<APIM>/o`;
@@ -292,6 +292,30 @@ class AppConstants {
       '$orientacionSolicitudes/$id/atender';
   static String get orientacionMetricasTemas =>
       '$orientacionSolicitudes/metricas/conteo-temas';
+
+  // M5: el prefijo APIM todavía no está definido en este repositorio.
+  // En despliegue se configura la URL completa del servicio o del gateway.
+  static const String _academicSupportConfiguredUrl = String.fromEnvironment(
+    'ACADEMIC_SUPPORT_BASE_URL',
+  );
+
+  static String get academicSupportBaseUrl {
+    if (_webDevProxy.isNotEmpty) return '$_webDevProxy/support';
+    final configured = _academicSupportConfiguredUrl.trim().replaceAll(
+      RegExp(r'/+$'),
+      '',
+    );
+    if (configured.isNotEmpty) return configured;
+    if (gateway.enabled || kReleaseMode) {
+      throw StateError('ACADEMIC_SUPPORT_BASE_URL no está configurada.');
+    }
+    try {
+      if (Platform.isAndroid) return 'http://10.0.2.2:5006';
+    } catch (_) {
+      // Flutter Web no expone Platform.
+    }
+    return 'http://localhost:5006';
+  }
 
   // ==========================================
   // ENDPOINTS DE HÁBITOS

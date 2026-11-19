@@ -121,6 +121,8 @@ Future<void> _pumpDashboard(
           '/evaluacion': (_) =>
               const Scaffold(body: Text('Flujo de evaluación')),
           '/agenda': (_) => const Scaffold(body: Text('Módulo Agenda')),
+          '/apoyo-universitario': (_) =>
+              const Scaffold(body: Text('Módulo Apoyo Universitario')),
           '/historial': (_) => const Scaffold(body: Text('Historial real')),
           '/perfil': (_) => const Scaffold(body: Text('Perfil real')),
         },
@@ -146,7 +148,7 @@ void main() {
     expect(find.textContaining('Ana'), findsNothing);
     expect(find.textContaining('26 de mayo'), findsNothing);
     expect(find.text('¿Cómo te sientes hoy?'), findsOneWidget);
-    expect(find.text('Orientación UNAYOE'), findsOneWidget);
+    expect(find.text('Apoyo universitario'), findsOneWidget);
     expect(find.text('Agenda Académica'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.tap(find.text('Iniciar mi primera evaluación'));
@@ -163,6 +165,17 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Módulo Agenda'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('existing support card opens M5 without a second card', (
+    tester,
+  ) async {
+    await _pumpDashboard(tester, const Size(375, 667));
+    expect(find.text('Apoyo universitario'), findsOneWidget);
+    await tester.ensureVisible(find.text('Apoyo universitario'));
+    await tester.tap(find.text('Apoyo universitario'));
+    await tester.pumpAndSettle();
+    expect(find.text('Módulo Apoyo Universitario'), findsOneWidget);
   });
 
   testWidgets('history keeps one Figma dashboard and one evaluation action', (

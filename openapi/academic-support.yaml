@@ -7,7 +7,7 @@ info:
     y materiales. Las rutas protegidas reciben el JWT HS256 emitido por Users.
     La URL APIM se añadirá cuando el gateway publique el prefijo del servicio.
 servers:
-  - url: http://localhost:5003
+  - url: http://localhost:5006
     description: Desarrollo local
 tags:
   - name: Salud

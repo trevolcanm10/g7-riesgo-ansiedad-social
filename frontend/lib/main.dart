@@ -23,6 +23,7 @@ import 'data/repositories/escuela_repository_impl.dart';
 import 'data/datasources/remote/citas_remote_datasource.dart';
 import 'data/repositories/citas_repository_impl.dart';
 import 'data/repositories/agenda_remote_repository.dart';
+import 'data/repositories/academic_support_repository.dart';
 import 'data/datasources/remote/orientacion_remote_datasource.dart';
 
 // Domain UseCases
@@ -58,6 +59,7 @@ import 'presentation/pages/evaluacion/resultado_screen.dart';
 import 'presentation/pages/evaluacion/historial_screen.dart';
 import 'presentation/pages/perfil/perfil_screen.dart';
 import 'presentation/pages/agenda/agenda_screen.dart';
+import 'presentation/pages/academic_support/academic_support_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -152,6 +154,12 @@ class _AnsiedadAppState extends State<AnsiedadApp> {
     apiService.onUnauthorized = authVM.invalidarSesion;
     _providers = [
       Provider<ApiService>.value(value: apiService),
+      Provider<AcademicSupportRepository>(
+        create: (_) => HttpAcademicSupportRepository(
+          apiService,
+          AppConstants.academicSupportBaseUrl,
+        ),
+      ),
       ChangeNotifierProvider(create: (_) => ThemeNotifier()),
       ChangeNotifierProvider(create: (_) => authVM, lazy: false),
       ChangeNotifierProvider(create: (_) => evaluationVM, lazy: false),
@@ -232,6 +240,8 @@ class _AnsiedadAppState extends State<AnsiedadApp> {
                 const SessionProtected(child: AgendarCitaScreen()),
             '/orientacion': (context) =>
                 const SessionProtected(child: OrientacionScreen()),
+            '/apoyo-universitario': (context) =>
+                const SessionProtected(child: AcademicSupportScreen()),
             '/perfil': (context) =>
                 const SessionProtected(child: PerfilScreen()),
             '/agenda': (context) => SessionProtected(

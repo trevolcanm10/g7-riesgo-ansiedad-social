@@ -38,7 +38,7 @@ http.createServer((request, response) => {
     response.writeHead(403).end();
     return;
   }
-  const route = ['/u', '/re', '/p', '/c', '/o', '/agenda'].find(prefix =>
+  const route = ['/u', '/re', '/p', '/c', '/o', '/agenda', '/support'].find(prefix =>
     requestUrl.pathname === prefix || requestUrl.pathname.startsWith(`${prefix}/`));
   if (!route) {
     response.writeHead(404, cors).end();
@@ -53,15 +53,18 @@ http.createServer((request, response) => {
     return;
   }
 
-  const destination = route === '/agenda' ? agenda : upstream;
-  const pathOnTarget = route === '/agenda'
-    ? requestUrl.pathname.slice('/agenda'.length) || '/'
+  const destination = route === '/support'
+    ? new URL('http://127.0.0.1:5006')
+    : route === '/agenda' ? agenda : upstream;
+  const pathOnTarget = route === '/agenda' || route === '/support'
+    ? requestUrl.pathname.slice(route.length) || '/'
     : requestUrl.pathname;
   const target = new URL(destination.pathname.replace(/\/$/, '') + pathOnTarget + requestUrl.search, destination);
   const headers = { ...request.headers, host: destination.host };
   for (const name of ['connection', 'transfer-encoding', 'upgrade', 'proxy-authorization', 'origin', 'ocp-apim-subscription-key']) delete headers[name];
-  if (route !== '/agenda') headers['ocp-apim-subscription-key'] = key;
-  const proxyRequest = https.request(target, { method: request.method, headers }, upstreamResponse => {
+  if (route !== '/agenda' && route !== '/support') headers['ocp-apim-subscription-key'] = key;
+  const transport = route === '/support' ? http : https;
+  const proxyRequest = transport.request(target, { method: request.method, headers }, upstreamResponse => {
     const responseHeaders = { ...upstreamResponse.headers, ...cors };
     for (const name of ['connection', 'transfer-encoding', 'access-control-allow-credentials']) delete responseHeaders[name];
     response.writeHead(upstreamResponse.statusCode || 502, responseHeaders);

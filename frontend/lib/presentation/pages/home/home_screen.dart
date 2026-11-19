@@ -327,10 +327,10 @@ class _HomeScreenState extends State<HomeScreen> {
           colors: colors,
           icon: Icons.verified_user_outlined,
           eyebrow: 'APOYO UNIVERSITARIO',
-          title: 'Orientación UNAYOE',
-          description: 'Solicita orientación confidencial',
+          title: 'Apoyo universitario',
+          description: 'Recursos, tutorías, talleres y orientación UNAYOE',
           tinted: true,
-          onTap: () => Navigator.pushNamed(context, '/orientacion'),
+          onTap: () => Navigator.pushNamed(context, '/apoyo-universitario'),
         ),
         const SizedBox(height: 12),
         _buildAccessCard(
