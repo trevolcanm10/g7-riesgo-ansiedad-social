@@ -1,0 +1,36 @@
+# Blueprint de Render para el microservicio Citas.
+#
+# Render > New > Blueprint > elegir este repositorio y la rama. Si te pide la ruta del archivo,
+# indica services/citas/render.yaml. Los valores marcados con "sync: false" NO están aquí:
+# Render los pide al crear el servicio y se escriben en su panel (nunca en Git).
+services:
+  - type: web
+    name: g7-riesgo-ansiedad-citas
+    runtime: python
+    rootDir: services/citas
+    plan: free          # el plan gratuito se duerme tras un rato sin tráfico (primer pedido lento)
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 60 "app:create_app()"
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION     # el código necesita Python 3.10 o más; si Render rechaza este
+        value: 3.12.8           # valor exacto, usa otra versión 3.11+ que ofrezca.
+      - key: USE_IN_MEMORY
+        value: "false"          # en producción los datos viven en MySQL, nunca en memoria
+      - key: DB_SSL
+        value: "true"
+      # Opcional: usar el modelo entrenado de inasistencia en lugar de las reglas.
+      # - key: NO_SHOW_MODEL_PATH
+      #   value: ml/artifacts/no_show_logreg_v1.json
+      - key: JWT_SECRET         # el MISMO valor que usa el servicio Users
+        sync: false
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false

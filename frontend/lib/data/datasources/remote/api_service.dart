@@ -132,18 +132,32 @@ class ApiService {
   }
 
   /// Realiza una petición PUT
-  Future<Map<String, dynamic>> put(
+  Future<Map<String, dynamic>> put(String url, {Map<String, dynamic>? body}) =>
+      _sendWithBody(http.put, url, body);
+
+  /// Realiza una petición PATCH
+  Future<Map<String, dynamic>> patch(
     String url, {
     Map<String, dynamic>? body,
-  }) async {
+  }) => _sendWithBody(http.patch, url, body);
+
+  /// PUT y PATCH comparten sesión, cabeceras, timeout y manejo de 401.
+  Future<Map<String, dynamic>> _sendWithBody(
+    Future<http.Response> Function(
+      Uri url, {
+      Map<String, String>? headers,
+      Object? body,
+    })
+    send,
+    String url,
+    Map<String, dynamic>? body,
+  ) async {
     final session = (_token, _sessionVersion);
-    final response = await http
-        .put(
-          Uri.parse(url),
-          headers: _headers(url),
-          body: body != null ? jsonEncode(body) : null,
-        )
-        .timeout(requestTimeout);
+    final response = await send(
+      Uri.parse(url),
+      headers: _headers(url),
+      body: body != null ? jsonEncode(body) : null,
+    ).timeout(requestTimeout);
     await _checkUnauthorized(response, session);
     return _procesarRespuesta(response);
   }

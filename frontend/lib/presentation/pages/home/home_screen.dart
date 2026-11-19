@@ -882,9 +882,15 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               _buildNavItem(
                 index: 2,
+                icon: Icons.event_outlined,
+                label: 'Citas',
+                isActive: _currentNavIndex == 2,
+              ),
+              _buildNavItem(
+                index: 3,
                 icon: Icons.person_outline_rounded,
                 label: 'Perfil',
-                isActive: _currentNavIndex == 2,
+                isActive: _currentNavIndex == 3,
               ),
             ],
           ),
@@ -912,6 +918,9 @@ class _HomeScreenState extends State<HomeScreen> {
             Navigator.pushNamed(context, '/historial');
             break;
           case 2:
+            Navigator.pushNamed(context, '/mis-citas');
+            break;
+          case 3:
             Navigator.pushNamed(context, '/perfil');
             break;
         }
