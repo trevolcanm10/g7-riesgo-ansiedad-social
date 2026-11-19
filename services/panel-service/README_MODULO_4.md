@@ -13,7 +13,9 @@ El módulo tiene tres piezas independientes:
 
 Además hay cambios en dos servicios existentes para permitir la correlación
 por HTTP: `services/users` (nuevo `GET /users/by-code/{code}`) y
-`services/riskEvaluation` (nuevo `GET /risk-evaluations/summary`).
+`services/riskEvaluation` (nuevo `POST /risk-evaluations/summary/counts`, que
+devuelve conteos agregados por nivel y suprime el resultado cuando el grupo
+evaluado tiene menos de 5 estudiantes).
 
 ---
 

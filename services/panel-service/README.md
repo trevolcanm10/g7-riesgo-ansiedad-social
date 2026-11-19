@@ -186,8 +186,11 @@ La especificacion completa esta en `openapi/panel.yaml` (raiz del repositorio).
 
 El nivel de riesgo (`BAJO` / `MEDIO` / `ALTO`) lo publica el microservicio
 `riskEvaluation`. El panel **no lee su base de datos**: lo pide por HTTP a
-`GET /risk-evaluations/summary?userIds=...`, que devuelve la ultima
-evaluacion de cada estudiante.
+`POST /risk-evaluations/summary/counts` con `{"userIds": [...]}`, que devuelve
+**solo conteos agregados** por nivel (`BAJO` / `MEDIO` / `ALTO`) y el `total`,
+sin datos individuales. Si el grupo evaluado tiene menos de 5 estudiantes
+**con evaluacion**, la respuesta llega con `suprimido: true` y sin conteos
+(regla de privacidad k=5).
 
 El flujo completo:
 
@@ -197,7 +200,8 @@ El flujo completo:
    -> guarda estudiante_id junto al cluster asignado por el modelo.
 
 2. Al pedir estadisticas, cuenta los estudiantes por cluster en su propia
-   base de datos y pide a riskEvaluation la evaluacion de esos estudiantes.
+   base de datos y pide a riskEvaluation los conteos por nivel de riesgo de
+   esos estudiantes.
 
 3. Cruza ambos: cada perfil muestra cuantos de sus estudiantes estan en
    riesgo alto, medio y bajo.
@@ -208,8 +212,8 @@ desplegado con el endpoint `by-code`, el panel sigue funcionando: la
 correlacion aparece vacia y `riesgo_disponible` es `false` en la respuesta.
 El personal ve los perfiles sin la correlacion, pero nada mas falla.
 
-**Estado actual:** los endpoints `by-code` (en `users`) y `summary` (en
-`riskEvaluation`) son **nuevos**. Hasta que ambos servicios se redesplieguen,
+**Estado actual:** los endpoints `by-code` (en `users`) y `summary/counts`
+(en `riskEvaluation`) son **nuevos**. Hasta que ambos servicios se redesplieguen,
 la correlacion de riesgo no aparece. Todo lo demas funciona igual.
 
 ---
