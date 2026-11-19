@@ -1,0 +1,605 @@
+openapi: 3.0.3
+info:
+  title: Microservicio de Apoyo Académico
+  version: 1.0.0
+  description: |
+    API M5 para catálogo, preferencias y recomendaciones de tutorías, talleres
+    y materiales. Las rutas protegidas reciben el JWT HS256 emitido por Users.
+    La URL APIM se añadirá cuando el gateway publique el prefijo del servicio.
+servers:
+  - url: http://localhost:5003
+    description: Desarrollo local
+tags:
+  - name: Salud
+  - name: Recursos
+  - name: Preferencias
+  - name: Recomendaciones
+  - name: Interacciones
+  - name: Inscripciones
+security:
+  - BearerAuth: []
+paths:
+  /health:
+    get:
+      tags: [Salud]
+      operationId: getHealth
+      summary: Comprueba el servicio y la conexión con la base
+      security: []
+      responses:
+        "200":
+          description: Servicio y base disponibles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /resources:
+    get:
+      tags: [Recursos]
+      operationId: listResources
+      summary: Lista recursos publicados y vigentes
+      description: Disponible para estudiante, personal UNAYOE y administrador.
+      parameters:
+        - name: type
+          in: query
+          schema:
+            $ref: "#/components/schemas/ResourceType"
+        - name: courseCode
+          in: query
+          schema: {type: string, minLength: 1, maxLength: 30}
+        - name: tag
+          in: query
+          schema: {type: string, minLength: 1, maxLength: 80}
+        - name: limit
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+        - name: offset
+          in: query
+          schema: {type: integer, minimum: 0, maximum: 10000, default: 0}
+      responses:
+        "200":
+          description: Página de recursos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourcePage"
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "500": {$ref: "#/components/responses/InternalError"}
+    post:
+      tags: [Recursos]
+      operationId: createResource
+      summary: Publica una tutoría, taller o material
+      description: Estudiantes solo publican tutorías y mantienen una publicada a la vez; personal UNAYOE y administradores pueden publicar los tres tipos.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/CreateResourceInput"}
+      responses:
+        "201":
+          description: Recurso publicado
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Resource"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "409": {$ref: "#/components/responses/Conflict"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /resources/{id}:
+    parameters:
+      - {$ref: "#/components/parameters/ResourceId"}
+    get:
+      tags: [Recursos]
+      operationId: getResource
+      summary: Consulta un recurso publicado
+      responses:
+        "200":
+          description: Recurso publicado
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Resource"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+    patch:
+      tags: [Recursos]
+      operationId: updateResource
+      summary: Actualiza campos permitidos de un recurso
+      description: Personal/admin pueden editar recursos; el dueño estudiante solo su tutoría.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/UpdateResourceInput"}
+      responses:
+        "200":
+          description: Recurso actualizado
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Resource"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+        "500": {$ref: "#/components/responses/InternalError"}
+    delete:
+      tags: [Recursos]
+      operationId: cancelResource
+      summary: Cancela un recurso sin borrar el historial
+      description: Personal/admin pueden cancelar recursos; el dueño estudiante solo su tutoría.
+      responses:
+        "204": {description: Recurso cancelado}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /students/me/preferences:
+    get:
+      tags: [Preferencias]
+      operationId: getMyPreferences
+      summary: Obtiene las preferencias del estudiante autenticado
+      description: Exclusivo para ESTUDIANTE; sin preferencias guardadas devuelve listas vacías.
+      responses:
+        "200":
+          description: Preferencias actuales
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Preferences"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "500": {$ref: "#/components/responses/InternalError"}
+    put:
+      tags: [Preferencias]
+      operationId: replaceMyPreferences
+      summary: Reemplaza las preferencias del estudiante autenticado
+      description: Las listas omitidas quedan vacías; la zona horaria omitida usa America/Lima.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/PreferencesInput"}
+      responses:
+        "200":
+          description: Preferencias guardadas
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Preferences"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /recommendations:
+    get:
+      tags: [Recomendaciones]
+      operationId: getRecommendations
+      summary: Obtiene recomendaciones personalizadas
+      description: Exclusivo para ESTUDIANTE. El score ordena resultados, no es probabilidad.
+      parameters:
+        - name: limit
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 50, default: 10}
+      responses:
+        "200":
+          description: Recomendaciones; puede ser una lista vacía si no hay catálogo
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/RecommendationPage"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /interactions:
+    post:
+      tags: [Interacciones]
+      operationId: recordInteraction
+      summary: Registra una interacción explícita
+      description: Exclusivo para ESTUDIANTE. Las inscripciones se registran por la ruta de talleres.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/InteractionInput"}
+      responses:
+        "201":
+          description: Interacción registrada
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/InteractionResult"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /workshops/{id}/enroll:
+    parameters:
+      - {$ref: "#/components/parameters/ResourceId"}
+    post:
+      tags: [Inscripciones]
+      operationId: enrollInWorkshop
+      summary: Inscribe al estudiante autenticado en un taller
+      description: Exclusivo para ESTUDIANTE. Puede responder 409 si no quedan cupos o ya existe inscripción activa.
+      responses:
+        "201":
+          description: Inscripción activa
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Enrollment"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+        "500": {$ref: "#/components/responses/InternalError"}
+    delete:
+      tags: [Inscripciones]
+      operationId: cancelWorkshopEnrollment
+      summary: Cancela la inscripción activa del estudiante
+      description: Exclusivo para ESTUDIANTE.
+      responses:
+        "204": {description: Inscripción cancelada}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /students/me/enrollments:
+    get:
+      tags: [Inscripciones]
+      operationId: listMyEnrollments
+      summary: Lista las inscripciones activas del estudiante autenticado
+      responses:
+        "200":
+          description: Inscripciones activas
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/EnrollmentPage"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "500": {$ref: "#/components/responses/InternalError"}
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT HS256 de Users; comparte JWT_SECRET con ese servicio.
+  parameters:
+    ResourceId:
+      name: id
+      in: path
+      required: true
+      description: ID positivo del recurso o taller.
+      schema: {type: integer, format: int64, minimum: 1}
+  responses:
+    BadRequest:
+      description: Solicitud inválida o fuera de los límites de validación
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Error"}
+    Unauthorized:
+      description: Falta el Bearer token o no es válido
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Error"}
+    Forbidden:
+      description: Rol o usuario autenticado sin autorización
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Error"}
+    NotFound:
+      description: Recurso, taller o inscripción no encontrados
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Error"}
+    Conflict:
+      description: Conflicto con estado, cupos o regla de negocio
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Error"}
+    InternalError:
+      description: Error interno inesperado
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Error"}
+    ServiceUnavailable:
+      description: La base de datos no está disponible
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/HealthUnavailable"}
+  schemas:
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message: {type: string}
+        errors:
+          type: array
+          items:
+            type: object
+            required: [field, message]
+            properties:
+              field: {type: string}
+              message: {type: string}
+      additionalProperties: false
+    HealthResponse:
+      type: object
+      required: [service, status, database]
+      properties:
+        service: {type: string, enum: [academic-support]}
+        status: {type: string, enum: [OK]}
+        database: {type: string, enum: [OK]}
+    HealthUnavailable:
+      type: object
+      required: [service, status, database]
+      properties:
+        service: {type: string, enum: [academic-support]}
+        status: {type: string, enum: [ERROR]}
+        database: {type: string, enum: [UNAVAILABLE]}
+    ResourceType:
+      type: string
+      enum: [TUTORING, WORKSHOP, MATERIAL]
+    Modality:
+      type: string
+      enum: [PRESENCIAL, REMOTO, HIBRIDO]
+    Resource:
+      type: object
+      required: [id, type, title, description, tags, courseCodes, modality, location, startAt, endAt, capacity, availableSeats, url, providerUserId, isSynthetic, createdAt, updatedAt]
+      properties:
+        id: {type: integer, format: int64}
+        type: {$ref: "#/components/schemas/ResourceType"}
+        title: {type: string}
+        description: {type: string}
+        tags:
+          type: array
+          items: {type: string}
+        courseCodes:
+          type: array
+          items: {type: string}
+        modality:
+          allOf:
+            - {$ref: "#/components/schemas/Modality"}
+          nullable: true
+        location: {type: string, nullable: true}
+        startAt: {type: string, format: date-time, nullable: true}
+        endAt: {type: string, format: date-time, nullable: true}
+        capacity: {type: integer, nullable: true}
+        availableSeats: {type: integer, nullable: true}
+        url: {type: string, format: uri, nullable: true}
+        providerUserId:
+          type: integer
+          format: int64
+          nullable: true
+          description: Se informa solo para tutorías.
+        isSynthetic: {type: boolean}
+        createdAt: {type: string, format: date-time, nullable: true}
+        updatedAt: {type: string, format: date-time, nullable: true}
+    ResourcePage:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items: {$ref: "#/components/schemas/Resource"}
+        pagination:
+          type: object
+          required: [limit, offset, total]
+          properties:
+            limit: {type: integer}
+            offset: {type: integer}
+            total: {type: integer}
+    ResourceInputBase:
+      type: object
+      required: [title, description, tags, courseCodes]
+      properties:
+        title: {type: string, minLength: 1, maxLength: 160}
+        description: {type: string, minLength: 1, maxLength: 5000}
+        tags:
+          type: array
+          maxItems: 30
+          items: {type: string, minLength: 1, maxLength: 80}
+        courseCodes:
+          type: array
+          maxItems: 40
+          items: {type: string, minLength: 1, maxLength: 30}
+        modality:
+          allOf:
+            - {$ref: "#/components/schemas/Modality"}
+          nullable: true
+        location: {type: string, maxLength: 255, nullable: true}
+        startAt: {type: string, format: date-time, nullable: true, description: Debe incluir zona horaria.}
+        endAt: {type: string, format: date-time, nullable: true, description: Debe incluir zona horaria.}
+        capacity: {type: integer, minimum: 1, maximum: 10000, nullable: true}
+        url: {type: string, format: uri, maxLength: 2048, nullable: true, description: Solo HTTP o HTTPS.}
+    CreateTutoringInput:
+      allOf:
+        - {$ref: "#/components/schemas/ResourceInputBase"}
+        - type: object
+          required: [type, modality, startAt, endAt]
+          properties:
+            type: {type: string, enum: [TUTORING]}
+            modality: {$ref: "#/components/schemas/Modality"}
+            startAt: {type: string, format: date-time, description: Debe ser futura.}
+            endAt: {type: string, format: date-time}
+          description: Para modalidad PRESENCIAL o HIBRIDO se exige location; no se admite capacity.
+    CreateWorkshopInput:
+      allOf:
+        - {$ref: "#/components/schemas/ResourceInputBase"}
+        - type: object
+          required: [type, modality, startAt, endAt, capacity]
+          properties:
+            type: {type: string, enum: [WORKSHOP]}
+            modality: {$ref: "#/components/schemas/Modality"}
+            startAt: {type: string, format: date-time, description: Debe ser futura.}
+            endAt: {type: string, format: date-time}
+            capacity: {type: integer, minimum: 1, maximum: 10000}
+          description: Para modalidad PRESENCIAL o HIBRIDO se exige location.
+    CreateMaterialInput:
+      allOf:
+        - {$ref: "#/components/schemas/ResourceInputBase"}
+        - type: object
+          required: [type, url]
+          properties:
+            type: {type: string, enum: [MATERIAL]}
+            url: {type: string, format: uri, maxLength: 2048, description: Solo HTTP o HTTPS.}
+          description: No admite startAt, endAt ni capacity.
+    CreateResourceInput:
+      oneOf:
+        - {$ref: "#/components/schemas/CreateTutoringInput"}
+        - {$ref: "#/components/schemas/CreateWorkshopInput"}
+        - {$ref: "#/components/schemas/CreateMaterialInput"}
+      discriminator:
+        propertyName: type
+        mapping:
+          TUTORING: "#/components/schemas/CreateTutoringInput"
+          WORKSHOP: "#/components/schemas/CreateWorkshopInput"
+          MATERIAL: "#/components/schemas/CreateMaterialInput"
+    UpdateResourceInput:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        title: {type: string, minLength: 1, maxLength: 160}
+        description: {type: string, minLength: 1, maxLength: 5000}
+        tags:
+          type: array
+          maxItems: 30
+          items: {type: string, minLength: 1, maxLength: 80}
+        courseCodes:
+          type: array
+          maxItems: 40
+          items: {type: string, minLength: 1, maxLength: 30}
+        modality:
+          allOf:
+            - {$ref: "#/components/schemas/Modality"}
+          nullable: true
+        location: {type: string, maxLength: 255, nullable: true}
+        startAt: {type: string, format: date-time, nullable: true}
+        endAt: {type: string, format: date-time, nullable: true}
+        capacity: {type: integer, minimum: 1, maximum: 10000, nullable: true}
+        url: {type: string, format: uri, maxLength: 2048, nullable: true}
+    Preferences:
+      type: object
+      required: [interests, courseCodes, availableSlots, preferredModalities, timeZone, updatedAt]
+      properties:
+        interests:
+          type: array
+          items: {type: string}
+        courseCodes:
+          type: array
+          items: {type: string}
+        availableSlots:
+          type: array
+          items: {$ref: "#/components/schemas/AvailableSlot"}
+        preferredModalities:
+          type: array
+          items: {$ref: "#/components/schemas/Modality"}
+        timeZone: {type: string}
+        updatedAt: {type: string, format: date-time, nullable: true}
+    PreferencesInput:
+      type: object
+      additionalProperties: false
+      properties:
+        interests:
+          type: array
+          maxItems: 30
+          items: {type: string, minLength: 1, maxLength: 80}
+        courseCodes:
+          type: array
+          maxItems: 40
+          items: {type: string, minLength: 1, maxLength: 30}
+        availableSlots:
+          type: array
+          maxItems: 14
+          items: {$ref: "#/components/schemas/AvailableSlot"}
+        preferredModalities:
+          type: array
+          items: {$ref: "#/components/schemas/Modality"}
+        timeZone: {type: string, maxLength: 64, description: Zona IANA; valor por defecto America/Lima.}
+    AvailableSlot:
+      type: object
+      required: [weekday, startTime, endTime]
+      additionalProperties: false
+      properties:
+        weekday: {type: integer, minimum: 0, maximum: 6, description: "0=lunes, 6=domingo."}
+        startTime: {type: string, pattern: "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"}
+        endTime: {type: string, pattern: "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"}
+    RecommendationPage:
+      type: object
+      required: [items, recommendationMode, modelVersion, generatedAt]
+      properties:
+        items:
+          type: array
+          items: {$ref: "#/components/schemas/Recommendation"}
+        recommendationMode: {type: string, enum: [CONTENT_BASED, HYBRID, POPULARITY_FALLBACK, NO_CATALOG]}
+        modelVersion: {type: string}
+        generatedAt: {type: string, format: date-time}
+    Recommendation:
+      type: object
+      required: [resource, score, recommendationMode, reasons]
+      properties:
+        resource: {$ref: "#/components/schemas/Resource"}
+        score: {type: number, minimum: 0, maximum: 1, description: "Puntuación relativa, no probabilidad."}
+        recommendationMode: {type: string, enum: [CONTENT_BASED, HYBRID, POPULARITY_FALLBACK]}
+        reasons:
+          type: array
+          items: {type: string}
+    InteractionInput:
+      type: object
+      required: [resourceId, eventType]
+      additionalProperties: false
+      properties:
+        resourceId: {type: integer, format: int64, minimum: 1}
+        eventType: {type: string, enum: [VIEW, CLICK, COMPLETE, DISMISS]}
+    InteractionResult:
+      type: object
+      required: [resourceId, eventType, recorded]
+      properties:
+        resourceId: {type: integer, format: int64}
+        eventType: {type: string, enum: [VIEW, CLICK, COMPLETE, DISMISS]}
+        recorded: {type: boolean, enum: [true]}
+    Enrollment:
+      type: object
+      required: [id, resourceId, userId, status, enrolledAt]
+      properties:
+        id: {type: integer, format: int64}
+        resourceId: {type: integer, format: int64}
+        userId: {type: integer, format: int64}
+        status: {type: string, enum: [ACTIVE]}
+        enrolledAt: {type: string, format: date-time}
+    EnrollmentPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: "#/components/schemas/EnrollmentItem"}
+    EnrollmentItem:
+      type: object
+      required: [id, resourceId, status, enrolledAt, workshop]
+      properties:
+        id: {type: integer, format: int64}
+        resourceId: {type: integer, format: int64}
+        status: {type: string, enum: [ACTIVE]}
+        enrolledAt: {type: string, format: date-time}
+        workshop:
+          type: object
+          required: [id, title, description, startAt, endAt, location, modality, capacity, availableSeats]
+          properties:
+            id: {type: integer, format: int64}
+            title: {type: string}
+            description: {type: string}
+            startAt: {type: string, format: date-time}
+            endAt: {type: string, format: date-time}
+            location: {type: string, nullable: true}
+            modality:
+              allOf:
+                - {$ref: "#/components/schemas/Modality"}
+              nullable: true
+            capacity: {type: integer, nullable: true}
+            availableSeats: {type: integer, nullable: true}

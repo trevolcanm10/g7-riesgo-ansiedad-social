@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: g7-riesgo-ansiedad-apoyo-academico
+    runtime: docker
+    plan: free
+    dockerfilePath: services/academic-support/Dockerfile
+    dockerContext: services/academic-support
+    healthCheckPath: /health
+    envVars:
+      - key: DB_SSL
+        value: "true"
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false

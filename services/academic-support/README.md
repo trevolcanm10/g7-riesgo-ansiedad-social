@@ -109,12 +109,12 @@ Crea primero la base de datos. Aplica schema.sql con una cuenta de migraciones q
 
 La configuración de conexión usa el mismo formato de variables (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`) que `services/users`; el archivo `.env` de ese servicio no se incluye en el repositorio. Reutiliza el host y puerto de la instancia compartida, crea la base `academic_support` y otorga permisos a una cuenta propia del microservicio. No copies ni publiques contraseñas en el chat o en Git.
 
-Con `.env` configurado y `schema.sql` aplicado, puedes comprobar la conexión real y las cuatro tablas requeridas desde PowerShell:
+Con `.env` configurado y `schema.sql` aplicado, puedes comprobar la conexión real, las cuatro tablas y la colación del esquema desde PowerShell:
 
     $env:ACADEMIC_SUPPORT_MYSQL_INTEGRATION = "1"
     python -m unittest discover -s tests -p test_mysql_live.py -v
 
-Esta prueba consulta únicamente la base configurada y su esquema. Sin la variable de activación, se omite durante la suite normal de pruebas.
+Esta prueba consulta únicamente la base configurada y comprueba conexión, tablas, colación y GET_LOCK (adquisición y liberación). Sin la variable de activación, se omite durante la suite normal de pruebas.
 
 También hay pruebas de integración del repositorio que crean y eliminan datos de prueba. Ejecútalas solo contra una base aislada cuyo nombre termine en `_test` (por ejemplo, `academic_support_test`), con `schema.sql` aplicado:
 
@@ -141,3 +141,20 @@ El archivo .env local está ignorado por Git. app.py carga el .env de esta carpe
 - La aplicación móvil debe usar el token Bearer existente y enviar las preferencias antes de pedir recomendaciones.
 - APIM debe publicar este backend como ruta propia; el gateway y el despliegue Azure quedan configurados por el responsable transversal. No se inventa aquí una URL de producción.
 - Los IDs de curso, tags y catálogo deben acordarse con el equipo. El código no modifica users, riskEvaluation, prediction-ml ni sus contratos.
+
+
+## Preparación de despliegue en Render
+
+El Blueprint está en render.yaml. Al crear el Blueprint en Render, selecciona services/academic-support/render.yaml; queda en la subcarpeta del microservicio para no afectar otros servicios del monorepo. La configuración construye la imagen con el Dockerfile del servicio y comprueba GET /health.
+
+Antes de desplegar, crea una base propia para este servicio y aplica schema.sql con una cuenta de migraciones. Luego configura de forma privada DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD y el mismo JWT_SECRET que usa Users. El Blueprint marca esos valores como sync:false para no guardarlos en Git. DB_SSL está activo para conexión TLS. DB_SSL_CA solo se configura en Render si la base usa una autoridad certificadora privada.
+
+La comprobación de salud consulta MySQL, así que el esquema y las variables deben estar listos antes de que el servicio pase el health check. Render no ejecuta schema.sql automáticamente. El APIM no está incluido porque el equipo aún debe asignar el prefijo y la URL pública.
+
+### Compatibilidad con TiDB
+
+La documentación oficial de TiDB lista GET_LOCK entre las funciones de bloqueo de usuario y establece un tiempo mínimo de espera de 1 segundo. El servicio usa 5 segundos. La colación utf8mb4_0900_ai_ci de schema.sql requiere TiDB 7.4.0 o posterior; para una versión anterior habrá que elegir una colación compatible y actualizar la expectativa de la prueba live.
+
+Antes del despliegue, configura una base de prueba aislada cuyo nombre termine en _test y activa ACADEMIC_SUPPORT_MYSQL_INTEGRATION=1. Las pruebas live comprueban conexión, tablas, colación y adquisición de GET_LOCK; las pruebas de integración del repositorio cubren concurrencia. No ejecutes las pruebas que crean datos sobre la base de producción.
+
+Referencias: [funciones de bloqueo de TiDB](https://docs.pingcap.com/tidb/v8.1/locking-functions/) y [juegos de caracteres y colaciones de TiDB](https://docs.pingcap.com/tidb/stable/character-set-and-collation/).
