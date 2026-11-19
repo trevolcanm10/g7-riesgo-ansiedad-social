@@ -40,7 +40,7 @@ Copia `.env.example` a `.env` y completa con valores reales. Nunca versionar
 `.env`.
 
 Para Render, usa `render.yaml` con el Dockerfile de `services/academic-agenda`.
-El contenedor inicia Gunicorn con un worker y escucha en `PORT` (5003 por
+El contenedor inicia Gunicorn con un worker y escucha en `PORT` (5004 por
 defecto). En el servicio de Render configura `DB_ENABLED=true`, `DB_SSL=true`,
 `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` y el mismo
 `JWT_SECRET` que Users. Configura los valores secretos en el panel de Render;
@@ -71,4 +71,4 @@ pytest tests/
 python app.py
 ```
 
-Puerto predeterminado: 5003.
+Puerto predeterminado: 5004.

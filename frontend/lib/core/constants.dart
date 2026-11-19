@@ -133,11 +133,11 @@ class AppConstants {
     if (configured.isNotEmpty) return configured;
     if (!kReleaseMode) {
       try {
-        if (Platform.isAndroid) return 'http://10.0.2.2:5003';
+        if (Platform.isAndroid) return 'http://10.0.2.2:5004';
       } catch (_) {
         // Flutter Web does not expose dart:io platform APIs.
       }
-      return 'http://localhost:5003';
+      return 'http://localhost:5004';
     }
     throw StateError('ACADEMIC_AGENDA_BASE_URL no está configurada.');
   }

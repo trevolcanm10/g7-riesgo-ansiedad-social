@@ -14,5 +14,5 @@ COPY app.py .
 ENV FLASK_ENV=production
 ENV DB_ENABLED=true
 ENV DB_SSL=true
-EXPOSE 5003
-CMD ["sh", "-c", "exec gunicorn --workers 1 --bind 0.0.0.0:${PORT:-5003} 'app:create_app()'"]
+EXPOSE 5004
+CMD ["sh", "-c", "exec gunicorn --workers 1 --bind 0.0.0.0:${PORT:-5004} 'app:create_app()'"]

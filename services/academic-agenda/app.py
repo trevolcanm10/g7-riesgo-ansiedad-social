@@ -90,6 +90,6 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     create_app().run(
         host="0.0.0.0",
-        port=int(os.environ.get("PORT", "5003")),
+        port=int(os.environ.get("PORT", "5004")),
         debug=False,
     )
