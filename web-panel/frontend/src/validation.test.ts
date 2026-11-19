@@ -4,11 +4,14 @@ import {
   esPeriodoValido,
   esUsuarioInstitucional,
   esUsuarioSesion,
+  estadoRedireccion,
   evaluarAcceso,
   expiracionDeToken,
   formatearConteoProtegido,
   formatearTotalAtenciones,
   indicadoresCompletos,
+  MENSAJE_ROL_SIN_PERMISO,
+  MENSAJE_SESION_REQUERIDA,
   mesesDisponibles,
   rolDelToken,
   textoGruposVisibles,
@@ -219,6 +222,26 @@ describe('evaluarAcceso', () => {
     const token = tokenDePrueba({ role: 'PERSONAL_UNAYOE', exp: 4102444800 });
 
     expect(evaluarAcceso(token, 'PERSONAL_UNAYOE').permitido).toBe(true);
+  });
+});
+
+describe('estadoRedireccion', () => {
+  it('lleva al inicio de sesion la ruta de origen y el motivo del rechazo', () => {
+    const decision = evaluarAcceso('token', 'ESTUDIANTE');
+
+    expect(estadoRedireccion(decision, '/informes')).toEqual({
+      desde: '/informes',
+      mensaje: MENSAJE_ROL_SIN_PERMISO,
+    });
+  });
+
+  it('indica que hay que iniciar sesion cuando no hay token', () => {
+    const decision = evaluarAcceso(null);
+
+    expect(estadoRedireccion(decision, '/')).toEqual({
+      desde: '/',
+      mensaje: MENSAJE_SESION_REQUERIDA,
+    });
   });
 });
 

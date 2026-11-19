@@ -3,17 +3,27 @@
  */
 import { Navigate, useLocation } from 'react-router-dom';
 import { useSesion } from './AuthContext';
+import { estadoRedireccion, evaluarAcceso } from '../validation';
 
 /**
  * Redirige al inicio de sesion si no hay token, o al panel si el rol no
- * tiene permiso.
+ * tiene permiso. El motivo del rechazo viaja en el estado de navegacion para
+ * que el inicio de sesion pueda explicarlo.
  */
 export function RutaProtegida({ children }: { children: React.ReactNode }) {
-  const { token } = useSesion();
+  const { token, usuario } = useSesion();
   const ubicacion = useLocation();
 
-  if (!token) {
-    return <Navigate to="/login" replace state={{ desde: ubicacion.pathname }} />;
+  const decision = evaluarAcceso(token, usuario?.role);
+
+  if (!decision.permitido) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={estadoRedireccion(decision, ubicacion.pathname)}
+      />
+    );
   }
 
   return <>{children}</>;

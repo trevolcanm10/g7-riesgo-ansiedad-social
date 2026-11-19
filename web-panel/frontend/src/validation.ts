@@ -344,6 +344,22 @@ export function evaluarAcceso(token: string | null, rol?: string | null): Decisi
   return { permitido: true, motivo: null, mensaje: '' };
 }
 
+/** Estado de navegacion que la ruta protegida entrega al inicio de sesion. */
+export interface EstadoRedireccion {
+  /** Ruta del panel que se quiso abrir. */
+  desde: string;
+  /** Motivo legible del rechazo, que el inicio de sesion muestra. */
+  mensaje: string;
+}
+
+/**
+ * Construye el estado de navegacion del inicio de sesion cuando el acceso al
+ * panel institucional queda denegado.
+ */
+export function estadoRedireccion(decision: DecisionAcceso, ruta: string): EstadoRedireccion {
+  return { desde: ruta, mensaje: decision.mensaje };
+}
+
 /** Textos legibles para cada motivo de ausencia de correlacion de riesgo. */
 export const TEXTOS_RIESGO_MOTIVO: Record<RiesgoMotivo, string> = {
   disponible: '',
